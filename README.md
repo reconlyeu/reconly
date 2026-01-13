@@ -1,6 +1,5 @@
-# Reconly - Open Source RSS Aggregator with AI Summarization
+# Reconly - Privacy-First Research Intelligence
 
-> **Self-host your intelligent RSS reader** - Aggregate feeds, summarize with AI, all under your control.
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
