@@ -9,7 +9,7 @@
 // SOURCE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type SourceType = 'rss' | 'youtube' | 'website' | 'blog';
+export type SourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent';
 export type FilterMode = 'title_only' | 'content' | 'both';
 
 export interface SourceConfig {
@@ -24,6 +24,8 @@ export interface SourceConfig {
     content?: string;
     date?: string;
   };
+  // Agent-specific
+  max_iterations?: number;
 }
 
 export interface Source {
@@ -303,6 +305,45 @@ export interface FeedRunSourceStatus {
 export interface FeedRunSourcesResponse {
   run_id: number;
   sources: FeedRunSourceStatus[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT RUN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type AgentRunStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface AgentToolCall {
+  tool: string;
+  input: Record<string, unknown>;
+  output: string;
+}
+
+export interface AgentRun {
+  id: number;
+  source_id: number;
+  source_name?: string | null;
+  prompt: string;
+  status: AgentRunStatus;
+  started_at?: string | null;
+  completed_at?: string | null;
+  iterations: number;
+  tool_calls?: AgentToolCall[] | null;
+  sources_consulted?: string[] | null;
+  result_title?: string | null;
+  result_content?: string | null;
+  tokens_in: number;
+  tokens_out: number;
+  estimated_cost: number;
+  error_log?: string | null;
+  trace_id?: string | null;
+  created_at: string;
+  duration_seconds?: number | null;
+}
+
+export interface AgentRunListResponse {
+  items: AgentRun[];
+  total: number;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

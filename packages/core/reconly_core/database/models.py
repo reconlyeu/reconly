@@ -954,3 +954,91 @@ class DigestRelationship(Base):
             'extra_data': self.extra_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AGENT RUN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AgentRun(Base):
+    """
+    Execution history for agent research runs.
+
+    Tracks each agent execution with status, timing, and results.
+    Similar to FeedRun but for autonomous agent research sessions.
+    """
+    __tablename__ = 'agent_runs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(Integer, ForeignKey('sources.id', ondelete='CASCADE'), nullable=False, index=True)
+
+    # Research input
+    prompt = Column(Text, nullable=False)
+
+    # Status
+    status = Column(String(20), default='pending', nullable=False, index=True)  # pending, running, completed, failed
+
+    # Timing
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Agent execution metrics
+    iterations = Column(Integer, default=0, nullable=False)
+    tool_calls = Column(JSON, nullable=True)  # List of {tool, input, output}
+    sources_consulted = Column(JSON, nullable=True)  # List of URLs fetched
+
+    # Result
+    result_title = Column(String(500), nullable=True)
+    result_content = Column(Text, nullable=True)
+
+    # Token tracking
+    tokens_in = Column(Integer, default=0, nullable=False)
+    tokens_out = Column(Integer, default=0, nullable=False)
+    estimated_cost = Column(Float, default=0.0, nullable=False)
+
+    # Error info
+    error_log = Column(Text, nullable=True)
+
+    # Tracing
+    trace_id = Column(String(36), nullable=True, index=True)  # UUID for log correlation
+
+    # Metadata
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    source = relationship('Source', backref='agent_runs')
+
+    __table_args__ = (
+        Index('ix_agent_runs_source_status', 'source_id', 'status'),
+    )
+
+    def __repr__(self):
+        return f"<AgentRun(id={self.id}, source_id={self.source_id}, status='{self.status}')>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source_id': self.source_id,
+            'prompt': self.prompt,
+            'status': self.status,
+            'started_at': self.started_at.isoformat() if self.started_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'iterations': self.iterations,
+            'tool_calls': self.tool_calls,
+            'sources_consulted': self.sources_consulted,
+            'result_title': self.result_title,
+            'result_content': self.result_content,
+            'tokens_in': self.tokens_in,
+            'tokens_out': self.tokens_out,
+            'estimated_cost': self.estimated_cost,
+            'error_log': self.error_log,
+            'trace_id': self.trace_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+    @property
+    def duration_seconds(self) -> float | None:
+        """Calculate run duration in seconds."""
+        if self.started_at and self.completed_at:
+            return (self.completed_at - self.started_at).total_seconds()
+        return None

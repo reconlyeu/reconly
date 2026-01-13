@@ -8,6 +8,7 @@
 ## Features
 
 - **Multi-Source Fetching**: RSS feeds, YouTube channels, and websites
+- **AI Research Agents**: Autonomous research agents that search the web and synthesize findings
 - **AI Summarization**: Local (Ollama), Free (HuggingFace), and Cloud (OpenAI, Anthropic)
 - **Consolidated Digests**: Combine multiple items into single briefings with source attribution
 - **Source Content Filters**: Include/exclude keywords to filter content before summarization
@@ -100,6 +101,49 @@ export EMBEDDING_MODEL=bge-m3
 
 **Documentation:** See [ARCHITECTURE.md - RAG Knowledge System](../ARCHITECTURE.md#rag-knowledge-system) for complete details.
 
+## AI Research Agents
+
+Create autonomous research agents that investigate topics on schedule - like having a personal research assistant.
+
+**How it works:**
+1. You define a research prompt (e.g., "Latest developments in AI agents this week")
+2. The agent uses web search and page fetching to gather information
+3. Results are synthesized into a digest, just like other sources
+4. Runs on schedule like any feed
+
+**Quick Setup:**
+
+```bash
+# Option A: Brave Search (recommended, free tier at https://brave.com/search/api/)
+AGENT_SEARCH_PROVIDER=brave
+BRAVE_API_KEY=your-api-key
+
+# Option B: SearXNG (self-hosted, fully private)
+AGENT_SEARCH_PROVIDER=searxng
+SEARXNG_URL=http://localhost:8080
+```
+
+**Creating an Agent Source:**
+
+1. Go to **Sources → Add Source**
+2. Select type: **Agent**
+3. Enter your research prompt in the URL field
+4. Set max iterations (default: 5)
+5. Add to a Feed and run
+
+**Example prompts:**
+- "Research news about competitor companies Feedly and Inoreader this week"
+- "Find recent developments in local LLM deployment and performance"
+- "Summarize this week's AI safety research papers and discussions"
+
+**Agent Run History:**
+
+View detailed execution logs including:
+- Tool calls (searches performed, pages fetched)
+- Iterations and duration
+- Sources consulted
+- Token usage and costs
+
 ## Documentation
 
 | Guide | Description |
@@ -184,6 +228,36 @@ curl -u :your-password http://localhost:8000/api/v1/sources
 Need **multi-user authentication**, **team management**, or **managed hosting**?
 
 Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management, and managed SaaS.
+
+## Troubleshooting
+
+### Agent Source Issues
+
+| Problem | Solution |
+|---------|----------|
+| "Brave API key required" | Set `BRAVE_API_KEY` in `.env` and restart the API |
+| "SearXNG URL required" | Set `SEARXNG_URL` in `.env` or switch to `AGENT_SEARCH_PROVIDER=brave` |
+| Agent returns empty results | Check search provider connectivity; try a simpler prompt |
+| "Max iterations reached" | Increase `max_iterations` on the source (default: 5, max: 20) |
+| Search rate limit errors | Brave free tier: 2000 queries/month; consider SearXNG for unlimited |
+| Agent runs but no digest | Ensure the agent source is added to a Feed and the feed is run |
+
+### Common API Errors
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| 404 on `/api/v1/feeds/` | Server not running | Start with `uvicorn reconly_api.main:app` |
+| 401 Unauthorized | Password protection enabled | Set `RECONLY_AUTH_PASSWORD` or authenticate |
+| 500 Database error | PostgreSQL not running | Start PostgreSQL: `docker-compose up -d postgres` |
+| LLM timeout | Provider unreachable | Check Ollama is running or API keys are valid |
+
+### RAG/Search Issues
+
+| Problem | Solution |
+|---------|----------|
+| "pgvector extension not found" | Run: `CREATE EXTENSION vector;` in PostgreSQL |
+| Embeddings not generating | Check `EMBEDDING_PROVIDER` config; ensure Ollama has `bge-m3` model |
+| Search returns no results | Embeddings may not be generated yet; check digest `embedding_status` |
 
 ## Contributing
 

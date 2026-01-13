@@ -55,6 +55,7 @@ export const strings = {
       youtube: 'YouTube',
       website: 'Website',
       blog: 'Blog',
+      agent: 'AI Agent',
     },
     fields: {
       name: 'Name',
@@ -149,6 +150,28 @@ export const strings = {
       SummarizeError: 'Summarize Error',
       SaveError: 'Save Error',
       TimeoutError: 'Timeout',
+    },
+  },
+
+  // Agent Runs
+  agentRuns: {
+    title: 'Agent Run History',
+    noRuns: 'No agent runs yet',
+    noRunsDescription: 'This agent source hasn\'t been run yet. Add it to a feed and run the feed to see results here.',
+    refresh: 'Refresh',
+    details: {
+      title: 'Agent Run Details',
+      prompt: 'Research Prompt',
+      toolCalls: 'Tool Calls',
+      sourcesConsulted: 'Sources Consulted',
+      result: 'Result',
+      errorLog: 'Error Log',
+    },
+    stats: {
+      duration: 'Duration',
+      iterations: 'Iterations',
+      tokens: 'Tokens',
+      cost: 'Est. Cost',
     },
   },
 
