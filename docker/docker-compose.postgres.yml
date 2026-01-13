@@ -1,0 +1,47 @@
+# PostgreSQL with pgvector for RAG Knowledge System
+#
+# Usage:
+#   docker-compose -f docker/docker-compose.postgres.yml up -d    # Start PostgreSQL
+#   docker-compose -f docker/docker-compose.postgres.yml down     # Stop PostgreSQL
+#   docker-compose -f docker/docker-compose.postgres.yml logs -f  # View logs
+#
+# Connection:
+#   Host: localhost
+#   Port: 5432 (or $POSTGRES_PORT)
+#   Database: reconly
+#   User: reconly
+#   Password: reconly_dev (or $POSTGRES_PASSWORD)
+#
+# DATABASE_URL format:
+#   postgresql://reconly:reconly_dev@localhost:5432/reconly
+#
+# This uses the pgvector/pgvector Docker image which includes:
+#   - PostgreSQL 16
+#   - pgvector extension pre-installed
+#
+# The pgvector extension is enabled automatically via init script.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: reconly-postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reconly}
+      POSTGRES_USER: ${POSTGRES_USER:-reconly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reconly_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-reconly} -d ${POSTGRES_DB:-reconly}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: reconly_postgres_data

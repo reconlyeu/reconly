@@ -1,0 +1,12 @@
+---
+/**
+ * Digests page - Browse and search digests
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import DigestsPage from '@/components/digests/DigestsPage.vue';
+---
+
+<BaseLayout title={strings.digests.title}>
+  <DigestsPage client:load />
+</BaseLayout>

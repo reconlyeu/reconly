@@ -1,0 +1,70 @@
+# Reconly OSS - Docker Compose Configuration
+#
+# Usage:
+#   docker-compose up -d        # Start all services
+#   docker-compose logs -f api  # View API logs
+#   docker-compose down         # Stop all services
+#
+# Environment variables (set in .env file or export):
+#   API_PORT              - API port (default: 8000)
+#   POSTGRES_PASSWORD     - PostgreSQL password (default: reconly)
+#   ANTHROPIC_API_KEY     - Anthropic API key
+#   OPENAI_API_KEY        - OpenAI API key
+#   HUGGINGFACE_API_KEY   - HuggingFace API key
+#   OLLAMA_HOST           - Ollama server URL (default: http://host.docker.internal:11434)
+#   DEFAULT_PROVIDER      - Default LLM provider (anthropic/openai/huggingface/ollama)
+#   RECONLY_EDITION       - Edition (oss/enterprise, default: oss)
+#   RECONLY_AUTH_PASSWORD - Optional password protection
+#   SCHEDULER_TIMEZONE    - Timezone for cron schedules (default: local)
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: reconly-oss-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=reconly
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-reconly}
+      - POSTGRES_DB=reconly
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reconly -d reconly"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/oss/Dockerfile
+    container_name: reconly-oss-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Database (PostgreSQL required)
+      - DATABASE_URL=postgresql://reconly:${POSTGRES_PASSWORD:-reconly}@postgres:5432/reconly
+      # LLM Providers
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-ollama}
+      # Edition & Auth
+      - RECONLY_EDITION=${RECONLY_EDITION:-oss}
+      - RECONLY_AUTH_PASSWORD=${RECONLY_AUTH_PASSWORD:-}
+      # Scheduler
+      - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
+    volumes:
+      - reconly_data:/app/data
+      - ./config:/app/config
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data:
+  reconly_data:

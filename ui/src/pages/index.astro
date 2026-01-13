@@ -1,0 +1,78 @@
+---
+/**
+ * Dashboard page - main entry point
+ *
+ * Features:
+ * - Real-time stats with auto-refresh
+ * - Live feed run monitoring
+ * - Recent digests preview
+ * - Immich-inspired design with staggered animations
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import StatsGrid from '@components/dashboard/StatsGrid.vue';
+import FeedRunList from '@components/dashboard/FeedRunList.vue';
+import RecentDigests from '@components/dashboard/RecentDigests.vue';
+import ConnectionStatus from '@components/dashboard/ConnectionStatus.vue';
+import { strings } from '@/i18n/en';
+---
+
+<BaseLayout title={strings.dashboard.title}>
+  <!-- Page header with gradient -->
+  <div class="mb-8">
+    <div class="mb-2 flex items-baseline gap-3">
+      <h1 class="text-3xl font-bold tracking-tight text-text-primary">
+        {strings.dashboard.title}
+      </h1>
+      <ConnectionStatus client:load />
+    </div>
+  </div>
+
+  <div class="space-y-8">
+    <!-- Stats Overview -->
+    <section>
+      <StatsGrid client:load />
+    </section>
+
+    <!-- Two-column layout for runs and digests -->
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- Recent Feed Runs -->
+      <section>
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-text-primary">
+            {strings.dashboard.recentRuns}
+          </h2>
+          <a
+            href="/feed-runs"
+            class="text-sm font-medium text-accent-primary hover:text-accent-primary-hover transition-colors"
+          >
+            View all →
+          </a>
+        </div>
+        <FeedRunList client:load />
+      </section>
+
+      <!-- Recent Digests -->
+      <section>
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-text-primary">
+            {strings.dashboard.recentDigests}
+          </h2>
+          <a
+            href="/digests"
+            class="text-sm font-medium text-accent-primary hover:text-accent-primary-hover transition-colors"
+          >
+            View all →
+          </a>
+        </div>
+        <RecentDigests client:load />
+      </section>
+    </div>
+
+    <!-- Decorative gradient orbs -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden">
+      <div class="absolute -left-48 top-0 h-96 w-96 rounded-full bg-accent-primary/5 blur-3xl" />
+      <div class="absolute -right-48 bottom-0 h-96 w-96 rounded-full bg-accent-success/5 blur-3xl" />
+    </div>
+  </div>
+</BaseLayout>
+

@@ -1,0 +1,960 @@
+/**
+ * TypeScript types matching the Reconly entity model
+ *
+ * These types mirror the Python SQLAlchemy models in:
+ * packages/core/reconly_core/database/models.py
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOURCE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type SourceType = 'rss' | 'youtube' | 'website' | 'blog';
+export type FilterMode = 'title_only' | 'content' | 'both';
+
+export interface SourceConfig {
+  // RSS-specific
+  max_items?: number;
+  fetch_full_content?: boolean;
+  // YouTube-specific
+  fetch_transcript?: boolean;
+  // Website/Blog-specific
+  selectors?: {
+    title?: string;
+    content?: string;
+    date?: string;
+  };
+}
+
+export interface Source {
+  id: number;
+  user_id?: number | null;
+  name: string;
+  type: SourceType;
+  url: string;
+  config?: SourceConfig | null;
+  enabled: boolean;
+  default_language?: string | null;
+  default_provider?: string | null;
+  default_model?: string | null;
+  // Content filtering
+  include_keywords?: string[] | null;
+  exclude_keywords?: string[] | null;
+  filter_mode?: FilterMode | null;
+  use_regex?: boolean;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface SourceCreate {
+  name: string;
+  type: SourceType;
+  url: string;
+  config?: SourceConfig | null;
+  enabled?: boolean;
+  // Content filtering
+  include_keywords?: string[] | null;
+  exclude_keywords?: string[] | null;
+  filter_mode?: FilterMode;
+  use_regex?: boolean;
+}
+
+export interface SourceUpdate {
+  name?: string;
+  type?: SourceType;
+  url?: string;
+  config?: SourceConfig | null;
+  enabled?: boolean;
+  // Content filtering
+  include_keywords?: string[] | null;
+  exclude_keywords?: string[] | null;
+  filter_mode?: FilterMode | null;
+  use_regex?: boolean | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEED
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type DigestMode = 'individual' | 'per_source' | 'all_sources';
+
+export interface OutputConfig {
+  db?: boolean;
+  email?: {
+    enabled: boolean;
+    recipients: string[];
+  };
+  obsidian?: {
+    vault_path: string;
+    folder: string;
+  };
+}
+
+export interface Feed {
+  id: number;
+  user_id?: number | null;
+  name: string;
+  description?: string | null;
+  digest_mode: DigestMode;
+  schedule_cron?: string | null;
+  schedule_enabled: boolean;
+  last_run_at?: string | null;
+  next_run_at?: string | null;
+  prompt_template_id?: number | null;
+  report_template_id?: number | null;
+  model_provider?: string | null;
+  model_name?: string | null;
+  output_config?: OutputConfig | null;
+  created_at: string;
+  updated_at?: string | null;
+  feed_sources?: FeedSource[];
+}
+
+export interface FeedCreate {
+  name: string;
+  description?: string | null;
+  digest_mode?: DigestMode;
+  schedule_cron?: string | null;
+  schedule_enabled?: boolean;
+  prompt_template_id?: number | null;
+  report_template_id?: number | null;
+  model_provider?: string | null;
+  model_name?: string | null;
+  output_config?: OutputConfig | null;
+  source_ids?: number[];
+}
+
+export interface FeedUpdate {
+  name?: string;
+  description?: string | null;
+  digest_mode?: DigestMode;
+  schedule_cron?: string | null;
+  schedule_enabled?: boolean;
+  prompt_template_id?: number | null;
+  report_template_id?: number | null;
+  model_provider?: string | null;
+  model_name?: string | null;
+  output_config?: OutputConfig | null;
+  source_ids?: number[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEED SOURCE (Junction)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface FeedSource {
+  feed_id: number;
+  source_id: number;
+  source_name?: string | null;
+  source_type?: SourceType | null;
+  enabled: boolean;
+  priority: number;
+}
+
+export interface FeedSourceCreate {
+  source_id: number;
+  enabled?: boolean;
+  priority?: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEMPLATE ORIGIN (for marketplace provenance tracking)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type TemplateOrigin = 'builtin' | 'user' | 'imported';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROMPT TEMPLATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface PromptTemplate {
+  id: number;
+  user_id?: number | null;
+  name: string;
+  description?: string | null;
+  system_prompt: string;
+  user_prompt_template: string;
+  language: string;
+  target_length: number;
+  model_provider?: string | null;
+  model_name?: string | null;
+  origin: TemplateOrigin;
+  imported_from_bundle?: string | null;
+  is_system: boolean; // Backwards compatibility - true if origin === 'builtin'
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface PromptTemplateCreate {
+  name: string;
+  description?: string | null;
+  system_prompt: string;
+  user_prompt_template: string;
+  language?: string;
+  target_length?: number;
+  model_provider?: string | null;
+  model_name?: string | null;
+}
+
+export interface PromptTemplateUpdate {
+  name?: string;
+  description?: string | null;
+  system_prompt?: string;
+  user_prompt_template?: string;
+  language?: string;
+  target_length?: number;
+  model_provider?: string | null;
+  model_name?: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// REPORT TEMPLATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ReportFormat = 'markdown' | 'html' | 'text';
+
+export interface ReportTemplate {
+  id: number;
+  user_id?: number | null;
+  name: string;
+  description?: string | null;
+  format: ReportFormat;
+  template_content: string;
+  origin: TemplateOrigin;
+  imported_from_bundle?: string | null;
+  is_system: boolean; // Backwards compatibility - true if origin === 'builtin'
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ReportTemplateCreate {
+  name: string;
+  description?: string | null;
+  format?: ReportFormat;
+  template_content: string;
+}
+
+export interface ReportTemplateUpdate {
+  name?: string;
+  description?: string | null;
+  format?: ReportFormat;
+  template_content?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEED RUN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type FeedRunStatus = 'pending' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
+export type TriggerType = 'schedule' | 'manual' | 'api';
+export type ErrorType = 'FetchError' | 'ParseError' | 'SummarizeError' | 'SaveError' | 'TimeoutError';
+
+export interface SourceError {
+  source_id: number;
+  source_name?: string | null;
+  error_type: ErrorType;
+  message: string;
+  timestamp: string;
+}
+
+export interface ErrorDetails {
+  errors: SourceError[];
+  summary?: string | null;
+}
+
+export interface FeedRun {
+  id: number;
+  feed_id: number;
+  feed_name?: string | null;  // Included via join with Feed table
+  triggered_by: TriggerType;
+  triggered_by_user_id?: number | null;
+  status: FeedRunStatus;
+  started_at?: string | null;
+  completed_at?: string | null;
+  sources_total: number;
+  sources_processed: number;
+  sources_failed: number;
+  items_processed: number;
+  total_tokens_in: number;
+  total_tokens_out: number;
+  total_cost: number;
+  error_log?: string | null;
+  error_details?: ErrorDetails | null;  // Structured error information
+  trace_id?: string | null;  // UUID for log correlation
+  llm_provider?: string | null;  // LLM provider used (anthropic, openai, etc.)
+  llm_model?: string | null;  // LLM model used (claude-3-5-sonnet, gpt-4, etc.)
+  created_at: string;
+  // Computed
+  duration_seconds?: number | null;
+  digests_count?: number;  // For detail response
+  // Relationships (when expanded)
+  feed?: Feed;
+}
+
+export interface FeedRunSourceStatus {
+  source_id: number;
+  source_name: string;
+  source_type: SourceType;
+  source_url?: string | null;
+  status: 'success' | 'failed' | 'pending';
+  error_message?: string | null;
+}
+
+export interface FeedRunSourcesResponse {
+  run_id: number;
+  sources: FeedRunSourceStatus[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LLM USAGE LOG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface LLMUsageLog {
+  id: number;
+  user_id?: number | null;
+  feed_run_id?: number | null;
+  digest_id?: number | null;
+  provider: string;
+  model: string;
+  tokens_in: number;
+  tokens_out: number;
+  cost: number;
+  request_type?: string | null;
+  latency_ms?: number | null;
+  success: boolean;
+  error_message?: string | null;
+  timestamp: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DIGEST
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface DigestSourceItem {
+  id: number;
+  digest_id: number;
+  source_id?: number | null;
+  source_name?: string | null;
+  item_url: string;
+  item_title?: string | null;
+  item_published_at?: string | null;
+  created_at: string;
+}
+
+export interface Digest {
+  id: number;
+  url: string;
+  title?: string | null;
+  content?: string | null;
+  summary?: string | null;
+  source_type?: SourceType | null;
+  feed_url?: string | null;
+  feed_title?: string | null;
+  image_url?: string | null;
+  author?: string | null;
+  published_at?: string | null;
+  created_at: string;
+  provider?: string | null;
+  language?: string | null;
+  estimated_cost: number;
+  consolidated_count: number;
+  user_id?: number | null;
+  feed_run_id?: number | null;
+  source_id?: number | null;
+  tags: string[];
+  // Token usage from LLM API
+  tokens_in: number;
+  tokens_out: number;
+  // Relationships (when expanded)
+  source?: Source;
+  feed_run?: FeedRun;
+  source_items?: DigestSourceItem[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TAG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface Tag {
+  id: number;
+  name: string;
+  digest_count?: number;  // Number of digests using this tag
+}
+
+export interface TagListResponse {
+  tags: Tag[];
+  total: number;
+}
+
+export interface TagSuggestion {
+  name: string;
+  digest_count: number;
+}
+
+export interface TagSuggestionsResponse {
+  suggestions: TagSuggestion[];
+}
+
+export interface DigestTagsUpdate {
+  tags: string[];
+}
+
+export interface TagDeleteResponse {
+  deleted: boolean;
+  tag_name: string;
+  digests_affected: number;
+}
+
+export interface TagBulkDeleteResponse {
+  deleted_count: number;
+  tag_names: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROVIDER STATUS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ProviderStatus = 'available' | 'configured' | 'not_configured';
+
+/**
+ * Information about an available model from a provider.
+ */
+export interface ModelInfo {
+  id: string;
+  name: string;
+  provider: string;
+  is_default: boolean;
+  deprecated: boolean;
+}
+
+export interface Provider {
+  name: string;
+  status: ProviderStatus;
+  masked_api_key?: string | null;
+  /** Models can be either ModelInfo objects (new format) or strings (legacy format) */
+  models: ModelInfo[] | string[];
+  is_default: boolean;
+}
+
+export interface ProviderConfig {
+  providers: Provider[];
+  default_provider?: string | null;
+  default_model?: string | null;
+  fallback_order: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface AnalyticsSummary {
+  total_tokens_in: number;
+  total_tokens_out: number;
+  success_rate: number;
+  total_runs: number;
+  total_digests: number;
+}
+
+export interface TokensByModel {
+  model: string;
+  tokens_in: number;
+  tokens_out: number;
+  total_tokens: number;
+  percentage: number;
+}
+
+export interface TokensByProvider {
+  provider: string;
+  tokens_in: number;
+  tokens_out: number;
+  total_tokens: number;
+  percentage: number;
+  models: TokensByModel[];
+}
+
+export interface TokensByFeed {
+  feed_id: number;
+  feed_name: string;
+  run_count: number;
+  digest_count: number;
+  tokens_in: number;
+  tokens_out: number;
+}
+
+export interface UsageOverTime {
+  date: string;
+  tokens_in: number;
+  tokens_out: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface EmailSettings {
+  smtp_host: string;
+  smtp_port: number;
+  username: string;
+  password: string;
+  from_address: string;
+}
+
+export interface ExportSettings {
+  obsidian: {
+    vault_path: string;
+    folder: string;
+  };
+}
+
+export interface Settings {
+  email?: EmailSettings;
+  exports?: ExportSettings;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Settings V2 (with source indicators)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type SettingSource = 'database' | 'environment' | 'default';
+
+export interface SettingValue {
+  value: unknown;
+  source: SettingSource;
+  editable: boolean;
+}
+
+export interface SettingsV2 {
+  provider: Record<string, SettingValue>;
+  email: Record<string, SettingValue>;
+  export: Record<string, SettingValue>;
+  fetch: Record<string, SettingValue>;
+}
+
+export interface SettingUpdate {
+  key: string;
+  value: unknown;
+}
+
+export interface SettingsUpdateRequest {
+  settings: SettingUpdate[];
+}
+
+export interface SettingsResetRequest {
+  keys: string[];
+}
+
+export interface SettingsResetResponse {
+  reset: string[];
+  not_found: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPORTERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ConfigFieldType = 'string' | 'boolean' | 'integer' | 'path';
+
+export interface ConfigField {
+  key: string;
+  type: ConfigFieldType;
+  label: string;
+  description: string;
+  default: unknown;
+  required: boolean;
+  placeholder: string;
+}
+
+export interface ExporterConfigSchema {
+  fields: ConfigField[];
+  supports_direct_export: boolean;
+}
+
+export interface Exporter {
+  name: string;
+  description: string;
+  content_type: string;
+  file_extension: string;
+  supports_direct_export: boolean;
+  config_schema: ExporterConfigSchema;
+  // Activation state fields
+  enabled: boolean;
+  is_configured: boolean;
+  can_enable: boolean;
+  // Extension flag
+  is_extension: boolean;
+}
+
+export interface ExporterListResponse {
+  exporters: Exporter[];
+}
+
+export interface ExportToPathRequest {
+  format: string;
+  path?: string | null;
+  digest_ids?: number[] | null;
+  feed_id?: number | null;
+  source_id?: number | null;
+  tag?: string | null;
+  search?: string | null;
+}
+
+export interface ExportToPathResponse {
+  success: boolean;
+  files_written: number;
+  files_skipped: number;
+  target_path: string;
+  filenames: string[];
+  errors: Array<{ file: string; error: string }>;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FETCHERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface FetcherConfigSchema {
+  fields: ConfigField[];
+}
+
+export interface Fetcher {
+  name: string;
+  description: string;
+  config_schema: FetcherConfigSchema;
+  enabled: boolean;
+  is_configured: boolean;
+  can_enable: boolean;
+  is_extension: boolean;
+}
+
+export interface FetcherListResponse {
+  fetchers: Fetcher[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXTENSIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ExtensionType = 'exporter' | 'fetcher' | 'provider';
+
+export interface ExtensionMetadata {
+  name: string;
+  version: string;
+  author: string;
+  min_reconly: string;
+  description: string;
+  homepage: string | null;
+  type: ExtensionType;
+  registry_name: string;
+}
+
+export interface Extension {
+  name: string;
+  type: ExtensionType;
+  metadata: ExtensionMetadata;
+  is_extension: boolean;
+  enabled: boolean;
+  is_configured: boolean;
+  can_enable: boolean;
+  load_error: string | null;
+  config_api: string | null;
+}
+
+export interface ExtensionListResponse {
+  total: number;
+  items: Extension[];
+}
+
+export interface ExtensionToggleRequest {
+  enabled: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Extension Catalog (Phase 2)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface CatalogEntry {
+  package: string;
+  name: string;
+  type: ExtensionType;
+  description: string;
+  author: string;
+  version: string;
+  verified: boolean;
+  homepage: string | null;
+  pypi_url: string | null;
+  installed: boolean;
+  installed_version: string | null;
+}
+
+export interface CatalogResponse {
+  version: string;
+  extensions: CatalogEntry[];
+  last_updated: string | null;
+}
+
+export interface ExtensionInstallRequest {
+  package: string;
+  upgrade?: boolean;
+}
+
+export interface ExtensionInstallResponse {
+  success: boolean;
+  package: string;
+  version: string | null;
+  error: string | null;
+  requires_restart: boolean;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// API RESPONSES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  per_page: number;
+  total_pages: number;
+}
+
+export interface ApiError {
+  detail: string;
+  status_code?: number;
+}
+
+export interface BatchDeleteResponse {
+  deleted_count: number;
+  failed_ids: number[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface DashboardStats {
+  sources_count: number;
+  feeds_count: number;
+  digests_count: number;
+  tokens_today: number;
+  tokens_week: number;
+  success_rate: number;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// FEED BUNDLES (Marketplace Export/Import)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type BundleCategory = 'news' | 'finance' | 'tech' | 'science' | 'entertainment' | 'sports' | 'business' | 'other';
+
+export interface BundleAuthor {
+  name: string;
+  github?: string | null;
+  email?: string | null;
+}
+
+export interface BundleSource {
+  name: string;
+  type: SourceType;
+  url: string;
+  config?: Record<string, unknown> | null;
+  default_language?: string | null;
+  include_keywords?: string[] | null;
+  exclude_keywords?: string[] | null;
+  filter_mode?: FilterMode | null;
+  use_regex?: boolean;
+}
+
+export interface BundlePromptTemplate {
+  name: string;
+  description?: string | null;
+  system_prompt: string;
+  user_prompt_template: string;
+  language: string;
+  target_length: number;
+}
+
+export interface BundleReportTemplate {
+  name: string;
+  description?: string | null;
+  format: ReportFormat;
+  template_content: string;
+}
+
+export interface BundleSchedule {
+  cron: string;
+  description?: string | null;
+}
+
+export interface BundleCompatibility {
+  min_reconly_version?: string | null;
+  required_features?: string[] | null;
+}
+
+export interface BundleMetadata {
+  license?: string | null;
+  homepage?: string | null;
+  repository?: string | null;
+}
+
+export interface FeedBundle {
+  schema_version: string;
+  bundle: {
+    id: string; // slug
+    name: string;
+    description?: string | null;
+    version: string;
+    author: BundleAuthor;
+    category?: BundleCategory | null;
+    tags?: string[] | null;
+    sources: BundleSource[];
+    prompt_template?: BundlePromptTemplate | null;
+    report_template?: BundleReportTemplate | null;
+    schedule?: BundleSchedule | null;
+    output_config?: OutputConfig | null;
+    digest_mode?: DigestMode;
+  };
+  compatibility?: BundleCompatibility;
+  metadata?: BundleMetadata;
+}
+
+// Bundle export request
+export interface BundleExportRequest {
+  version?: string;
+  category?: BundleCategory | null;
+  tags?: string[] | null;
+  min_reconly_version?: string | null;
+  required_features?: string[] | null;
+  license?: string | null;
+  homepage?: string | null;
+  repository?: string | null;
+}
+
+// Bundle export response
+export interface BundleExportResponse {
+  success: boolean;
+  bundle: FeedBundle;
+  filename: string;
+}
+
+// Bundle validation response
+export interface BundleValidateResponse {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// Bundle preview types
+export interface SourcePreview {
+  name: string;
+  url: string;
+  type?: SourceType | null;
+  existing_id?: number | null;
+}
+
+export interface FeedPreview {
+  name: string;
+  id: string;
+  version: string;
+  description?: string | null;
+  already_exists: boolean;
+}
+
+export interface TemplatePreview {
+  included: boolean;
+  name?: string | null;
+}
+
+export interface SchedulePreview {
+  included: boolean;
+  cron?: string | null;
+}
+
+export interface SourcesPreview {
+  total: number;
+  new: SourcePreview[];
+  existing: SourcePreview[];
+}
+
+export interface BundlePreviewResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  feed?: FeedPreview | null;
+  sources?: SourcesPreview | null;
+  prompt_template?: TemplatePreview | null;
+  report_template?: TemplatePreview | null;
+  schedule?: SchedulePreview | null;
+}
+
+// Bundle import response
+export interface BundleImportResponse {
+  success: boolean;
+  feed_id?: number | null;
+  feed_name?: string | null;
+  sources_created: number;
+  prompt_template_id?: number | null;
+  report_template_id?: number | null;
+  errors: string[];
+  warnings: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// KNOWLEDGE GRAPH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type GraphNodeType = 'digest' | 'tag' | 'source' | 'feed';
+export type GraphEdgeType = 'semantic' | 'tag' | 'source' | 'temporal';
+export type GraphLayoutType = 'force' | 'hierarchical' | 'radial';
+export type GraphViewMode = '2d' | '3d';
+
+export interface GraphNodeData {
+  // Common fields
+  label: string;
+  // Digest-specific
+  title?: string | null;
+  summary?: string | null;
+  published_at?: string | null;
+  url?: string | null;
+  feed_title?: string | null;
+  source_name?: string | null;
+  tags?: string[];
+  // Tag-specific
+  count?: number;
+  // Source-specific
+  source_type?: SourceType | null;
+  // Feed-specific
+  digest_count?: number;
+}
+
+export interface GraphNode {
+  id: string;
+  type: GraphNodeType;
+  label: string;
+  data: GraphNodeData;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  type: GraphEdgeType;
+  score: number;
+}
+
+export interface GraphResponse {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  total_nodes: number;
+  total_edges: number;
+}
+
+export interface GraphFilters {
+  center_digest_id?: number;
+  depth?: number;
+  min_similarity?: number;
+  include_tags?: boolean;
+  relationship_types?: GraphEdgeType[];
+  limit?: number;
+  feed_id?: number;
+  from_date?: string;
+  to_date?: string;
+  tags?: string[];
+}

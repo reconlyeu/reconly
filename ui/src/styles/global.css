@@ -1,0 +1,299 @@
+@import "tailwindcss";
+
+/* Immich-inspired Design System */
+@theme {
+  /* Base colors - OLED-friendly dark */
+  --color-bg-base: #000000;
+  --color-bg-surface: #0a0a0a;
+  --color-bg-elevated: #141414;
+  --color-bg-hover: #1f1f1f;
+
+  /* Text colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-text-muted: #71717a;
+
+  /* Accent colors - immich-inspired */
+  --color-accent-primary: #4250af;
+  --color-accent-primary-hover: #5363c9;
+  --color-accent-success: #18c249;
+  --color-accent-warning: #ffb400;
+  --color-accent-error: #fa2921;
+
+  /* Status colors */
+  --color-status-running: #1e83f7;
+  --color-status-success: #18c249;
+  --color-status-failed: #fa2921;
+  --color-status-error: #fa2921;
+  --color-status-pending: #71717a;
+  --color-status-warning: #ffb400;
+
+  /* Border colors */
+  --color-border-subtle: #27272a;
+  --color-border-default: #3f3f46;
+
+  /* Sidebar width */
+  --spacing-sidebar: 16rem;
+
+  /* Typography */
+  --font-family-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Base styles */
+html {
+  @apply bg-bg-base text-text-primary font-sans antialiased;
+}
+
+body {
+  @apply min-h-screen;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-bg-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border-default rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-text-muted;
+}
+
+/* Focus states */
+*:focus-visible {
+  @apply outline-none ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-base;
+}
+
+/* Selection */
+::selection {
+  @apply bg-accent-primary/30 text-text-primary;
+}
+
+/* Light mode overrides - applied via .light class on :root */
+:root.light,
+.light {
+  --color-bg-base: #ffffff;
+  --color-bg-surface: #f4f4f5;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #e4e4e7;
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-muted: #71717a;
+  --color-border-subtle: #e4e4e7;
+  --color-border-default: #d4d4d8;
+}
+
+/* Dark mode (default) */
+:root.dark,
+.dark,
+:root:not(.light) {
+  color-scheme: dark;
+}
+
+/* Theme-aware logo switching */
+/* Default: show dark logo (dark mode is default) */
+.logo-light { display: none; }
+.logo-dark { display: block; }
+
+/* Light mode: show light logo */
+:root.light .logo-light,
+.light .logo-light { display: block; }
+:root.light .logo-dark,
+.light .logo-dark { display: none; }
+
+/* ============================================================================
+   ANIMATIONS & EFFECTS
+   ============================================================================ */
+
+/* Smooth page transitions */
+@view-transition {
+  navigation: auto;
+}
+
+/* Backdrop blur utilities for glass morphism */
+.glass {
+  @apply backdrop-blur-xl bg-bg-elevated/80 border border-border-subtle;
+}
+
+/* Glow effects for interactive elements */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(66, 80, 175, 0.3);
+}
+
+.glow-success {
+  box-shadow: 0 0 20px rgba(24, 194, 73, 0.3);
+}
+
+.glow-warning {
+  box-shadow: 0 0 20px rgba(255, 180, 0, 0.3);
+}
+
+/* Shimmer effect for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Pulse glow animation for live indicators */
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 10px currentColor;
+  }
+  50% {
+    opacity: 0.6;
+    box-shadow: 0 0 20px currentColor;
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Gradient text effect */
+.gradient-text {
+  @apply bg-gradient-to-r from-accent-primary to-accent-primary-hover bg-clip-text text-transparent;
+}
+
+/* Smooth entrance animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Utility classes for common animations */
+.animate-slide-in-up {
+  animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-slide-in-right-slow {
+  animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.animate-slide-in-right-fast {
+  animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================================
+   COMPONENT PATTERNS
+   ============================================================================ */
+
+/* Card pattern with depth */
+.card {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-subtle);
+  background: linear-gradient(to bottom right, rgba(20, 20, 20, 0.8), rgba(20, 20, 20, 0.5));
+  transition: all 0.3s;
+}
+
+.card:hover {
+  border-color: var(--color-border-default);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Interactive card with hover lift */
+.card-interactive {
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-subtle);
+  background: linear-gradient(to bottom right, rgba(20, 20, 20, 0.8), rgba(20, 20, 20, 0.5));
+  transition: all 0.3s;
+}
+
+.card-interactive:hover {
+  border-color: var(--color-border-default);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
+}
+
+.card-interactive:active {
+  transform: scale(0.98);
+}
+
+/* Status badge pattern */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-primary {
+  background-color: rgba(66, 80, 175, 0.1);
+  color: var(--color-accent-primary);
+}
+
+.badge-success {
+  background-color: rgba(24, 194, 73, 0.1);
+  color: var(--color-accent-success);
+}
+
+.badge-warning {
+  background-color: rgba(255, 180, 0, 0.1);
+  color: var(--color-accent-warning);
+}
+
+.badge-error {
+  background-color: rgba(250, 41, 33, 0.1);
+  color: var(--color-accent-error);
+}

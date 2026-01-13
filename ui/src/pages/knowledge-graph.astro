@@ -1,0 +1,12 @@
+---
+/**
+ * Knowledge Graph page - Visualize relationships between digests, tags, and sources
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import KnowledgeGraphPage from '@/components/graph/KnowledgeGraphPage.vue';
+---
+
+<BaseLayout title={strings.knowledgeGraph.title}>
+  <KnowledgeGraphPage client:load />
+</BaseLayout>

@@ -1,0 +1,12 @@
+---
+/**
+ * Templates page - Prompt and Report template management
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import TemplatesPage from '@/components/templates/TemplatesPage.vue';
+---
+
+<BaseLayout title={strings.templates.title}>
+  <TemplatesPage client:load />
+</BaseLayout>

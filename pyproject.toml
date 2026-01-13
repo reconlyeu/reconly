@@ -1,0 +1,50 @@
+[project]
+name = "reconly"
+version = "1.0.0"
+description = "AI-powered RSS aggregator and content summarization platform"
+requires-python = ">=3.10"
+authors = [
+    { name = "Reconly Team", email = "hello@reconly.eu" }
+]
+readme = "README.md"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-mock>=3.12.0",
+    "responses>=0.24.0",
+    "freezegun>=1.4.0",
+]
+
+[tool.ruff]
+line-length = 150
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E402",  # Module level import not at top of file (needed for load_dotenv)
+    "E501",  # Line too long (templates and prompts may have long lines)
+    "E711",  # Comparison to None (valid for SQLAlchemy IS NOT NULL filters)
+    "E712",  # Comparison to True/False (valid for SQLAlchemy filters)
+    "E721",  # Type comparison using == (valid for runtime type checks)
+    "E722",  # Bare except (intentional for fallback error handling)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"packages/api/reconly_api/main.py" = ["E402"]
+"packages/api/reconly_api/models/__init__.py" = ["E402"]
+"packages/api/reconly_api/routes/feeds.py" = ["E402"]
+"packages/core/reconly_core/summarizers/registry.py" = ["F821"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

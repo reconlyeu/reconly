@@ -1,0 +1,12 @@
+---
+/**
+ * Feed Runs page - View execution history and debug failed runs
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import FeedRunsPage from '@/components/feed-runs/FeedRunsPage.vue';
+---
+
+<BaseLayout title={strings.feedRuns.title}>
+  <FeedRunsPage client:load />
+</BaseLayout>

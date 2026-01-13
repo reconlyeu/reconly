@@ -1,0 +1,53 @@
+---
+/**
+ * Login page for password-protected OSS deployments
+ *
+ * This page is shown when SKIMBERRY_AUTH_PASSWORD is configured.
+ * Users must enter the correct password to access the application.
+ */
+import LoginForm from '@components/auth/LoginForm.vue';
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Skimberry - Login" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <title>Login - Skimberry</title>
+  </head>
+  <body class="bg-bg-base text-text-primary min-h-screen">
+    <LoginForm client:load />
+
+    <!-- Theme initialization script -->
+    <script is:inline>
+      const getTheme = () => {
+        if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+          return localStorage.getItem('theme');
+        }
+        if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+          return 'light';
+        }
+        return 'dark';
+      };
+
+      const theme = getTheme();
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+    </script>
+
+    <!-- Decorative gradient orbs -->
+    <div class="pointer-events-none fixed inset-0 overflow-hidden">
+      <div class="absolute -left-48 top-0 h-96 w-96 rounded-full bg-accent-primary/5 blur-3xl" />
+      <div class="absolute -right-48 bottom-0 h-96 w-96 rounded-full bg-accent-success/5 blur-3xl" />
+    </div>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+---
+/**
+ * Sources page - CRUD for content sources
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import SourcesPage from '@/components/sources/SourcesPage.vue';
+---
+
+<BaseLayout title={strings.sources.title}>
+  <SourcesPage client:load />
+</BaseLayout>

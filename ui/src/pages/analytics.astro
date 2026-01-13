@@ -1,0 +1,12 @@
+---
+/**
+ * Analytics page - LLM token usage analytics
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import AnalyticsPage from '@/components/analytics/AnalyticsPage.vue';
+---
+
+<BaseLayout title={strings.analytics.title}>
+  <AnalyticsPage client:load />
+</BaseLayout>

@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "last_updated": "2026-01-10T00:00:00Z",
+  "extensions": [
+    {
+      "package": "reconly-ext-txt",
+      "name": "Plain Text Exporter",
+      "type": "exporter",
+      "description": "Export digests as readable plain text files. Ideal for terminals, simple text editors, or archival.",
+      "author": "Reconly Team",
+      "version": "0.1.0",
+      "verified": true,
+      "homepage": "https://github.com/reconlyeu/reconly-ext-txt"
+    },
+    {
+      "package": "reconly-ext-notion",
+      "name": "Notion Exporter",
+      "type": "exporter",
+      "description": "Export digests directly to Notion databases. Supports custom properties and page templates.",
+      "author": "Reconly Team",
+      "version": "0.2.0",
+      "verified": true,
+      "homepage": "https://github.com/reconlyeu/reconly-ext-notion"
+    },
+    {
+      "package": "reconly-ext-slack",
+      "name": "Slack Exporter",
+      "type": "exporter",
+      "description": "Post digest summaries to Slack channels with rich formatting and thread support.",
+      "author": "Reconly Team",
+      "version": "0.1.0",
+      "verified": true,
+      "homepage": "https://github.com/reconlyeu/reconly-ext-slack"
+    },
+    {
+      "package": "reconly-ext-reddit",
+      "name": "Reddit Fetcher",
+      "type": "fetcher",
+      "description": "Fetch posts from Reddit subreddits. Supports top posts, new posts, and comment fetching.",
+      "author": "Community",
+      "version": "0.3.0",
+      "verified": false,
+      "homepage": "https://github.com/example/reconly-ext-reddit"
+    },
+    {
+      "package": "reconly-ext-hackernews",
+      "name": "Hacker News Fetcher",
+      "type": "fetcher",
+      "description": "Fetch top stories, new stories, and comments from Hacker News.",
+      "author": "Community",
+      "version": "0.2.1",
+      "verified": false,
+      "homepage": "https://github.com/example/reconly-ext-hackernews"
+    },
+    {
+      "package": "reconly-ext-groq",
+      "name": "Groq Provider",
+      "type": "provider",
+      "description": "Use Groq's ultra-fast LPU inference for summarization. Supports Llama, Mixtral, and Gemma models.",
+      "author": "Reconly Team",
+      "version": "0.1.0",
+      "verified": true,
+      "homepage": "https://github.com/reconlyeu/reconly-ext-groq"
+    },
+    {
+      "package": "reconly-ext-together",
+      "name": "Together AI Provider",
+      "type": "provider",
+      "description": "Access 100+ open-source models via Together AI. Supports Llama, Mistral, Qwen, and more.",
+      "author": "Community",
+      "version": "0.2.0",
+      "verified": false,
+      "homepage": "https://github.com/example/reconly-ext-together"
+    }
+  ]
+}

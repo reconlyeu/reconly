@@ -1,0 +1,12 @@
+---
+/**
+ * Settings page - Provider status, email, and export configuration
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import SettingsPage from '@/components/settings/SettingsPage.vue';
+---
+
+<BaseLayout title={strings.settings.title}>
+  <SettingsPage client:load />
+</BaseLayout>

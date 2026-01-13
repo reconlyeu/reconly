@@ -1,0 +1,130 @@
+# Reconly Sources Configuration
+# Configure your RSS feeds, YouTube channels, and websites here
+
+sources:
+  # ============================================================================
+  # RSS FEEDS
+  # ============================================================================
+
+  - name: "Hacker News - Top Stories"
+    type: rss
+    url: https://news.ycombinator.com/rss
+    tags:
+      - tech
+      - news
+    enabled: true
+    language: en
+
+  - name: "Hacker News - Best Stories"
+    type: rss
+    url: https://hnrss.org/best
+    tags:
+      - tech
+      - curated
+    enabled: false
+
+  - name: "TechCrunch"
+    type: rss
+    url: https://techcrunch.com/feed/
+    tags:
+      - tech
+      - startups
+    enabled: false
+
+  - name: "Ars Technica"
+    type: rss
+    url: https://feeds.arstechnica.com/arstechnica/index
+    tags:
+      - tech
+      - science
+    enabled: false
+
+  - name: "GitHub Trending (Daily)"
+    type: rss
+    url: https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml
+    tags:
+      - github
+      - code
+    enabled: false
+
+  # ============================================================================
+  # YOUTUBE CHANNELS/VIDEOS
+  # ============================================================================
+  # Note: For individual videos, just paste the video URL
+  # For channels, you can use their RSS feed or individual video URLs
+
+  - name: "Fireship - Latest Video"
+    type: youtube
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA
+    tags:
+      - coding
+      - tutorials
+    enabled: false
+    language: en
+
+  # Individual YouTube video example
+  - name: "Rick Astley - Never Gonna Give You Up"
+    type: youtube
+    url: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+    tags:
+      - music
+      - classic
+    enabled: false
+
+  # ============================================================================
+  # WEBSITES (Individual Articles)
+  # ============================================================================
+
+  - name: "Example Article"
+    type: website
+    url: https://example.com/article
+    tags:
+      - example
+    enabled: false
+
+# ============================================================================
+# GLOBAL SETTINGS
+# ============================================================================
+
+settings:
+  # Default language for summaries (de or en)
+  language: en
+
+  # Default AI provider (anthropic or huggingface)
+  provider: anthropic
+
+  # Model to use (for anthropic, leave empty for default)
+  # model: claude-sonnet-4
+
+  # Auto-save all processed content to database
+  auto_save: true
+
+  # Database settings (PostgreSQL required)
+  database:
+    url: postgresql://reconly:reconly@localhost:5432/reconly
+
+  # Batch processing settings
+  batch:
+    max_concurrent: 3      # Process max 3 sources at once
+    delay_between: 2       # Delay in seconds between requests (be nice to servers!)
+
+  # Email settings (not yet implemented in OSS)
+  email:
+    enabled: false
+    recipients:
+      - your@email.com
+    schedule: "0 8 * * *"  # Cron format: Every day at 8 AM
+
+# ============================================================================
+# USAGE:
+# ============================================================================
+#
+# To process all enabled sources:
+#   python run_reconly.py --batch
+#
+# To process specific tags only:
+#   python run_reconly.py --batch --tags tech,news
+#
+# To process a single URL (not in config):
+#   python run_reconly.py "https://example.com/feed.xml" --save
+#

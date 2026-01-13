@@ -1,0 +1,164 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import { Rss, Youtube, Globe, BookOpen, Edit, Trash2 } from 'lucide-vue-next';
+import type { Source } from '@/types/entities';
+import { useConfirm } from '@/composables/useConfirm';
+import BaseCard from '@/components/common/BaseCard.vue';
+import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+
+interface Props {
+  source: Source;
+}
+
+interface Emits {
+  (e: 'toggle', sourceId: number, enabled: boolean): void;
+  (e: 'edit', source: Source): void;
+  (e: 'delete', sourceId: number): void;
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits<Emits>();
+
+// Detect if YouTube URL is a channel
+const isYouTubeChannel = (url: string): boolean => {
+  const channelPatterns = [
+    /youtube\.com\/channel\/UC[a-zA-Z0-9_-]+/i,
+    /youtube\.com\/@[a-zA-Z0-9_.-]+/i,
+    /youtube\.com\/c\/[a-zA-Z0-9_.-]+/i,
+    /youtube\.com\/user\/[a-zA-Z0-9_.-]+/i,
+  ];
+  return channelPatterns.some(pattern => pattern.test(url));
+};
+
+const typeConfig = computed(() => {
+  // Special handling for YouTube to distinguish video vs channel
+  if (props.source.type === 'youtube') {
+    const isChannel = isYouTubeChannel(props.source.url);
+    return {
+      icon: Youtube,
+      label: isChannel ? 'YouTube Channel' : 'YouTube Video',
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
+      glow: 'error' as const,
+    };
+  }
+
+  const configs = {
+    rss: {
+      icon: Rss,
+      label: 'RSS Feed',
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-400/10',
+      glow: 'orange' as const,
+    },
+    website: {
+      icon: Globe,
+      label: 'Website',
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-400/10',
+      glow: 'blue' as const,
+    },
+    blog: {
+      icon: BookOpen,
+      label: 'Blog',
+      color: 'text-green-400',
+      bgColor: 'bg-green-400/10',
+      glow: 'success' as const,
+    },
+  };
+  return configs[props.source.type as keyof typeof configs] || configs.rss;
+});
+
+const handleToggle = (value: boolean) => {
+  emit('toggle', props.source.id, value);
+};
+
+const handleEdit = () => {
+  emit('edit', props.source);
+};
+
+const handleDelete = () => {
+  const { confirmDelete } = useConfirm();
+  if (confirmDelete(props.source.name, 'source')) {
+    emit('delete', props.source.id);
+  }
+};
+</script>
+
+<template>
+  <BaseCard :glow-color="typeConfig.glow">
+    <template #header>
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <!-- Type Icon -->
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
+            :class="typeConfig.bgColor"
+          >
+            <component :is="typeConfig.icon" :class="typeConfig.color" :size="22" :stroke-width="2" />
+          </div>
+
+          <!-- Type Label -->
+          <div>
+            <div class="text-xs font-medium uppercase tracking-wider text-text-muted">
+              {{ typeConfig.label }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div
+          class="rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
+          :class="
+            source.enabled
+              ? 'bg-status-success/10 text-status-success'
+              : 'bg-text-muted/10 text-text-muted'
+          "
+        >
+          {{ source.enabled ? 'Active' : 'Disabled' }}
+        </div>
+      </div>
+    </template>
+
+    <!-- Source Name -->
+    <h3 class="mb-2 text-lg font-semibold text-text-primary transition-colors duration-300 group-hover:text-accent-primary">
+      {{ source.name }}
+    </h3>
+
+    <!-- Source URL -->
+    <div class="flex items-center gap-2">
+      <p class="truncate text-sm text-text-muted">
+        {{ source.url }}
+      </p>
+    </div>
+
+    <template #footer>
+      <div class="flex items-center justify-between">
+        <!-- Toggle Switch -->
+        <ToggleSwitch
+          :model-value="source.enabled"
+          @update:model-value="handleToggle"
+          label="Toggle source"
+        />
+
+        <!-- Edit & Delete Buttons -->
+        <div class="flex gap-2">
+          <button
+            @click="handleEdit"
+            class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-bg-hover hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
+            title="Edit source"
+          >
+            <Edit :size="18" :stroke-width="2" />
+          </button>
+          <button
+            @click="handleDelete"
+            class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-base"
+            title="Delete source"
+          >
+            <Trash2 :size="18" :stroke-width="2" />
+          </button>
+        </div>
+      </div>
+    </template>
+  </BaseCard>
+</template>

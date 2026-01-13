@@ -1,0 +1,13 @@
+---
+/**
+ * Feed Run Details page - View detailed information about a specific feed run
+ * Uses query parameter: /feed-runs/detail?id=123
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import FeedRunDetailsPage from '@/components/feed-runs/FeedRunDetailsPage.vue';
+---
+
+<BaseLayout title={strings.feedRuns.details.title}>
+  <FeedRunDetailsPage client:load />
+</BaseLayout>

@@ -1,0 +1,12 @@
+---
+/**
+ * Feeds page - Feed orchestration and management
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import FeedsPage from '@/components/feeds/FeedsPage.vue';
+---
+
+<BaseLayout title={strings.feeds.title}>
+  <FeedsPage client:load />
+</BaseLayout>
