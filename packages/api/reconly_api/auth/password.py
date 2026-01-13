@@ -1,7 +1,7 @@
 """Simple password authentication for OSS deployments.
 
 This module provides optional password protection for Reconly OSS.
-When SKIMBERRY_AUTH_PASSWORD is set, all API routes (except health, config, and auth)
+When RECONLY_AUTH_PASSWORD is set, all API routes (except health, config, and auth)
 require authentication via either:
 1. Session cookie (from /api/auth/login)
 2. HTTP Basic Auth (for CLI/scripts)
@@ -176,7 +176,7 @@ def check_basic_auth(request: Request) -> bool:
 
     For OSS password auth, we accept:
     - Username: empty or any value (ignored)
-    - Password: must match SKIMBERRY_AUTH_PASSWORD
+    - Password: must match RECONLY_AUTH_PASSWORD
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Basic "):

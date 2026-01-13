@@ -20,17 +20,17 @@ def get_edition() -> str:
     """
     Get the current Reconly edition.
 
-    Reads from SKIMBERRY_EDITION environment variable.
+    Reads from RECONLY_EDITION environment variable.
     Defaults to 'oss' if not set or invalid.
 
     Returns:
         'oss' or 'enterprise'
     """
-    edition = os.getenv("SKIMBERRY_EDITION", "oss").lower()
+    edition = os.getenv("RECONLY_EDITION", "oss").lower()
 
     if edition not in ("oss", "enterprise"):
         warnings.warn(
-            f"Invalid SKIMBERRY_EDITION '{edition}', defaulting to 'oss'"
+            f"Invalid RECONLY_EDITION '{edition}', defaulting to 'oss'"
         )
         return "oss"
 

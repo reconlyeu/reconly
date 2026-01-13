@@ -132,7 +132,7 @@ class CatalogFetcher:
 
         Searches in order:
         1. Explicitly configured local_path
-        2. Environment variable SKIMBERRY_CATALOG_PATH
+        2. Environment variable RECONLY_CATALOG_PATH
         3. extensions-catalog.json in current directory and parent directories
 
         Returns:
@@ -145,7 +145,7 @@ class CatalogFetcher:
                 return path
 
         # Check environment variable
-        env_path = os.environ.get("SKIMBERRY_CATALOG_PATH")
+        env_path = os.environ.get("RECONLY_CATALOG_PATH")
         if env_path:
             path = Path(env_path)
             if path.exists():

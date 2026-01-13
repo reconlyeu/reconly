@@ -503,13 +503,13 @@ class TestFindLocalCatalog:
         # Should continue searching, may find in cwd or return None
         # depending on test environment
 
-    @patch.dict('os.environ', {'SKIMBERRY_CATALOG_PATH': ''})
+    @patch.dict('os.environ', {'RECONLY_CATALOG_PATH': ''})
     def test_env_var_path(self, tmp_path):
         """Test finds path from environment variable."""
         catalog_path = tmp_path / "catalog.json"
         catalog_path.write_text('{"version": "1.0"}')
 
-        with patch.dict('os.environ', {'SKIMBERRY_CATALOG_PATH': str(catalog_path)}):
+        with patch.dict('os.environ', {'RECONLY_CATALOG_PATH': str(catalog_path)}):
             fetcher = CatalogFetcher()
             found = fetcher._find_local_catalog()
 

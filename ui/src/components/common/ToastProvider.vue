@@ -13,7 +13,7 @@
 </template>
 
 <style>
-/* Custom toast styling to match Skimberry dark theme */
+/* Custom toast styling to match Reconly dark theme */
 :root {
   --toastify-color-light: #1a1a1a;
   --toastify-color-dark: #141414;

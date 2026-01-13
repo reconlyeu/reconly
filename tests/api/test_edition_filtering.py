@@ -29,7 +29,7 @@ class TestEditionUtilityFunctions:
 
     def test_exclude_cost_fields_oss(self, monkeypatch):
         """In OSS mode, cost fields should be excluded from model serialization."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         from datetime import datetime
@@ -57,7 +57,7 @@ class TestEditionUtilityFunctions:
 
     def test_exclude_cost_fields_enterprise(self, monkeypatch):
         """In Enterprise mode, cost fields should be included."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         from datetime import datetime
@@ -84,7 +84,7 @@ class TestEditionUtilityFunctions:
 
     def test_exclude_cost_fields_from_dict_oss(self, monkeypatch):
         """In OSS mode, cost fields should be excluded from dicts."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         data = {
@@ -103,7 +103,7 @@ class TestEditionUtilityFunctions:
 
     def test_exclude_cost_fields_from_dict_enterprise(self, monkeypatch):
         """In Enterprise mode, cost fields should be included in dicts."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         data = {
@@ -120,7 +120,7 @@ class TestEditionUtilityFunctions:
 
     def test_exclude_cost_fields_from_list_oss(self, monkeypatch):
         """In OSS mode, cost fields should be excluded from list items."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         items = [
@@ -142,7 +142,7 @@ class TestFeedRunResponseFiltering:
 
     def test_model_dump_excludes_cost_in_oss(self, monkeypatch):
         """FeedRunResponse.model_dump() excludes total_cost in OSS."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         from datetime import datetime
@@ -171,7 +171,7 @@ class TestFeedRunResponseFiltering:
 
     def test_model_dump_includes_cost_in_enterprise(self, monkeypatch):
         """FeedRunResponse.model_dump() includes total_cost in Enterprise."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         from datetime import datetime
@@ -202,7 +202,7 @@ class TestDigestResponseFiltering:
 
     def test_model_dump_excludes_cost_in_oss(self, monkeypatch):
         """DigestResponse.model_dump() excludes estimated_cost in OSS."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         response = DigestResponse(
@@ -218,7 +218,7 @@ class TestDigestResponseFiltering:
 
     def test_model_dump_includes_cost_in_enterprise(self, monkeypatch):
         """DigestResponse.model_dump() includes estimated_cost in Enterprise."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         response = DigestResponse(
@@ -238,7 +238,7 @@ class TestDigestStatsFiltering:
 
     def test_model_dump_excludes_cost_in_oss(self, monkeypatch):
         """DigestStats.model_dump() excludes total_cost in OSS."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         stats = DigestStats(
@@ -256,7 +256,7 @@ class TestDigestStatsFiltering:
 
     def test_model_dump_includes_cost_in_enterprise(self, monkeypatch):
         """DigestStats.model_dump() includes total_cost in Enterprise."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         stats = DigestStats(

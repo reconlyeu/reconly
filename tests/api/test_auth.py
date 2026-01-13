@@ -178,7 +178,7 @@ class TestAuthRoutesWithPassword:
     @pytest.fixture(autouse=True)
     def setup_password(self, monkeypatch):
         """Configure a test password."""
-        monkeypatch.setenv("SKIMBERRY_AUTH_PASSWORD", "test-password-123")
+        monkeypatch.setenv("RECONLY_AUTH_PASSWORD", "test-password-123")
         # Clear rate limiting state
         _failed_attempts.clear()
 

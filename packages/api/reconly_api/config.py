@@ -94,7 +94,7 @@ class Settings(BaseSettings):
         v = str(v).lower()
         if v not in ("oss", "enterprise"):
             import warnings
-            warnings.warn(f"Invalid SKIMBERRY_EDITION '{v}', defaulting to 'oss'")
+            warnings.warn(f"Invalid RECONLY_EDITION '{v}', defaulting to 'oss'")
             return "oss"
         return v
 

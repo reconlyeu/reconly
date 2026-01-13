@@ -41,7 +41,7 @@ const isSubmitting = computed(() => loginMutation.isPending.value);
         <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-primary to-accent-primary/70 mb-4">
           <Lock :size="32" class="text-white" />
         </div>
-        <h1 class="text-2xl font-bold text-text-primary">Skimberry</h1>
+        <h1 class="text-2xl font-bold text-text-primary">Reconly</h1>
         <p class="text-text-secondary mt-2">Enter your password to continue</p>
       </div>
 

@@ -29,7 +29,7 @@ const localSettings = ref<{
   smtp_host: 'localhost',
   smtp_port: 587,
   from_address: '',
-  from_name: 'Skimberry',
+  from_name: 'Reconly',
 });
 
 // Track if form has changes
@@ -49,7 +49,7 @@ const updateLocalFromSettings = () => {
       localSettings.value.from_address = String(e.from_address.value || '');
     }
     if (e.from_name?.value !== undefined) {
-      localSettings.value.from_name = String(e.from_name.value || 'Skimberry');
+      localSettings.value.from_name = String(e.from_name.value || 'Reconly');
     }
     hasChanges.value = false;
   }
@@ -115,8 +115,8 @@ const testConnection = async () => {
   try {
     await apiClient.post('/settings/test-email', {
       to_email: testEmail.value,
-      subject: 'Skimberry Test Email',
-      body: 'This is a test email from Skimberry. If you receive this, your email configuration is working correctly!',
+      subject: 'Reconly Test Email',
+      body: 'This is a test email from Reconly. If you receive this, your email configuration is working correctly!',
     });
     toast.success(`Test email sent to ${testEmail.value}`);
   } catch (error: any) {

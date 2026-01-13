@@ -1,5 +1,5 @@
 /**
- * Edition-aware feature flags for Skimberry UI.
+ * Edition-aware feature flags for Reconly UI.
  *
  * Features are controlled by the VITE_EDITION environment variable:
  * - 'oss' (default): Open source edition, cost features disabled

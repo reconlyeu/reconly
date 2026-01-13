@@ -25,41 +25,41 @@ class TestGetEdition:
     """Tests for get_edition() function."""
 
     def test_default_is_oss(self, monkeypatch):
-        """When SKIMBERRY_EDITION is not set, default to 'oss'."""
-        monkeypatch.delenv("SKIMBERRY_EDITION", raising=False)
+        """When RECONLY_EDITION is not set, default to 'oss'."""
+        monkeypatch.delenv("RECONLY_EDITION", raising=False)
         clear_edition_cache()
 
         assert get_edition() == "oss"
 
     def test_oss_edition(self, monkeypatch):
-        """When SKIMBERRY_EDITION=oss, return 'oss'."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        """When RECONLY_EDITION=oss, return 'oss'."""
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         assert get_edition() == "oss"
 
     def test_enterprise_edition(self, monkeypatch):
-        """When SKIMBERRY_EDITION=enterprise, return 'enterprise'."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        """When RECONLY_EDITION=enterprise, return 'enterprise'."""
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         assert get_edition() == "enterprise"
 
     def test_case_insensitive(self, monkeypatch):
         """Edition value should be case-insensitive."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "ENTERPRISE")
+        monkeypatch.setenv("RECONLY_EDITION", "ENTERPRISE")
         clear_edition_cache()
 
         assert get_edition() == "enterprise"
 
-        monkeypatch.setenv("SKIMBERRY_EDITION", "OSS")
+        monkeypatch.setenv("RECONLY_EDITION", "OSS")
         clear_edition_cache()
 
         assert get_edition() == "oss"
 
     def test_invalid_value_defaults_to_oss(self, monkeypatch):
         """Invalid edition values should default to 'oss' with a warning."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "invalid")
+        monkeypatch.setenv("RECONLY_EDITION", "invalid")
         clear_edition_cache()
 
         with warnings.catch_warnings(record=True) as w:
@@ -68,11 +68,11 @@ class TestGetEdition:
 
             assert result == "oss"
             assert len(w) == 1
-            assert "Invalid SKIMBERRY_EDITION" in str(w[0].message)
+            assert "Invalid RECONLY_EDITION" in str(w[0].message)
 
     def test_caching(self, monkeypatch):
         """get_edition() should cache its result."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         # First call
@@ -80,7 +80,7 @@ class TestGetEdition:
         assert result1 == "enterprise"
 
         # Change env var (shouldn't affect cached result)
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         result2 = get_edition()
         assert result2 == "enterprise"  # Still cached
 
@@ -95,7 +95,7 @@ class TestEditionHelpers:
 
     def test_is_enterprise_true(self, monkeypatch):
         """is_enterprise() returns True when edition is enterprise."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         assert is_enterprise() is True
@@ -103,7 +103,7 @@ class TestEditionHelpers:
 
     def test_is_oss_true(self, monkeypatch):
         """is_oss() returns True when edition is oss."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         assert is_oss() is True
@@ -115,7 +115,7 @@ class TestFeatures:
 
     def test_features_oss(self, monkeypatch):
         """In OSS mode, enterprise features are disabled."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "oss")
+        monkeypatch.setenv("RECONLY_EDITION", "oss")
         clear_edition_cache()
 
         assert features.cost_tracking is False
@@ -126,7 +126,7 @@ class TestFeatures:
 
     def test_features_enterprise(self, monkeypatch):
         """In Enterprise mode, enterprise features are enabled."""
-        monkeypatch.setenv("SKIMBERRY_EDITION", "enterprise")
+        monkeypatch.setenv("RECONLY_EDITION", "enterprise")
         clear_edition_cache()
 
         assert features.cost_tracking is True

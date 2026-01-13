@@ -42,7 +42,7 @@ logger = logging.getLogger("reconly_mcp")
 def get_database_url() -> str:
     """Get database URL from environment.
 
-    Requires DATABASE_URL or SKIMBERRY_DATABASE_URL environment variable.
+    Requires DATABASE_URL or RECONLY_DATABASE_URL environment variable.
 
     Returns:
         Database connection URL
@@ -50,11 +50,11 @@ def get_database_url() -> str:
     Raises:
         DatabaseConnectionError: If no database URL is configured
     """
-    url = os.getenv("DATABASE_URL") or os.getenv("SKIMBERRY_DATABASE_URL")
+    url = os.getenv("DATABASE_URL") or os.getenv("RECONLY_DATABASE_URL")
     if not url:
         raise DatabaseConnectionError(
             "DATABASE_URL environment variable is required. "
-            "Set DATABASE_URL or SKIMBERRY_DATABASE_URL to a PostgreSQL connection string."
+            "Set DATABASE_URL or RECONLY_DATABASE_URL to a PostgreSQL connection string."
         )
     return url
 

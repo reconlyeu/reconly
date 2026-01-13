@@ -1,7 +1,7 @@
 """Authentication module.
 
 OSS Edition:
-- Optional password protection via SKIMBERRY_AUTH_PASSWORD
+- Optional password protection via RECONLY_AUTH_PASSWORD
 - Session-based auth with signed cookies
 - HTTP Basic Auth support for CLI/scripts
 
