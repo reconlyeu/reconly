@@ -9,6 +9,7 @@ from reconly_core.database.models import (
     PromptTemplate,
     ReportTemplate,
     FeedRun,
+    AgentRun,
     LLMUsageLog,
     Digest,
     Tag,
@@ -39,6 +40,7 @@ __all__ = [
     'PromptTemplate',
     'ReportTemplate',
     'FeedRun',
+    'AgentRun',
     'LLMUsageLog',
     # Existing entities
     'Digest',

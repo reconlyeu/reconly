@@ -1,7 +1,7 @@
 /**
  * API client service using Axios
  *
- * Provides typed API calls to the Skimberry backend.
+ * Provides typed API calls to the Reconly backend.
  * Uses TanStack Vue Query for caching and state management.
  */
 
@@ -71,6 +71,10 @@ import type {
   // Knowledge Graph types
   GraphResponse,
   GraphFilters,
+  // Agent Run types
+  AgentRun,
+  AgentRunStatus,
+  AgentRunListResponse,
 } from '@/types/entities';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -292,6 +296,43 @@ export const feedRunsApi = {
 
   getDigests: async (id: number): Promise<Digest[]> => {
     const { data } = await apiClient.get<Digest[]>(`/feed-runs/${id}/digests`);
+    return data;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT RUNS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface AgentRunFilters {
+  source_id?: number;
+  status?: AgentRunStatus;
+  from_date?: string;
+  to_date?: string;
+}
+
+export const agentRunsApi = {
+  list: async (
+    filters?: AgentRunFilters,
+    limit = 20,
+    offset = 0
+  ): Promise<AgentRunListResponse> => {
+    const searchParams = new URLSearchParams();
+    if (filters?.source_id) searchParams.set('source_id', String(filters.source_id));
+    if (filters?.status) searchParams.set('status', filters.status);
+    if (filters?.from_date) searchParams.set('from_date', filters.from_date);
+    if (filters?.to_date) searchParams.set('to_date', filters.to_date);
+    if (limit) searchParams.set('limit', String(limit));
+    if (offset) searchParams.set('offset', String(offset));
+    const query = searchParams.toString();
+    const { data } = await apiClient.get<AgentRunListResponse>(
+      `/agent-runs/${query ? '?' + query : ''}`
+    );
+    return data;
+  },
+
+  get: async (id: number): Promise<AgentRun> => {
+    const { data } = await apiClient.get<AgentRun>(`/agent-runs/${id}`);
     return data;
   },
 };

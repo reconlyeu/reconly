@@ -5,8 +5,9 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { sourcesApi } from '@/services/api';
-import type { Source, FilterMode } from '@/types/entities';
+import type { Source, FilterMode, SourceConfig } from '@/types/entities';
 import { X, Loader2, Filter, Plus, AlertCircle } from 'lucide-vue-next';
+import AgentSourceForm from './AgentSourceForm.vue';
 
 interface Props {
   isOpen: boolean;
@@ -23,15 +24,36 @@ const emit = defineEmits<Emits>();
 
 const queryClient = useQueryClient();
 
-// Validation schema
+// Validation schema - URL is required for all types except 'agent'
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
-    type: z.enum(['rss', 'youtube', 'website', 'blog'], {
+    type: z.enum(['rss', 'youtube', 'website', 'blog', 'agent'], {
       errorMap: () => ({ message: 'Please select a source type' }),
     }),
-    url: z.string().url('Must be a valid URL'),
+    url: z.string(),
     enabled: z.boolean(),
+  }).superRefine((data, ctx) => {
+    // URL is required for non-agent types
+    if (data.type !== 'agent') {
+      if (!data.url) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'URL is required',
+          path: ['url'],
+        });
+      } else {
+        try {
+          new URL(data.url);
+        } catch {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Must be a valid URL',
+            path: ['url'],
+          });
+        }
+      }
+    }
   })
 );
 
@@ -61,6 +83,10 @@ const useRegex = ref(false);
 const includeInput = ref('');
 const excludeInput = ref('');
 const regexError = ref<string | null>(null);
+
+// Agent-specific fields
+const agentConfig = ref<SourceConfig>({});
+const agentPrompt = ref('');
 
 // Validate regex pattern
 const validateRegex = (pattern: string): boolean => {
@@ -120,6 +146,9 @@ const resetFilterFields = () => {
   excludeInput.value = '';
   regexError.value = null;
   showFilters.value = false;
+  // Reset agent fields
+  agentConfig.value = {};
+  agentPrompt.value = '';
 };
 
 // Watch for source prop changes (edit mode)
@@ -130,7 +159,7 @@ watch(
       resetForm({
         values: {
           name: newSource.name,
-          type: newSource.type as 'rss' | 'youtube' | 'website' | 'blog',
+          type: newSource.type as 'rss' | 'youtube' | 'website' | 'blog' | 'agent',
           url: newSource.url,
           enabled: newSource.enabled,
         },
@@ -143,6 +172,14 @@ watch(
       useRegex.value = newSource.use_regex || false;
       // Show filters section if any filters are configured
       showFilters.value = !!(maxItems.value || newSource.include_keywords?.length || newSource.exclude_keywords?.length);
+      // Restore agent fields
+      if (newSource.type === 'agent') {
+        agentConfig.value = { max_iterations: newSource.config?.max_iterations };
+        agentPrompt.value = newSource.url; // URL field stores the prompt for agent sources
+      } else {
+        agentConfig.value = {};
+        agentPrompt.value = '';
+      }
     } else {
       resetForm();
       resetFilterFields();
@@ -156,12 +193,21 @@ const isEditMode = computed(() => !!props.source);
 // Create/Update mutation
 const saveMutation = useMutation({
   mutationFn: async (data: any) => {
-    // Build config object with max_items
-    const config = maxItems.value ? { max_items: maxItems.value } : null;
+    // Build config object based on source type
+    let config: SourceConfig | null = null;
+    if (data.type === 'agent') {
+      config = agentConfig.value.max_iterations ? { max_iterations: agentConfig.value.max_iterations } : null;
+    } else if (maxItems.value) {
+      config = { max_items: maxItems.value };
+    }
+
+    // For agent sources, the prompt is stored in the URL field
+    const finalUrl = data.type === 'agent' ? agentPrompt.value : data.url;
 
     // Add filter fields to data
     const payload = {
       ...data,
+      url: finalUrl,
       config,
       include_keywords: includeKeywords.value.length > 0 ? includeKeywords.value : null,
       exclude_keywords: excludeKeywords.value.length > 0 ? excludeKeywords.value : null,
@@ -315,6 +361,7 @@ const urlPlaceholder = computed(() => {
                 <option value="youtube">YouTube</option>
                 <option value="website">Website</option>
                 <option value="blog">Blog</option>
+                <option value="agent">AI Research Agent</option>
               </select>
               <Transition name="error">
                 <p v-if="errors.type" class="mt-2 text-sm text-status-failed">
@@ -323,8 +370,15 @@ const urlPlaceholder = computed(() => {
               </Transition>
             </div>
 
-            <!-- URL Field -->
-            <div>
+            <!-- Agent Source Form (shown when type is 'agent') -->
+            <AgentSourceForm
+              v-if="type === 'agent'"
+              v-model:config="agentConfig"
+              v-model:prompt="agentPrompt"
+            />
+
+            <!-- URL Field (hidden for agent type) -->
+            <div v-else>
               <label for="url" class="mb-2 block text-sm font-medium text-text-primary">
                 URL
               </label>
@@ -379,8 +433,8 @@ const urlPlaceholder = computed(() => {
               </button>
             </div>
 
-            <!-- Filters Section -->
-            <div class="rounded-lg border border-border-subtle bg-bg-surface">
+            <!-- Filters Section (hidden for agent type - agents use prompts not keyword filters) -->
+            <div v-if="type !== 'agent'" class="rounded-lg border border-border-subtle bg-bg-surface">
               <!-- Toggle Header -->
               <button
                 type="button"

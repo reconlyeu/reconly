@@ -26,7 +26,7 @@ from reconly_api.dependencies import SessionLocal, engine
 from reconly_api.routes import (
     digests, health, sources, feeds, feed_runs, templates,
     analytics, providers, dashboard, auth, exporters, fetchers, tags, bundles,
-    extensions, search, rag, graph
+    extensions, search, rag, graph, agent_runs
 )
 from reconly_api.routes import settings as settings_routes
 from reconly_api.auth.password import is_public_route
@@ -334,6 +334,13 @@ app.include_router(
     graph.router,
     prefix=f"{settings.api_v1_prefix}/graph",
     tags=["graph"]
+)
+
+# Agent Runs
+app.include_router(
+    agent_runs.router,
+    prefix=f"{settings.api_v1_prefix}/agent-runs",
+    tags=["agent-runs"]
 )
 
 

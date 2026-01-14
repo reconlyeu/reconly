@@ -185,6 +185,52 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="EMBEDDING_CHUNK_OVERLAP",
         description="Token overlap between chunks (10-20% of chunk_size)",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Agent Settings
+    # Configuration for agent-based web research sources
+    # ─────────────────────────────────────────────────────────────────────────
+    "agent.search_provider": SettingDef(
+        category="agent",
+        type=str,
+        default="brave",
+        editable=True,
+        env_var="AGENT_SEARCH_PROVIDER",
+        description="Search provider: brave or searxng",
+    ),
+    "agent.brave_api_key": SettingDef(
+        category="agent",
+        type=str,
+        default=None,
+        editable=False,  # Secret - env only
+        env_var="BRAVE_API_KEY",
+        secret=True,
+        description="Brave Search API key",
+    ),
+    "agent.searxng_url": SettingDef(
+        category="agent",
+        type=str,
+        default="http://localhost:8080",
+        editable=True,
+        env_var="SEARXNG_URL",
+        description="SearXNG instance URL",
+    ),
+    "agent.max_search_results": SettingDef(
+        category="agent",
+        type=int,
+        default=10,
+        editable=True,
+        env_var="AGENT_MAX_SEARCH_RESULTS",
+        description="Maximum number of search results to retrieve",
+    ),
+    "agent.default_max_iterations": SettingDef(
+        category="agent",
+        type=int,
+        default=5,
+        editable=True,
+        env_var="AGENT_DEFAULT_MAX_ITERATIONS",
+        description="Default maximum iterations for agent research loops",
+    ),
 }
 
 
