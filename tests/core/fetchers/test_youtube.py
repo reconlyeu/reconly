@@ -133,7 +133,8 @@ class TestYouTubeFetcher:
         mock_transcript.snippets = [mock_snippet1, mock_snippet2]
         mock_transcript.language = "en"
 
-        with patch('reconly_core.fetchers.youtube.YouTubeTranscriptApi') as mock_api_class:
+        with patch('reconly_core.fetchers.youtube.YouTubeTranscriptApi') as mock_api_class, \
+             patch.object(youtube_fetcher, '_fetch_video_title', return_value=None):
             mock_api = Mock()
             mock_api.fetch.return_value = mock_transcript
             mock_api_class.return_value = mock_api

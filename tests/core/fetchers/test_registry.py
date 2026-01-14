@@ -244,7 +244,7 @@ class TestFetcherRegistry:
         assert user_agent_setting.default is None
 
     def test_register_fetcher_no_settings_for_empty_schema(self):
-        """Test that fetcher with empty schema doesn't register extra settings."""
+        """Test that fetcher with empty schema only registers enabled setting."""
         @register_fetcher('no-schema')
         class NoSchemaFetcher(BaseFetcher):
             def fetch(self, url, since=None, max_items=None, **kwargs):
@@ -258,8 +258,9 @@ class TestFetcherRegistry:
         # Fetcher should be registered
         assert is_fetcher_registered('no-schema')
 
-        # No settings should be registered (empty schema has no fields)
-        assert "fetch.no-schema.enabled" not in SETTINGS_REGISTRY
+        # Only the enabled setting should be registered (always added for all fetchers)
+        assert "fetch.no-schema.enabled" in SETTINGS_REGISTRY
+        # But no other custom settings from schema
         assert "fetch.no-schema.timeout" not in SETTINGS_REGISTRY
 
     def test_fetcher_config_schema_stored_in_registry_entry(self):

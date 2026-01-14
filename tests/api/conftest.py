@@ -2,7 +2,18 @@
 
 Database fixtures are inherited from tests/conftest.py.
 This file only contains API-specific fixtures (test client).
+
+Note: Database availability check and skip logic is in tests/conftest.py
+via pytest_collection_modifyitems hook.
 """
+import os
+
+# Override DATABASE_URL before importing the app to use test database
+os.environ.setdefault(
+    "DATABASE_URL",
+    os.getenv("TEST_DATABASE_URL", "postgresql://reconly:reconly_dev@localhost:5432/reconly_test")
+)
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker

@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session, sessionmaker
 
 from reconly_core.database.models import (
@@ -40,12 +41,48 @@ TEST_DATABASE_URL = os.getenv(
 # Database Engine & Connection Fixtures
 # =============================================================================
 
+# Global flag to track database availability (checked once at session start)
+_db_available = None
+_db_error = None
+
+
+def _check_db_available():
+    """Check if the test database is available (cached result)."""
+    global _db_available, _db_error
+    if _db_available is None:
+        try:
+            engine = create_engine(TEST_DATABASE_URL, echo=False)
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            engine.dispose()
+            _db_available = True
+        except OperationalError as e:
+            _db_available = False
+            _db_error = str(e)
+    return _db_available
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip API tests if database is unavailable."""
+    if not _check_db_available():
+        skip_marker = pytest.mark.skip(reason=f"Database unavailable: {_db_error}")
+        for item in items:
+            # Skip tests in tests/api directory that need DB
+            item_path = str(item.fspath)
+            if "tests/api" in item_path or "tests\\api" in item_path:
+                item.add_marker(skip_marker)
+
+
 @pytest.fixture(scope="session")
 def test_engine():
     """Create a test database engine (session-scoped for efficiency).
 
     Enables pgvector extension and creates all tables once per test session.
+    Skips tests gracefully if database is unavailable.
     """
+    if not _check_db_available():
+        pytest.skip(f"Database unavailable: {_db_error}")
+
     engine = create_engine(TEST_DATABASE_URL, echo=False)
 
     # Enable pgvector extension before creating tables
