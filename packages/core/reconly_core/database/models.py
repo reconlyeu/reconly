@@ -101,6 +101,7 @@ class User(Base):
     report_templates = relationship('ReportTemplate', back_populates='user', cascade='all, delete-orphan')
     digests = relationship('Digest', back_populates='user')
     llm_usage_logs = relationship('LLMUsageLog', back_populates='user')
+    agent_runs = relationship('AgentRun', back_populates='user')
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
@@ -971,6 +972,7 @@ class AgentRun(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     source_id = Column(Integer, ForeignKey('sources.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
 
     # Research input
     prompt = Column(Text, nullable=False)
@@ -1007,6 +1009,7 @@ class AgentRun(Base):
 
     # Relationships
     source = relationship('Source', backref='agent_runs')
+    user = relationship('User', back_populates='agent_runs')
 
     __table_args__ = (
         Index('ix_agent_runs_source_status', 'source_id', 'status'),
@@ -1019,6 +1022,7 @@ class AgentRun(Base):
         return {
             'id': self.id,
             'source_id': self.source_id,
+            'user_id': self.user_id,
             'prompt': self.prompt,
             'status': self.status,
             'started_at': self.started_at.isoformat() if self.started_at else None,
