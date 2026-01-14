@@ -4,11 +4,11 @@ import pytest
 
 @pytest.mark.api
 class TestExportersAPI:
-    """Test suite for /api/v1/exporters/ endpoints."""
+    """Test suite for /api/v1/exporters endpoints."""
 
     def test_list_exporters(self, client):
         """Test listing all available exporters."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -19,7 +19,7 @@ class TestExportersAPI:
 
     def test_exporters_have_required_fields(self, client):
         """Test that each exporter has all required fields."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -38,7 +38,7 @@ class TestExportersAPI:
 
     def test_exporter_config_schema_structure(self, client):
         """Test that config schema has the correct structure."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -50,7 +50,7 @@ class TestExportersAPI:
 
     def test_obsidian_exporter_exists(self, client):
         """Test that the Obsidian exporter is available."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -59,7 +59,7 @@ class TestExportersAPI:
 
     def test_obsidian_exporter_supports_direct_export(self, client):
         """Test that Obsidian exporter supports direct export."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -72,7 +72,7 @@ class TestExportersAPI:
 
     def test_obsidian_exporter_has_config_fields(self, client):
         """Test that Obsidian exporter has expected config fields."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -92,7 +92,7 @@ class TestExportersAPI:
 
     def test_config_field_structure(self, client):
         """Test that config fields have the correct structure."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -118,7 +118,7 @@ class TestExportersAPI:
 
     def test_json_exporter_supports_direct_export(self, client):
         """Test that JSON exporter supports direct export."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -132,7 +132,7 @@ class TestExportersAPI:
 
     def test_csv_exporter_supports_direct_export(self, client):
         """Test that CSV exporter supports direct export."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -146,7 +146,7 @@ class TestExportersAPI:
 
     def test_exporters_have_valid_content_types(self, client):
         """Test that exporters have valid content types."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -163,7 +163,7 @@ class TestExportersAPI:
 
     def test_exporters_have_file_extensions(self, client):
         """Test that exporters have valid file extensions."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -179,7 +179,7 @@ class TestExportersFieldTypes:
 
     def test_vault_path_field_is_path_type(self, client):
         """Test that vault_path field is of type 'path'."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -199,7 +199,7 @@ class TestExportersFieldTypes:
 
     def test_one_file_per_digest_is_boolean(self, client):
         """Test that one_file_per_digest field is of type 'boolean'."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 
@@ -218,7 +218,7 @@ class TestExportersFieldTypes:
 
     def test_filename_pattern_is_string(self, client):
         """Test that filename_pattern field is of type 'string'."""
-        response = client.get("/api/v1/exporters/")
+        response = client.get("/api/v1/exporters")
         assert response.status_code == 200
         data = response.json()
 

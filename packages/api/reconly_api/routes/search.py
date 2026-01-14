@@ -17,7 +17,7 @@ from reconly_api.schemas.search import (
 router = APIRouter()
 
 
-@router.get("/hybrid/", response_model=SearchResponse)
+@router.get("/hybrid", response_model=SearchResponse)
 async def hybrid_search(
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),
@@ -115,7 +115,7 @@ async def hybrid_search(
         )
 
 
-@router.get("/stats/", response_model=SearchStatsResponse)
+@router.get("/stats", response_model=SearchStatsResponse)
 async def get_search_stats(
     db: Session = Depends(get_db),
 ) -> SearchStatsResponse:
@@ -162,7 +162,7 @@ async def get_search_stats(
         )
 
 
-@router.get("/vector/", response_model=SearchResponse)
+@router.get("/vector", response_model=SearchResponse)
 async def vector_search(
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),
@@ -256,7 +256,7 @@ async def vector_search(
         )
 
 
-@router.get("/fts/", response_model=SearchResponse)
+@router.get("/fts", response_model=SearchResponse)
 async def fts_search(
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),

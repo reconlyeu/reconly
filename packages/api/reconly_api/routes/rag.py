@@ -53,7 +53,7 @@ def _convert_filters(filters: RAGFiltersSchema | None):
     )
 
 
-@router.post("/query/", response_model=RAGQueryResponse)
+@router.post("/query", response_model=RAGQueryResponse)
 async def rag_query(
     request: RAGQueryRequest,
     db: Session = Depends(get_db),
@@ -132,7 +132,7 @@ async def rag_query(
         )
 
 
-@router.post("/search/", response_model=RAGQueryResponse)
+@router.post("/search", response_model=RAGQueryResponse)
 async def rag_search(
     request: RAGQueryRequest,
     db: Session = Depends(get_db),
@@ -155,7 +155,7 @@ async def rag_search(
     return await rag_query(request, db)
 
 
-@router.post("/export/", response_model=RAGExportResponse)
+@router.post("/export", response_model=RAGExportResponse)
 async def rag_export(
     request: RAGExportRequest,
     db: Session = Depends(get_db),

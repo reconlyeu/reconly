@@ -25,7 +25,7 @@ from reconly_api.auth.password import (
 router = APIRouter()
 
 
-@router.post("/login/", response_model=LoginResponse)
+@router.post("/login", response_model=LoginResponse)
 async def login(request: Request, body: LoginRequest, response: Response):
     """
     Authenticate with password and receive a session cookie.
@@ -66,7 +66,7 @@ async def login(request: Request, body: LoginRequest, response: Response):
     )
 
 
-@router.post("/logout/", response_model=LoginResponse)
+@router.post("/logout", response_model=LoginResponse)
 async def logout(response: Response):
     """
     Clear the session cookie.
@@ -80,7 +80,7 @@ async def logout(response: Response):
     )
 
 
-@router.get("/config/", response_model=ConfigResponse)
+@router.get("/config", response_model=ConfigResponse)
 async def get_config():
     """
     Get authentication configuration.

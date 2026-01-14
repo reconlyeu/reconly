@@ -28,11 +28,11 @@ def sample_digest(test_db):
 
 @pytest.mark.api
 class TestDigestsAPI:
-    """Test suite for /api/v1/digests/ endpoints."""
+    """Test suite for /api/v1/digests endpoints."""
 
     def test_list_digests_empty(self, client):
         """Test listing digests when none exist."""
-        response = client.get("/api/v1/digests/")
+        response = client.get("/api/v1/digests")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 0
@@ -40,7 +40,7 @@ class TestDigestsAPI:
 
     def test_list_digests(self, client, sample_digest):
         """Test listing digests."""
-        response = client.get("/api/v1/digests/")
+        response = client.get("/api/v1/digests")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 1
@@ -64,7 +64,7 @@ class TestDigestsAPI:
         test_db.commit()
 
         # Request with limit
-        response = client.get("/api/v1/digests/?limit=5")
+        response = client.get("/api/v1/digests?limit=5")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 10
@@ -110,7 +110,7 @@ class TestDigestsResponseFormat:
 
     def test_list_response_has_total_and_digests(self, client, sample_digest):
         """Verify list response has 'total' and 'digests' keys."""
-        response = client.get("/api/v1/digests/")
+        response = client.get("/api/v1/digests")
         assert response.status_code == 200
         data = response.json()
 

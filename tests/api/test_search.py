@@ -55,7 +55,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=machine learning")
+            response = client.get("/api/v1/search/hybrid?q=machine learning")
 
             assert response.status_code == 200
             data = response.json()
@@ -74,7 +74,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=AI")
+            response = client.get("/api/v1/search/hybrid?q=AI")
 
             assert response.status_code == 200
             data = response.json()
@@ -82,7 +82,7 @@ class TestSearchAPI:
 
     def test_hybrid_search_missing_query(self, client):
         """Test search without query parameter."""
-        response = client.get("/api/v1/search/hybrid/")
+        response = client.get("/api/v1/search/hybrid")
         assert response.status_code == 422  # Validation error
 
     def test_hybrid_search_with_filters(self, client, test_db, sample_digest_with_embeddings):
@@ -95,7 +95,7 @@ class TestSearchAPI:
             mock_provider.return_value = provider
 
             response = client.get(
-                f"/api/v1/search/hybrid/?q=test&source_id={sample_digest_with_embeddings.source_id}&days=30"
+                f"/api/v1/search/hybrid?q=test&source_id={sample_digest_with_embeddings.source_id}&days=30"
             )
 
             assert response.status_code == 200
@@ -111,7 +111,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test&mode=vector")
+            response = client.get("/api/v1/search/hybrid?q=test&mode=vector")
 
             assert response.status_code == 200
             data = response.json()
@@ -119,7 +119,7 @@ class TestSearchAPI:
 
     def test_hybrid_search_fts_mode(self, client, sample_digest_with_embeddings):
         """Test search with FTS-only mode."""
-        response = client.get("/api/v1/search/hybrid/?q=test&mode=fts")
+        response = client.get("/api/v1/search/hybrid?q=test&mode=fts")
 
         # FTS mode may work even without embeddings
         assert response.status_code in [200, 500]  # May fail if FTS not available
@@ -133,7 +133,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test&limit=5")
+            response = client.get("/api/v1/search/hybrid?q=test&limit=5")
 
             assert response.status_code == 200
             data = response.json()
@@ -148,7 +148,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test&include_embedding=true")
+            response = client.get("/api/v1/search/hybrid?q=test&include_embedding=true")
 
             assert response.status_code == 200
             data = response.json()
@@ -164,7 +164,7 @@ class TestSearchAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test")
+            response = client.get("/api/v1/search/hybrid?q=test")
 
             assert response.status_code == 200
             data = response.json()
@@ -186,18 +186,18 @@ class TestSearchAPI:
 
     def test_search_invalid_mode(self, client):
         """Test search with invalid mode parameter."""
-        response = client.get("/api/v1/search/hybrid/?q=test&mode=invalid")
+        response = client.get("/api/v1/search/hybrid?q=test&mode=invalid")
         assert response.status_code == 422  # Validation error
 
     def test_search_invalid_limit(self, client):
         """Test search with invalid limit parameter."""
-        response = client.get("/api/v1/search/hybrid/?q=test&limit=1000")
+        response = client.get("/api/v1/search/hybrid?q=test&limit=1000")
         assert response.status_code == 422  # Validation error (exceeds max)
 
     def test_search_stats_endpoint(self, client):
         """Test search stats endpoint if available."""
         # This endpoint may or may not exist
-        response = client.get("/api/v1/search/stats/")
+        response = client.get("/api/v1/search/stats")
 
         # Accept both 200 (exists) and 404 (not implemented)
         assert response.status_code in [200, 404]
@@ -220,7 +220,7 @@ class TestSearchAPIEdgeCases:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test")
+            response = client.get("/api/v1/search/hybrid?q=test")
 
             assert response.status_code == 200
             data = response.json()
@@ -237,7 +237,7 @@ class TestSearchAPIEdgeCases:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get(f"/api/v1/search/hybrid/?q={long_query}")
+            response = client.get(f"/api/v1/search/hybrid?q={long_query}")
 
             # Should either work or return error
             assert response.status_code in [200, 413, 422]
@@ -252,7 +252,7 @@ class TestSearchAPIEdgeCases:
             mock_provider.return_value = provider
 
             special_query = "test & <script> OR 'DROP TABLE'"
-            response = client.get(f"/api/v1/search/hybrid/?q={special_query}")
+            response = client.get(f"/api/v1/search/hybrid?q={special_query}")
 
             # Should handle gracefully
             assert response.status_code in [200, 422]
@@ -266,7 +266,7 @@ class TestSearchAPIEdgeCases:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/search/hybrid/?q=test&mode=vector")
+            response = client.get("/api/v1/search/hybrid?q=test&mode=vector")
 
             # Should return error
             assert response.status_code == 500

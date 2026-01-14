@@ -136,14 +136,14 @@ export const dashboardApi = {
   },
 
   getRecentRuns: async (limit = 5): Promise<FeedRun[]> => {
-    const { data } = await apiClient.get<{ items: FeedRun[]; total: number }>('/feed-runs/', {
+    const { data } = await apiClient.get<{ items: FeedRun[]; total: number }>('/feed-runs', {
       params: { limit },
     });
     return data.items;
   },
 
   getRecentDigests: async (limit = 5): Promise<Digest[]> => {
-    const { data } = await apiClient.get<{ total: number; digests: Digest[] }>('/digests/', {
+    const { data } = await apiClient.get<{ total: number; digests: Digest[] }>('/digests', {
       params: { limit },
     });
     return data.digests;
@@ -156,7 +156,7 @@ export const dashboardApi = {
 
 export const sourcesApi = {
   list: async (type?: string): Promise<Source[]> => {
-    const { data } = await apiClient.get<Source[]>('/sources/', {
+    const { data } = await apiClient.get<Source[]>('/sources', {
       params: type ? { type } : undefined,
     });
     return data;
@@ -168,7 +168,7 @@ export const sourcesApi = {
   },
 
   create: async (source: SourceCreate): Promise<Source> => {
-    const { data } = await apiClient.post<Source>('/sources/', source);
+    const { data } = await apiClient.post<Source>('/sources', source);
     return data;
   },
 
@@ -198,7 +198,7 @@ export const sourcesApi = {
 
 export const feedsApi = {
   list: async (): Promise<Feed[]> => {
-    const { data } = await apiClient.get<Feed[]>('/feeds/');
+    const { data } = await apiClient.get<Feed[]>('/feeds');
     return data;
   },
 
@@ -208,7 +208,7 @@ export const feedsApi = {
   },
 
   create: async (feed: FeedCreate): Promise<Feed> => {
-    const { data } = await apiClient.post<Feed>('/feeds/', feed);
+    const { data } = await apiClient.post<Feed>('/feeds', feed);
     return data;
   },
 
@@ -278,7 +278,7 @@ export const feedRunsApi = {
     limit = 20,
     offset = 0
   ): Promise<{ items: FeedRun[]; total: number }> => {
-    const { data } = await apiClient.get<{ items: FeedRun[]; total: number }>('/feed-runs/', {
+    const { data } = await apiClient.get<{ items: FeedRun[]; total: number }>('/feed-runs', {
       params: { ...filters, limit, offset },
     });
     return data;
@@ -438,7 +438,7 @@ export const digestsApi = {
     page = 1,
     perPage = 20
   ): Promise<{ total: number; digests: Digest[] }> => {
-    const { data } = await apiClient.get<{ total: number; digests: Digest[] }>('/digests/', {
+    const { data } = await apiClient.get<{ total: number; digests: Digest[] }>('/digests', {
       params: { ...filters, limit: perPage },
     });
     return data;
@@ -466,7 +466,7 @@ export const digestsApi = {
   },
 
   getTags: async (): Promise<Tag[]> => {
-    const { data } = await apiClient.get<TagListResponse>('/tags/');
+    const { data } = await apiClient.get<TagListResponse>('/tags');
     return data.tags;
   },
 
@@ -481,7 +481,7 @@ export const digestsApi = {
   },
 
   exportToPath: async (request: ExportToPathRequest): Promise<ExportToPathResponse> => {
-    const { data } = await apiClient.post<ExportToPathResponse>('/digests/export-to-path/', request);
+    const { data } = await apiClient.post<ExportToPathResponse>('/digests/export-to-path', request);
     return data;
   },
 };
@@ -496,7 +496,7 @@ export const tagsApi = {
    * Tags are sorted by digest count (most used first).
    */
   list: async (): Promise<Tag[]> => {
-    const { data } = await apiClient.get<TagListResponse>('/tags/');
+    const { data } = await apiClient.get<TagListResponse>('/tags');
     return data.tags;
   },
 
@@ -506,7 +506,7 @@ export const tagsApi = {
    * @param limit - Maximum number of suggestions to return
    */
   getSuggestions: async (query: string = '', limit: number = 10): Promise<TagSuggestionsResponse> => {
-    const { data } = await apiClient.get<TagSuggestionsResponse>('/tags/suggestions/', {
+    const { data } = await apiClient.get<TagSuggestionsResponse>('/tags/suggestions', {
       params: { q: query, limit },
     });
     return data;
@@ -517,7 +517,7 @@ export const tagsApi = {
    * This will also remove the tag from all associated digests.
    */
   delete: async (tagId: number): Promise<TagDeleteResponse> => {
-    const { data } = await apiClient.delete<TagDeleteResponse>(`/tags/${tagId}/`);
+    const { data } = await apiClient.delete<TagDeleteResponse>(`/tags/${tagId}`);
     return data;
   },
 
@@ -525,7 +525,7 @@ export const tagsApi = {
    * Delete all tags that are not associated with any digests.
    */
   deleteUnused: async (): Promise<TagBulkDeleteResponse> => {
-    const { data } = await apiClient.delete<TagBulkDeleteResponse>('/tags/unused/');
+    const { data } = await apiClient.delete<TagBulkDeleteResponse>('/tags/unused');
     return data;
   },
 };
@@ -537,7 +537,7 @@ export const tagsApi = {
 export const exportersApi = {
   list: async (enabledOnly?: boolean): Promise<Exporter[]> => {
     const params = enabledOnly ? { enabled_only: true } : {};
-    const { data } = await apiClient.get<ExporterListResponse>('/exporters/', { params });
+    const { data } = await apiClient.get<ExporterListResponse>('/exporters', { params });
     return data.exporters;
   },
 
@@ -554,7 +554,7 @@ export const exportersApi = {
 export const fetchersApi = {
   list: async (enabledOnly?: boolean): Promise<Fetcher[]> => {
     const params = enabledOnly ? { enabled_only: true } : {};
-    const { data } = await apiClient.get<FetcherListResponse>('/fetchers/', { params });
+    const { data } = await apiClient.get<FetcherListResponse>('/fetchers', { params });
     return data.fetchers;
   },
 
@@ -576,17 +576,17 @@ export const fetchersApi = {
 export const extensionsApi = {
   list: async (type?: ExtensionType): Promise<Extension[]> => {
     const params = type ? { type } : {};
-    const { data } = await apiClient.get<ExtensionListResponse>('/extensions/', { params });
+    const { data } = await apiClient.get<ExtensionListResponse>('/extensions', { params });
     return data.items;
   },
 
   listByType: async (type: ExtensionType): Promise<Extension[]> => {
-    const { data } = await apiClient.get<ExtensionListResponse>(`/extensions/${type}/`);
+    const { data } = await apiClient.get<ExtensionListResponse>(`/extensions/${type}`);
     return data.items;
   },
 
   get: async (type: ExtensionType, name: string): Promise<Extension> => {
-    const { data } = await apiClient.get<Extension>(`/extensions/${type}/${name}/`);
+    const { data } = await apiClient.get<Extension>(`/extensions/${type}/${name}`);
     return data;
   },
 
@@ -601,7 +601,7 @@ export const extensionsApi = {
 
   getCatalog: async (forceRefresh = false): Promise<CatalogEntry[]> => {
     const params = forceRefresh ? { force_refresh: true } : {};
-    const { data } = await apiClient.get<CatalogResponse>('/extensions/catalog/', { params });
+    const { data } = await apiClient.get<CatalogResponse>('/extensions/catalog', { params });
     return data.extensions;
   },
 
@@ -610,12 +610,12 @@ export const extensionsApi = {
     if (query) params.q = query;
     if (type) params.type = type;
     if (verifiedOnly) params.verified_only = true;
-    const { data } = await apiClient.get<CatalogResponse>('/extensions/catalog/search/', { params });
+    const { data } = await apiClient.get<CatalogResponse>('/extensions/catalog/search', { params });
     return data.extensions;
   },
 
   install: async (packageName: string, upgrade = false): Promise<ExtensionInstallResponse> => {
-    const { data } = await apiClient.post<ExtensionInstallResponse>('/extensions/install/', {
+    const { data } = await apiClient.post<ExtensionInstallResponse>('/extensions/install', {
       package: packageName,
       upgrade,
     });
@@ -623,7 +623,7 @@ export const extensionsApi = {
   },
 
   uninstall: async (type: ExtensionType, name: string): Promise<ExtensionInstallResponse> => {
-    const { data } = await apiClient.delete<ExtensionInstallResponse>(`/extensions/${type}/${name}/`);
+    const { data } = await apiClient.delete<ExtensionInstallResponse>(`/extensions/${type}/${name}`);
     return data;
   },
 };
@@ -785,7 +785,7 @@ export const authApi = {
    * Returns whether auth is required and the current edition.
    */
   getConfig: async (): Promise<AuthConfig> => {
-    const { data } = await apiClient.get<AuthConfig>('/auth/config/');
+    const { data } = await apiClient.get<AuthConfig>('/auth/config');
     return data;
   },
 
@@ -794,7 +794,7 @@ export const authApi = {
    * On success, a session cookie is set by the server.
    */
   login: async (password: string): Promise<LoginResponse> => {
-    const { data } = await apiClient.post<LoginResponse>('/auth/login/', {
+    const { data } = await apiClient.post<LoginResponse>('/auth/login', {
       password,
     });
     return data;
@@ -804,7 +804,7 @@ export const authApi = {
    * Logout and clear session.
    */
   logout: async (): Promise<LoginResponse> => {
-    const { data } = await apiClient.post<LoginResponse>('/auth/logout/');
+    const { data } = await apiClient.post<LoginResponse>('/auth/logout');
     return data;
   },
 };
@@ -921,7 +921,7 @@ export const graphApi = {
     if (filters?.to_date) params.to_date = filters.to_date;
     if (filters?.tags?.length) params.tags = filters.tags.join(',');
 
-    const { data } = await apiClient.get<GraphResponse>('/graph/nodes/', { params });
+    const { data } = await apiClient.get<GraphResponse>('/graph/nodes', { params });
     return data;
   },
 
@@ -936,7 +936,7 @@ export const graphApi = {
     depth = 1,
     minSimilarity = 0.5
   ): Promise<GraphResponse> => {
-    const { data } = await apiClient.get<GraphResponse>(`/graph/expand/${nodeId}/`, {
+    const { data } = await apiClient.get<GraphResponse>(`/graph/expand/${nodeId}`, {
       params: { depth, min_similarity: minSimilarity },
     });
     return data;

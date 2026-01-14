@@ -52,7 +52,7 @@ async def list_tags(
     return TagListResponse(tags=tags, total=len(tags))
 
 
-@router.get("/suggestions/", response_model=TagSuggestionsResponse)
+@router.get("/suggestions", response_model=TagSuggestionsResponse)
 async def get_tag_suggestions(
     q: str = Query("", description="Query string for autocomplete"),
     limit: int = Query(10, ge=1, le=50, description="Maximum suggestions to return"),
@@ -102,7 +102,7 @@ async def get_tag_suggestions(
     return TagSuggestionsResponse(suggestions=suggestions)
 
 
-@router.delete("/unused/", response_model=TagBulkDeleteResponse)
+@router.delete("/unused", response_model=TagBulkDeleteResponse)
 async def delete_unused_tags(
     db: Session = Depends(get_db),
 ):
@@ -130,7 +130,7 @@ async def delete_unused_tags(
     )
 
 
-@router.delete("/{tag_id}/", response_model=TagDeleteResponse)
+@router.delete("/{tag_id}", response_model=TagDeleteResponse)
 async def delete_tag(
     tag_id: int,
     db: Session = Depends(get_db),

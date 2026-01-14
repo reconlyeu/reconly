@@ -48,11 +48,11 @@ def sample_digest_with_tags(test_db, sample_tags):
 
 @pytest.mark.api
 class TestTagsAPI:
-    """Test suite for /api/v1/tags/ endpoints."""
+    """Test suite for /api/v1/tags endpoints."""
 
     def test_list_tags_empty(self, client):
         """Test listing tags when none exist."""
-        response = client.get("/api/v1/tags/")
+        response = client.get("/api/v1/tags")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 0
@@ -60,7 +60,7 @@ class TestTagsAPI:
 
     def test_list_tags(self, client, sample_tags):
         """Test listing all tags."""
-        response = client.get("/api/v1/tags/")
+        response = client.get("/api/v1/tags")
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == 4
@@ -72,7 +72,7 @@ class TestTagsAPI:
 
     def test_list_tags_with_digest_counts(self, client, sample_digest_with_tags):
         """Test that tags include digest counts."""
-        response = client.get("/api/v1/tags/")
+        response = client.get("/api/v1/tags")
         assert response.status_code == 200
         data = response.json()
 
@@ -111,7 +111,7 @@ class TestTagsAPI:
 
         test_db.commit()
 
-        response = client.get("/api/v1/tags/")
+        response = client.get("/api/v1/tags")
         assert response.status_code == 200
         data = response.json()
 
@@ -122,11 +122,11 @@ class TestTagsAPI:
 
 @pytest.mark.api
 class TestTagSuggestionsAPI:
-    """Test suite for /api/v1/tags/suggestions/ endpoint."""
+    """Test suite for /api/v1/tags/suggestions endpoint."""
 
     def test_suggestions_empty_query(self, client, sample_tags):
         """Test getting suggestions without a query returns all tags."""
-        response = client.get("/api/v1/tags/suggestions/")
+        response = client.get("/api/v1/tags/suggestions")
         assert response.status_code == 200
         data = response.json()
         assert "suggestions" in data
@@ -135,7 +135,7 @@ class TestTagSuggestionsAPI:
 
     def test_suggestions_with_prefix(self, client, sample_tags):
         """Test getting suggestions with prefix filter."""
-        response = client.get("/api/v1/tags/suggestions/?q=te")
+        response = client.get("/api/v1/tags/suggestions?q=te")
         assert response.status_code == 200
         data = response.json()
         assert "suggestions" in data
@@ -146,7 +146,7 @@ class TestTagSuggestionsAPI:
 
     def test_suggestions_case_insensitive(self, client, sample_tags):
         """Test that suggestions search is case-insensitive."""
-        response = client.get("/api/v1/tags/suggestions/?q=AI")
+        response = client.get("/api/v1/tags/suggestions?q=AI")
         assert response.status_code == 200
         data = response.json()
 
@@ -156,14 +156,14 @@ class TestTagSuggestionsAPI:
 
     def test_suggestions_with_limit(self, client, sample_tags):
         """Test suggestions respect limit parameter."""
-        response = client.get("/api/v1/tags/suggestions/?limit=2")
+        response = client.get("/api/v1/tags/suggestions?limit=2")
         assert response.status_code == 200
         data = response.json()
         assert len(data["suggestions"]) == 2
 
     def test_suggestions_include_digest_count(self, client, sample_digest_with_tags):
         """Test that suggestions include digest count."""
-        response = client.get("/api/v1/tags/suggestions/?q=tech")
+        response = client.get("/api/v1/tags/suggestions?q=tech")
         assert response.status_code == 200
         data = response.json()
 
@@ -199,7 +199,7 @@ class TestDigestTagsUpdate:
         assert set(data["tags"]) == {"new-tag", "another-new-tag"}
 
         # Verify tags were created in database
-        response = client.get("/api/v1/tags/")
+        response = client.get("/api/v1/tags")
         data = response.json()
         tag_names = {t["name"] for t in data["tags"]}
         assert "new-tag" in tag_names

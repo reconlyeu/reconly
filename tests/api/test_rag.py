@@ -68,7 +68,7 @@ class TestRAGAPI:
             mock_sum.return_value = summarizer
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": "What progress did AI make?"}
             )
 
@@ -101,7 +101,7 @@ class TestRAGAPI:
             mock_sum.return_value = summarizer
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={
                     "question": "What is AI?",
                     "filters": {
@@ -123,7 +123,7 @@ class TestRAGAPI:
             mock_emb.return_value = provider
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={
                     "question": "What is AI?",
                     "include_answer": False
@@ -156,7 +156,7 @@ class TestRAGAPI:
             mock_sum.return_value = summarizer
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={
                     "question": "Test question",
                     "max_chunks": 5
@@ -168,7 +168,7 @@ class TestRAGAPI:
     def test_rag_query_missing_question(self, client):
         """Test RAG query without question parameter."""
         response = client.post(
-            "/api/v1/rag/query/",
+            "/api/v1/rag/query",
             json={}
         )
 
@@ -184,7 +184,7 @@ class TestRAGAPI:
             mock_emb.return_value = provider
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": "Test question"}
             )
 
@@ -211,7 +211,7 @@ class TestRAGAPI:
             mock_sum.return_value = summarizer
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": "What is AI?"}
             )
 
@@ -239,7 +239,7 @@ class TestRAGAPI:
         """Test RAG export to markdown endpoint."""
         # This endpoint may not exist, testing if available
         response = client.post(
-            "/api/v1/rag/export/",
+            "/api/v1/rag/export",
             json={
                 "answer": "Test answer [1]",
                 "citations": [
@@ -275,7 +275,7 @@ class TestRAGAPIEdgeCases:
             mock_emb.return_value = provider
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": "Test"}
             )
 
@@ -333,7 +333,7 @@ class TestRAGAPIEdgeCases:
 
             # Query with terms that FTS will match
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": "test question topic"}
             )
 
@@ -352,7 +352,7 @@ class TestRAGAPIEdgeCases:
             mock_emb.return_value = provider
 
             response = client.post(
-                "/api/v1/rag/query/",
+                "/api/v1/rag/query",
                 json={"question": long_question}
             )
 
@@ -362,7 +362,7 @@ class TestRAGAPIEdgeCases:
     def test_rag_invalid_max_chunks(self, client):
         """Test RAG with invalid max_chunks parameter."""
         response = client.post(
-            "/api/v1/rag/query/",
+            "/api/v1/rag/query",
             json={
                 "question": "Test",
                 "max_chunks": 1000  # Exceeds limit
@@ -374,7 +374,7 @@ class TestRAGAPIEdgeCases:
     def test_rag_invalid_filters(self, client):
         """Test RAG with invalid filter values."""
         response = client.post(
-            "/api/v1/rag/query/",
+            "/api/v1/rag/query",
             json={
                 "question": "Test",
                 "filters": {

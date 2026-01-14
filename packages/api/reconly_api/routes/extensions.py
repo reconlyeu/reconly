@@ -206,7 +206,7 @@ async def list_extensions(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-@router.get("/catalog/", response_model=CatalogResponse)
+@router.get("/catalog", response_model=CatalogResponse)
 async def get_catalog(
     force_refresh: bool = Query(False, description="Bypass cache and fetch fresh catalog"),
 ):
@@ -254,7 +254,7 @@ async def get_catalog(
         )
 
 
-@router.get("/catalog/search/", response_model=CatalogResponse)
+@router.get("/catalog/search", response_model=CatalogResponse)
 async def search_catalog_endpoint(
     q: Optional[str] = Query(None, description="Search query"),
     type: Optional[str] = Query(None, description="Filter by type (exporter, fetcher, provider)"),
@@ -309,7 +309,7 @@ async def search_catalog_endpoint(
         )
 
 
-@router.post("/install/", response_model=ExtensionInstallResponse)
+@router.post("/install", response_model=ExtensionInstallResponse)
 async def install_extension(
     request: ExtensionInstallRequest,
 ):
@@ -373,7 +373,7 @@ async def install_extension(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-@router.get("/{type}/", response_model=ExtensionListResponse)
+@router.get("/{type}", response_model=ExtensionListResponse)
 async def list_extensions_by_type(
     type: str,
     db: Session = Depends(get_db),
@@ -411,7 +411,7 @@ async def list_extensions_by_type(
     return ExtensionListResponse(total=len(extensions), items=extensions)
 
 
-@router.get("/{type}/{name}/", response_model=ExtensionResponse)
+@router.get("/{type}/{name}", response_model=ExtensionResponse)
 async def get_extension(
     type: str,
     name: str,
@@ -543,7 +543,7 @@ async def update_extension_settings_deprecated(
     )
 
 
-@router.delete("/{type}/{name}/", response_model=ExtensionInstallResponse)
+@router.delete("/{type}/{name}", response_model=ExtensionInstallResponse)
 async def uninstall_extension(
     type: str,
     name: str,

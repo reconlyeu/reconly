@@ -143,7 +143,7 @@ class TestAuthRoutesNoPassword:
 
     def test_config_returns_auth_not_required(self, client):
         """GET /api/config should return auth_required: false when no password."""
-        response = client.get("/api/v1/auth/config/")
+        response = client.get("/api/v1/auth/config")
         assert response.status_code == 200
         data = response.json()
         assert data["auth_required"] is False
@@ -151,7 +151,7 @@ class TestAuthRoutesNoPassword:
 
     def test_login_succeeds_without_password(self, client):
         """Login should succeed when no password is configured."""
-        response = client.post("/api/v1/auth/login/", json={"password": "anything"})
+        response = client.post("/api/v1/auth/login", json={"password": "anything"})
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -159,7 +159,7 @@ class TestAuthRoutesNoPassword:
 
     def test_logout_always_succeeds(self, client):
         """Logout should always succeed."""
-        response = client.post("/api/v1/auth/logout/")
+        response = client.post("/api/v1/auth/logout")
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
@@ -192,7 +192,7 @@ class TestAuthRoutesWithPassword:
             # Patch the settings object directly
             settings.reconly_auth_password = "test-password-123"
 
-            response = client.get("/api/v1/auth/config/")
+            response = client.get("/api/v1/auth/config")
             assert response.status_code == 200
             data = response.json()
             assert data["auth_required"] is True
@@ -207,7 +207,7 @@ class TestAuthRoutesWithPassword:
         try:
             settings.reconly_auth_password = "test-password-123"
 
-            response = client.post("/api/v1/auth/login/", json={"password": "test-password-123"})
+            response = client.post("/api/v1/auth/login", json={"password": "test-password-123"})
             assert response.status_code == 200
             data = response.json()
             assert data["success"] is True
@@ -226,7 +226,7 @@ class TestAuthRoutesWithPassword:
         try:
             settings.reconly_auth_password = "test-password-123"
 
-            response = client.post("/api/v1/auth/login/", json={"password": "wrong-password"})
+            response = client.post("/api/v1/auth/login", json={"password": "wrong-password"})
             assert response.status_code == 401
             assert "Invalid password" in response.json()["detail"]
         finally:
@@ -271,7 +271,7 @@ class TestAuthRoutesWithPassword:
             settings.reconly_auth_password = "test-password-123"
 
             # First login to get session cookie
-            login_response = client.post("/api/v1/auth/login/", json={"password": "test-password-123"})
+            login_response = client.post("/api/v1/auth/login", json={"password": "test-password-123"})
             assert login_response.status_code == 200
 
             # Use the cookie for subsequent requests
@@ -291,11 +291,11 @@ class TestAuthRoutesWithPassword:
 
             # Make 5 failed login attempts
             for _ in range(5):
-                response = client.post("/api/v1/auth/login/", json={"password": "wrong"})
+                response = client.post("/api/v1/auth/login", json={"password": "wrong"})
                 assert response.status_code == 401
 
             # 6th attempt should be rate limited
-            response = client.post("/api/v1/auth/login/", json={"password": "wrong"})
+            response = client.post("/api/v1/auth/login", json={"password": "wrong"})
             assert response.status_code == 429
             assert "Too many" in response.json()["detail"]
         finally:

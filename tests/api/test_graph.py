@@ -81,7 +81,7 @@ class TestGraphAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/")
+            response = client.get("/api/v1/graph/nodes")
 
             assert response.status_code == 200
             data = response.json()
@@ -100,7 +100,7 @@ class TestGraphAPI:
             mock_provider.return_value = provider
 
             digest_id = sample_graph_data[0].id
-            response = client.get(f"/api/v1/graph/nodes/?center_digest_id={digest_id}")
+            response = client.get(f"/api/v1/graph/nodes?center_digest_id={digest_id}")
 
             assert response.status_code == 200
             data = response.json()
@@ -119,7 +119,7 @@ class TestGraphAPI:
             mock_provider.return_value = provider
 
             response = client.get(
-                f"/api/v1/graph/nodes/?center_digest_id={sample_graph_data[0].id}&depth=1"
+                f"/api/v1/graph/nodes?center_digest_id={sample_graph_data[0].id}&depth=1"
             )
 
             assert response.status_code == 200
@@ -132,7 +132,7 @@ class TestGraphAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/?min_similarity=0.8")
+            response = client.get("/api/v1/graph/nodes?min_similarity=0.8")
 
             assert response.status_code == 200
             data = response.json()
@@ -151,7 +151,7 @@ class TestGraphAPI:
             mock_provider.return_value = provider
 
             response = client.get(
-                f"/api/v1/graph/nodes/?center_digest_id={sample_graph_data[0].id}&include_tags=true"
+                f"/api/v1/graph/nodes?center_digest_id={sample_graph_data[0].id}&include_tags=true"
             )
 
             assert response.status_code == 200
@@ -170,7 +170,7 @@ class TestGraphAPI:
             mock_provider.return_value = provider
 
             response = client.get(
-                f"/api/v1/graph/nodes/?center_digest_id={sample_graph_data[0].id}&include_tags=false"
+                f"/api/v1/graph/nodes?center_digest_id={sample_graph_data[0].id}&include_tags=false"
             )
 
             assert response.status_code == 200
@@ -189,7 +189,7 @@ class TestGraphAPI:
             mock_provider.return_value = provider
 
             response = client.get(
-                "/api/v1/graph/nodes/?relationship_types=semantic"
+                "/api/v1/graph/nodes?relationship_types=semantic"
             )
 
             assert response.status_code == 200
@@ -208,7 +208,7 @@ class TestGraphAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/?limit=2")
+            response = client.get("/api/v1/graph/nodes?limit=2")
 
             assert response.status_code == 200
             data = response.json()
@@ -224,7 +224,7 @@ class TestGraphAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/")
+            response = client.get("/api/v1/graph/nodes")
 
             assert response.status_code == 200
             data = response.json()
@@ -244,7 +244,7 @@ class TestGraphAPI:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/")
+            response = client.get("/api/v1/graph/nodes")
 
             assert response.status_code == 200
             data = response.json()
@@ -266,7 +266,7 @@ class TestGraphAPI:
 
             digest_id = sample_graph_data[0].id
             response = client.post(
-                "/api/v1/graph/compute/",
+                "/api/v1/graph/compute",
                 json={"digest_id": digest_id}
             )
 
@@ -275,7 +275,7 @@ class TestGraphAPI:
 
     def test_graph_stats_endpoint(self, client, sample_graph_data):
         """Test graph statistics endpoint if available."""
-        response = client.get("/api/v1/graph/stats/")
+        response = client.get("/api/v1/graph/stats")
 
         # May not be implemented
         if response.status_code == 200:
@@ -294,7 +294,7 @@ class TestGraphAPIEdgeCases:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/")
+            response = client.get("/api/v1/graph/nodes")
 
             assert response.status_code == 200
             data = response.json()
@@ -310,7 +310,7 @@ class TestGraphAPIEdgeCases:
             provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
             mock_provider.return_value = provider
 
-            response = client.get("/api/v1/graph/nodes/?center_digest_id=99999")
+            response = client.get("/api/v1/graph/nodes?center_digest_id=99999")
 
             assert response.status_code == 200
             data = response.json()
@@ -320,19 +320,19 @@ class TestGraphAPIEdgeCases:
 
     def test_graph_invalid_depth(self, client):
         """Test graph with invalid depth parameter."""
-        response = client.get("/api/v1/graph/nodes/?depth=100")
+        response = client.get("/api/v1/graph/nodes?depth=100")
 
         assert response.status_code == 422  # Validation error (exceeds max)
 
     def test_graph_invalid_min_similarity(self, client):
         """Test graph with invalid min_similarity parameter."""
-        response = client.get("/api/v1/graph/nodes/?min_similarity=1.5")
+        response = client.get("/api/v1/graph/nodes?min_similarity=1.5")
 
         assert response.status_code == 422  # Validation error (exceeds 1.0)
 
     def test_graph_invalid_limit(self, client):
         """Test graph with invalid limit parameter."""
-        response = client.get("/api/v1/graph/nodes/?limit=10000")
+        response = client.get("/api/v1/graph/nodes?limit=10000")
 
         assert response.status_code == 422  # Validation error (exceeds max)
 
@@ -341,7 +341,7 @@ class TestGraphAPIEdgeCases:
         with patch('reconly_core.rag.embeddings.get_embedding_provider') as mock_provider:
             mock_provider.side_effect = RuntimeError("Provider error")
 
-            response = client.get("/api/v1/graph/nodes/")
+            response = client.get("/api/v1/graph/nodes")
 
             # Should handle error gracefully
             assert response.status_code in [500, 200]  # May work without provider

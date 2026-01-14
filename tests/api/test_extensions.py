@@ -8,7 +8,7 @@ from reconly_core.extensions.catalog import Catalog, CatalogEntry
 
 @pytest.mark.api
 class TestExtensionsListAPI:
-    """Test suite for GET /api/v1/extensions/ endpoints."""
+    """Test suite for GET /api/v1/extensions endpoints."""
 
     @patch('reconly_api.routes.extensions.ensure_extensions_loaded')
     @patch('reconly_api.routes.extensions.list_extension_exporters')
@@ -20,7 +20,7 @@ class TestExtensionsListAPI:
         mock_exporters.return_value = []
         mock_fetchers.return_value = []
 
-        response = client.get("/api/v1/extensions/")
+        response = client.get("/api/v1/extensions")
         assert response.status_code == 200
 
         data = response.json()
@@ -37,10 +37,10 @@ class TestExtensionsListAPI:
         mock_exporters.return_value = []
         mock_fetchers.return_value = []
 
-        response = client.get("/api/v1/extensions/?type=exporter")
+        response = client.get("/api/v1/extensions?type=exporter")
         assert response.status_code == 200
 
-        response = client.get("/api/v1/extensions/?type=fetcher")
+        response = client.get("/api/v1/extensions?type=fetcher")
         assert response.status_code == 200
 
 
@@ -50,7 +50,7 @@ class TestExtensionsByTypeAPI:
 
     def test_invalid_type_returns_400(self, client):
         """Test invalid extension type returns 400."""
-        response = client.get("/api/v1/extensions/invalid/")
+        response = client.get("/api/v1/extensions/invalid")
         assert response.status_code == 400
         assert "Invalid extension type" in response.json()["detail"]
 
@@ -60,7 +60,7 @@ class TestExtensionsByTypeAPI:
         """Test listing exporter extensions."""
         mock_exporters.return_value = []
 
-        response = client.get("/api/v1/extensions/exporter/")
+        response = client.get("/api/v1/extensions/exporter")
         assert response.status_code == 200
         data = response.json()
         assert "total" in data
@@ -72,7 +72,7 @@ class TestExtensionsByTypeAPI:
         """Test listing fetcher extensions."""
         mock_fetchers.return_value = []
 
-        response = client.get("/api/v1/extensions/fetcher/")
+        response = client.get("/api/v1/extensions/fetcher")
         assert response.status_code == 200
 
 
@@ -86,7 +86,7 @@ class TestExtensionDetailsAPI:
         """Test getting non-existent extension returns 404."""
         mock_is_ext.return_value = False
 
-        response = client.get("/api/v1/extensions/exporter/nonexistent/")
+        response = client.get("/api/v1/extensions/exporter/nonexistent")
         assert response.status_code == 404
         assert "not found" in response.json()["detail"].lower()
 
@@ -96,7 +96,7 @@ class TestExtensionDetailsAPI:
         """Test getting non-existent fetcher returns 404."""
         mock_is_ext.return_value = False
 
-        response = client.get("/api/v1/extensions/fetcher/nonexistent/")
+        response = client.get("/api/v1/extensions/fetcher/nonexistent")
         assert response.status_code == 404
 
 
@@ -111,7 +111,7 @@ class TestExtensionToggleAPI:
         mock_is_ext.return_value = False
 
         response = client.put(
-            "/api/v1/extensions/exporter/nonexistent/enabled",
+            "/api/v1/extensions/exporter/nonexistentenabled",
             json={"enabled": True}
         )
         assert response.status_code == 404
@@ -131,7 +131,7 @@ class TestExtensionToggleAPI:
         mock_can.return_value = False
 
         response = client.put(
-            "/api/v1/extensions/exporter/test/enabled",
+            "/api/v1/extensions/exporter/testenabled",
             json={"enabled": True}
         )
         assert response.status_code == 400
@@ -140,7 +140,7 @@ class TestExtensionToggleAPI:
 
 @pytest.mark.api
 class TestCatalogAPI:
-    """Test suite for /api/v1/extensions/catalog/ endpoints."""
+    """Test suite for /api/v1/extensions/catalog endpoints."""
 
     @patch('reconly_api.routes.extensions.get_catalog_fetcher')
     def test_get_catalog_success(self, mock_get_fetcher, client):
@@ -163,7 +163,7 @@ class TestCatalogAPI:
         )
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/")
+        response = client.get("/api/v1/extensions/catalog")
         assert response.status_code == 200
 
         data = response.json()
@@ -179,7 +179,7 @@ class TestCatalogAPI:
         mock_fetcher.fetch_sync.return_value = Catalog(version="1.0")
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/?force_refresh=true")
+        response = client.get("/api/v1/extensions/catalog?force_refresh=true")
         assert response.status_code == 200
 
         mock_fetcher.fetch_sync.assert_called_once_with(force_refresh=True)
@@ -191,14 +191,14 @@ class TestCatalogAPI:
         mock_fetcher.fetch_sync.side_effect = Exception("Network error")
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/")
+        response = client.get("/api/v1/extensions/catalog")
         assert response.status_code == 503
         assert "Failed to fetch" in response.json()["detail"]
 
 
 @pytest.mark.api
 class TestCatalogSearchAPI:
-    """Test suite for GET /api/v1/extensions/catalog/search/ endpoint."""
+    """Test suite for GET /api/v1/extensions/catalogsearch/ endpoint."""
 
     @patch('reconly_api.routes.extensions.get_catalog_fetcher')
     def test_search_catalog_by_query(self, mock_get_fetcher, client):
@@ -220,7 +220,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = catalog.extensions
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/search/?q=notion")
+        response = client.get("/api/v1/extensions/catalogsearch/?q=notion")
         assert response.status_code == 200
 
         mock_fetcher.search.assert_called_once()
@@ -233,7 +233,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = []
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/search/?type=exporter")
+        response = client.get("/api/v1/extensions/catalogsearch/?type=exporter")
         assert response.status_code == 200
 
         mock_fetcher.search.assert_called_once()
@@ -248,7 +248,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = []
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalog/search/?verified_only=true")
+        response = client.get("/api/v1/extensions/catalogsearch/?verified_only=true")
         assert response.status_code == 200
 
         call_args = mock_fetcher.search.call_args
@@ -257,12 +257,12 @@ class TestCatalogSearchAPI:
 
 @pytest.mark.api
 class TestInstallAPI:
-    """Test suite for POST /api/v1/extensions/install/ endpoint."""
+    """Test suite for POST /api/v1/extensions/install endpoint."""
 
     def test_install_invalid_package_name(self, client):
         """Test install with invalid package name."""
         response = client.post(
-            "/api/v1/extensions/install/",
+            "/api/v1/extensions/install",
             json={"package": "invalid-package"}
         )
         assert response.status_code == 400
@@ -281,7 +281,7 @@ class TestInstallAPI:
         mock_get_installer.return_value = mock_installer
 
         response = client.post(
-            "/api/v1/extensions/install/",
+            "/api/v1/extensions/install",
             json={"package": "reconly-ext-test"}
         )
         assert response.status_code == 200
@@ -304,7 +304,7 @@ class TestInstallAPI:
         mock_get_installer.return_value = mock_installer
 
         response = client.post(
-            "/api/v1/extensions/install/",
+            "/api/v1/extensions/install",
             json={"package": "reconly-ext-missing"}
         )
         assert response.status_code == 400
@@ -322,7 +322,7 @@ class TestInstallAPI:
         mock_get_installer.return_value = mock_installer
 
         response = client.post(
-            "/api/v1/extensions/install/",
+            "/api/v1/extensions/install",
             json={"package": "reconly-ext-test", "upgrade": True}
         )
         assert response.status_code == 200
@@ -341,7 +341,7 @@ class TestUninstallAPI:
         """Test uninstalling non-existent extension."""
         mock_is_ext.return_value = False
 
-        response = client.delete("/api/v1/extensions/exporter/nonexistent/")
+        response = client.delete("/api/v1/extensions/exporter/nonexistent")
         assert response.status_code == 404
 
     @patch('reconly_api.routes.extensions.is_exporter_extension')
@@ -357,7 +357,7 @@ class TestUninstallAPI:
         )
         mock_get_installer.return_value = mock_installer
 
-        response = client.delete("/api/v1/extensions/exporter/test/")
+        response = client.delete("/api/v1/extensions/exporter/test")
         assert response.status_code == 200
 
         data = response.json()
@@ -377,7 +377,7 @@ class TestUninstallAPI:
         )
         mock_get_installer.return_value = mock_installer
 
-        response = client.delete("/api/v1/extensions/exporter/test/")
+        response = client.delete("/api/v1/extensions/exporter/test")
         assert response.status_code == 400
 
 
@@ -388,7 +388,7 @@ class TestDeprecatedSettingsAPI:
     def test_settings_endpoint_returns_410(self, client):
         """Test deprecated settings endpoint returns 410 Gone."""
         response = client.put(
-            "/api/v1/extensions/exporter/test/settings",
+            "/api/v1/extensions/exporter/testsettings",
             json={"settings": {}}
         )
         assert response.status_code == 410

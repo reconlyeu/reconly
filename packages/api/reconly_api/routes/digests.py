@@ -411,7 +411,7 @@ async def export_digests_by_ids(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/export-to-path/", response_model=ExportToPathResponse)
+@router.post("/export-to-path", response_model=ExportToPathResponse)
 async def export_digests_to_path(
     request: ExportToPathRequest,
     db: Session = Depends(get_db)

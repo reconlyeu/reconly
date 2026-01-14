@@ -42,12 +42,12 @@ def temp_export_dir():
 
 @pytest.mark.api
 class TestExportToPathAPI:
-    """Test suite for POST /api/v1/digests/export-to-path/ endpoint."""
+    """Test suite for POST /api/v1/digests/export-to-path endpoint."""
 
     def test_export_to_path_success(self, client, sample_digests, temp_export_dir):
         """Test successful export to filesystem."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -69,7 +69,7 @@ class TestExportToPathAPI:
     def test_export_to_path_empty_digests(self, client, temp_export_dir):
         """Test export when no digests match filters."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -86,7 +86,7 @@ class TestExportToPathAPI:
     def test_export_to_path_invalid_format(self, client, temp_export_dir):
         """Test export with unsupported format."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "invalid_format",
                 "path": temp_export_dir
@@ -98,7 +98,7 @@ class TestExportToPathAPI:
     def test_export_to_path_json_works(self, client, temp_export_dir, sample_digests):
         """Test JSON format supports direct export."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "json",
                 "path": temp_export_dir
@@ -111,7 +111,7 @@ class TestExportToPathAPI:
     def test_export_to_path_csv_works(self, client, temp_export_dir, sample_digests):
         """Test CSV format supports direct export."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "csv",
                 "path": temp_export_dir
@@ -124,7 +124,7 @@ class TestExportToPathAPI:
     def test_export_to_path_nonexistent_path(self, client):
         """Test export to non-existent path."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": "/nonexistent/path/that/does/not/exist"
@@ -140,7 +140,7 @@ class TestExportToPathAPI:
         file_path.write_text("test")
 
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": str(file_path)
@@ -152,7 +152,7 @@ class TestExportToPathAPI:
     def test_export_to_path_no_path_no_config(self, client):
         """Test export without path and without configured default path."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian"
                 # No path provided
@@ -169,7 +169,7 @@ class TestExportToPathFilters:
     def test_export_with_search_filter(self, client, sample_digests, temp_export_dir):
         """Test export with search filter."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir,
@@ -202,7 +202,7 @@ class TestExportToPathFilters:
         test_db.commit()
 
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir,
@@ -223,7 +223,7 @@ class TestExportToPathResponseFormat:
     def test_response_has_required_fields(self, client, sample_digests, temp_export_dir):
         """Test that response has all required fields."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -239,7 +239,7 @@ class TestExportToPathResponseFormat:
     def test_response_field_types(self, client, sample_digests, temp_export_dir):
         """Test that response fields have correct types."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -257,7 +257,7 @@ class TestExportToPathResponseFormat:
     def test_target_path_is_vault_path_by_default(self, client, sample_digests, temp_export_dir):
         """Test that target_path is the vault path when no subfolder configured."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -277,7 +277,7 @@ class TestExportToPathFileContent:
     def test_exported_files_are_markdown(self, client, sample_digests, temp_export_dir):
         """Test that exported files have .md extension."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -292,7 +292,7 @@ class TestExportToPathFileContent:
     def test_exported_files_have_frontmatter(self, client, sample_digests, temp_export_dir):
         """Test that exported files have YAML frontmatter."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir
@@ -313,7 +313,7 @@ class TestExportToPathFileContent:
     def test_exported_files_contain_digest_content(self, client, sample_digests, temp_export_dir):
         """Test that exported files contain the digest summary."""
         response = client.post(
-            "/api/v1/digests/export-to-path/",
+            "/api/v1/digests/export-to-path",
             json={
                 "format": "obsidian",
                 "path": temp_export_dir

@@ -15,7 +15,7 @@ from reconly_api.schemas.graph import (
 router = APIRouter()
 
 
-@router.get("/nodes/", response_model=GraphResponse)
+@router.get("/nodes", response_model=GraphResponse)
 async def get_graph_nodes(
     center_digest_id: int | None = Query(
         None,
@@ -181,7 +181,7 @@ async def get_graph_nodes(
         )
 
 
-@router.get("/expand/{node_id}/", response_model=GraphResponse)
+@router.get("/expand/{node_id}", response_model=GraphResponse)
 async def expand_node(
     node_id: str,
     depth: int = Query(
@@ -285,7 +285,7 @@ async def expand_node(
         )
 
 
-@router.get("/stats/", response_model=GraphStatsResponse)
+@router.get("/stats", response_model=GraphStatsResponse)
 async def get_graph_stats(
     db: Session = Depends(get_db),
 ) -> GraphStatsResponse:
@@ -320,7 +320,7 @@ async def get_graph_stats(
         )
 
 
-@router.post("/compute/", response_model=ComputeRelationshipsResponse)
+@router.post("/compute", response_model=ComputeRelationshipsResponse)
 async def compute_relationships(
     request: ComputeRelationshipsRequest,
     db: Session = Depends(get_db),
@@ -385,7 +385,7 @@ async def compute_relationships(
         )
 
 
-@router.post("/compute-all/")
+@router.post("/compute-all")
 async def compute_all_relationships(
     background_tasks: BackgroundTasks,
     include_semantic: bool = Query(True, description="Compute semantic relationships"),
@@ -516,7 +516,7 @@ async def _compute_relationships_background(
         db.close()
 
 
-@router.delete("/relationships/{digest_id}/")
+@router.delete("/relationships/{digest_id}")
 async def delete_digest_relationships(
     digest_id: int,
     db: Session = Depends(get_db),
@@ -559,7 +559,7 @@ async def delete_digest_relationships(
         )
 
 
-@router.post("/prune/")
+@router.post("/prune")
 async def prune_relationships(
     min_score: float | None = Query(
         None,
