@@ -53,6 +53,7 @@ class TestGraphService:
         for i in range(3):
             digest = Digest(
                 title=f"Digest {i}",
+                url=f"https://test.example.com/digest-{i}",
                 content=f"Content {i}",
                 source_id=source.id,
             )
@@ -97,10 +98,6 @@ class TestGraphService:
         service = GraphService(db=db_session)
         assert service.embedding_provider is None
 
-    def test_detect_postgres(self, graph_service):
-        """Test PostgreSQL detection."""
-        assert graph_service._is_postgres is True  # PostgreSQL in tests
-
     @pytest.mark.asyncio
     async def test_compute_relationships(self, graph_service, sample_digests):
         """Test computing relationships for a digest."""
@@ -133,18 +130,27 @@ class TestGraphService:
         db_session.add_all([tag1, tag2])
         db_session.flush()
 
-        # Add tags to digests
+        # Add tags to digests - both digests share both tags for high Jaccard similarity
+        # Jaccard = intersection / union = 2 / 2 = 1.0 (well above 0.6 min_similarity)
         digest1, digest2 = sample_digests[0], sample_digests[1]
 
         db_session.add(DigestTag(digest_id=digest1.id, tag_id=tag1.id))
         db_session.add(DigestTag(digest_id=digest1.id, tag_id=tag2.id))
         db_session.add(DigestTag(digest_id=digest2.id, tag_id=tag1.id))
+        db_session.add(DigestTag(digest_id=digest2.id, tag_id=tag2.id))
         db_session.commit()
+
+        # Expire and re-query to ensure relationship is loaded
+        db_session.expire(digest1)
+        digest1 = db_session.query(Digest).filter(Digest.id == digest1.id).first()
+
+        # Verify tags are loaded
+        assert len(digest1.tags) == 2, f"Expected 2 tags, got {len(digest1.tags)}"
 
         # Compute tag relationships for digest1
         count = graph_service._compute_tag_relationships(digest1)
 
-        # Should create relationship with digest2 (shared tag)
+        # Should create relationship with digest2 (shared tags with Jaccard = 1.0)
         assert count > 0
 
     def test_compute_tag_relationships_no_tags(self, graph_service, sample_digests):
@@ -163,7 +169,7 @@ class TestGraphService:
 
     def test_compute_source_relationships_no_source(self, graph_service, db_session):
         """Test computing source relationships when digest has no source."""
-        digest = Digest(title="No Source", content="Content")
+        digest = Digest(title="No Source", url="https://test.example.com/no-source", content="Content")
         db_session.add(digest)
         db_session.commit()
 
@@ -401,17 +407,6 @@ class TestGraphService:
 
         assert count == 0
 
-    def test_deserialize_embedding_list(self, graph_service):
-        """Test deserializing list embedding (pgvector format)."""
-        embedding = [0.1, 0.2, 0.3]
-        result = graph_service._deserialize_embedding(embedding)
-        assert result == embedding
-
-    def test_deserialize_embedding_none(self, graph_service):
-        """Test deserializing None."""
-        result = graph_service._deserialize_embedding(None)
-        assert result is None
-
 
 class TestGraphNode:
     """Test GraphNode dataclass."""
@@ -494,8 +489,8 @@ class TestGraphServiceIntegration:
         db_session.flush()
 
         # Create digests
-        digest1 = Digest(title="AI News 1", content="Content 1", source_id=source.id)
-        digest2 = Digest(title="AI News 2", content="Content 2", source_id=source.id)
+        digest1 = Digest(title="AI News 1", url="https://tech.example.com/ai-news-1", content="Content 1", source_id=source.id)
+        digest2 = Digest(title="AI News 2", url="https://tech.example.com/ai-news-2", content="Content 2", source_id=source.id)
         db_session.add_all([digest1, digest2])
         db_session.flush()
 

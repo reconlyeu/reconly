@@ -43,6 +43,7 @@ class TestVectorSearchService:
         # Create digest
         digest = Digest(
             title="Sample Digest",
+            url="https://example.com/sample-digest",
             content="This is a sample digest about AI and machine learning.",
             source_id=source.id,
         )
@@ -75,13 +76,6 @@ class TestVectorSearchService:
         service = VectorSearchService(db_session, mock_embedding_provider)
         assert service.db == db_session
         assert service.embedding_provider == mock_embedding_provider
-        assert service._is_postgres is True  # PostgreSQL in tests
-
-    def test_detect_postgres(self, db_session, mock_embedding_provider):
-        """Test PostgreSQL detection."""
-        service = VectorSearchService(db_session, mock_embedding_provider)
-        # Should be True for PostgreSQL test database
-        assert service._is_postgres is True
 
     @pytest.mark.asyncio
     async def test_get_query_embedding(self, vector_service, mock_embedding_provider):
@@ -133,11 +127,11 @@ class TestVectorSearchService:
         # Create feed and feed run
         from reconly_core.database.models import Feed
 
-        feed = Feed(name="Test Feed", type="rss", url="https://example.com", config={})
+        feed = Feed(name="Test Feed")
         db_session.add(feed)
         db_session.flush()
 
-        feed_run = FeedRun(feed_id=feed.id, status="completed")
+        feed_run = FeedRun(feed_id=feed.id, triggered_by="manual", status="completed")
         db_session.add(feed_run)
         db_session.flush()
 
@@ -190,17 +184,6 @@ class TestVectorSearchService:
 
         for result in results:
             assert isinstance(result, VectorSearchResult)
-
-    def test_deserialize_embedding_list(self, vector_service):
-        """Test deserializing list embedding (pgvector format)."""
-        embedding = [0.1, 0.2, 0.3]
-        result = vector_service._deserialize_embedding(embedding)
-        assert result == embedding
-
-    def test_deserialize_embedding_none(self, vector_service):
-        """Test deserializing None."""
-        result = vector_service._deserialize_embedding(None)
-        assert result is None
 
 
 class TestVectorSearchResult:

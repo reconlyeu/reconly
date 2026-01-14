@@ -87,7 +87,7 @@ class TestRAGService:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="AI Article", content="Content about AI", source_id=source.id)
+        digest = Digest(title="AI Article", url="https://example.com/ai-article", content="Content about AI", source_id=source.id)
         db_session.add(digest)
         db_session.commit()
 
@@ -186,7 +186,7 @@ class TestRAGService:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="Test", content="Content", source_id=source.id)
+        digest = Digest(title="Test", url="https://test.example.com/test", content="Content", source_id=source.id)
         db_session.add(digest)
         db_session.commit()
 
@@ -220,7 +220,7 @@ class TestRAGService:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="Test", content="Content", source_id=source.id)
+        digest = Digest(title="Test", url="https://test.example.com/test-search", content="Content", source_id=source.id)
         db_session.add(digest)
         db_session.commit()
 
@@ -250,14 +250,14 @@ class TestRAGService:
 
         answer = "This is an answer with citations [1] and [2]."
         parsed = ParsedResponse(
-            text=answer,
+            answer=answer,
             cited_ids={1, 2},
             uncited_claims=[],
         )
         context = CitationContext(
             citations=[
-                Citation(id=1, digest_id=1, digest_title="Title 1", text="text1", url=None),
-                Citation(id=2, digest_id=2, digest_title="Title 2", text="text2", url=None),
+                Citation(id=1, digest_id=1, digest_title="Title 1", chunk_text="text1", chunk_index=0, relevance_score=0.9),
+                Citation(id=2, digest_id=2, digest_title="Title 2", chunk_text="text2", chunk_index=0, relevance_score=0.8),
             ],
             formatted_context="",
             total_chunks=2,
@@ -272,7 +272,7 @@ class TestRAGService:
 
         answer = "This is an answer without citations."
         parsed = ParsedResponse(
-            text=answer,
+            answer=answer,
             cited_ids=set(),
             uncited_claims=["This is an answer without citations"],
         )
@@ -287,13 +287,13 @@ class TestRAGService:
 
         answer = "Answer with invalid citation [99]."
         parsed = ParsedResponse(
-            text=answer,
+            answer=answer,
             cited_ids={99},
             uncited_claims=[],
         )
         context = CitationContext(
             citations=[
-                Citation(id=1, digest_id=1, digest_title="Title", text="text", url=None),
+                Citation(id=1, digest_id=1, digest_title="Title", chunk_text="text", chunk_index=0, relevance_score=0.9),
             ],
             formatted_context="",
             total_chunks=1,
@@ -308,7 +308,7 @@ class TestRAGService:
 
         answer = "I cannot find information about this in the available sources."
         parsed = ParsedResponse(
-            text=answer,
+            answer=answer,
             cited_ids=set(),
             uncited_claims=[],
         )
@@ -348,7 +348,7 @@ class TestRAGResult:
     def test_result_creation(self):
         """Test creating a RAGResult."""
         citations = [
-            Citation(id=1, digest_id=1, digest_title="Title", text="text", url=None)
+            Citation(id=1, digest_id=1, digest_title="Title", chunk_text="text", chunk_index=0, relevance_score=0.9)
         ]
 
         result = RAGResult(
@@ -403,6 +403,7 @@ class TestRAGServiceIntegration:
 
         digest = Digest(
             title="AI Revolution",
+            url="https://tech.com/ai-revolution",
             content="Artificial intelligence is transforming the world.",
             source_id=source.id,
         )

@@ -91,11 +91,14 @@ class TestQueryEmbeddingCache:
         cache.set("query", "ollama", "bge-m3", [0.1])
         cache.clear()
 
-        assert cache.get("query", "ollama", "bge-m3") is None
+        # After clear, stats should be reset (before any get calls)
         stats = cache.get_stats()
         assert stats['size'] == 0
         assert stats['hits'] == 0
         assert stats['misses'] == 0
+
+        # Verify the entry is gone (this will increment misses)
+        assert cache.get("query", "ollama", "bge-m3") is None
 
     def test_get_stats(self, cache):
         """Test getting cache statistics."""
@@ -120,6 +123,7 @@ class TestHybridSearchService:
         provider = Mock()
         provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
         provider.get_dimension = Mock(return_value=1024)
+        provider.get_provider_name = Mock(return_value='ollama')
         provider.get_model_info = Mock(return_value={
             'provider': 'ollama',
             'model': 'bge-m3',
@@ -186,9 +190,10 @@ class TestHybridSearchService:
                 FTSSearchResult(
                     digest_id=1,
                     title="ML Article",
-                    snippet="Machine learning is...",
+                    summary=None,
                     score=0.8,
-                    rank=1,
+                    matched_field="title",
+                    snippet="Machine learning is...",
                 )
             ]
 
@@ -237,9 +242,10 @@ class TestHybridSearchService:
                 FTSSearchResult(
                     digest_id=1,
                     title="Test Article",
-                    snippet="Test content",
+                    summary=None,
                     score=0.8,
-                    rank=1,
+                    matched_field="title",
+                    snippet="Test content",
                 )
             ]
 
@@ -319,8 +325,8 @@ class TestHybridSearchService:
         ]
 
         fts_results = [
-            FTSSearchResult(1, "Title 1", "snippet1", 0.95, 1),
-            FTSSearchResult(3, "Title 3", "snippet3", 0.7, 2),
+            FTSSearchResult(digest_id=1, title="Title 1", summary=None, score=0.95, matched_field="title", snippet="snippet1"),
+            FTSSearchResult(digest_id=3, title="Title 3", summary=None, score=0.7, matched_field="title", snippet="snippet3"),
         ]
 
         merged = hybrid_service._merge_with_rrf(vector_results, fts_results, limit=10)
@@ -346,7 +352,7 @@ class TestHybridSearchService:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="Test Digest", content="Content", source_id=source.id)
+        digest = Digest(title="Test Digest", url="https://test.example.com/test-digest", content="Content", source_id=source.id)
         db_session.add(digest)
         db_session.commit()
 
@@ -364,8 +370,8 @@ class TestHybridSearchService:
     def test_convert_fts_results(self, hybrid_service):
         """Test converting FTS results to hybrid format."""
         fts_results = [
-            FTSSearchResult(1, "Title 1", "snippet1", 0.95, 1),
-            FTSSearchResult(2, "Title 2", "snippet2", 0.85, 2),
+            FTSSearchResult(digest_id=1, title="Title 1", summary=None, score=0.95, matched_field="title", snippet="snippet1"),
+            FTSSearchResult(digest_id=2, title="Title 2", summary=None, score=0.85, matched_field="title", snippet="snippet2"),
         ]
 
         converted = hybrid_service._convert_fts_results(fts_results)
