@@ -142,23 +142,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-# Trailing slash normalization middleware
-# Routes are defined without trailing slashes, but UI sends with trailing slashes.
-# This middleware strips trailing slashes from API routes to ensure matching.
-@app.middleware("http")
-async def normalize_trailing_slash(request: Request, call_next):
-    """Strip trailing slashes from API routes for consistent routing."""
-    path = request.url.path
-    if path.startswith("/api/") and path.endswith("/") and len(path) > 1:
-        # Redirect to path without trailing slash
-        from starlette.responses import RedirectResponse
-        new_path = path.rstrip("/")
-        query = request.url.query
-        new_url = f"{new_path}?{query}" if query else new_path
-        return RedirectResponse(url=new_url, status_code=307)
-    return await call_next(request)
-
-
 # Debug exception handler to log all unhandled exceptions
 @app.exception_handler(Exception)
 async def debug_exception_handler(request: Request, exc: Exception):
