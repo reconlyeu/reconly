@@ -1,9 +1,19 @@
-"""FastAPI dependency injection for database sessions."""
+"""FastAPI dependency injection for database sessions and rate limiting."""
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from reconly_api.config import settings
+
+
+# Shared rate limiter instance for use across route files
+# Default limit is configurable via settings.rate_limit_per_minute
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[f"{settings.rate_limit_per_minute}/minute"]
+)
 
 
 def get_engine():

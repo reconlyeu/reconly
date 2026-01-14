@@ -20,12 +20,15 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import HTTPException, Request, Response, status
 from pydantic import BaseModel
 
 from reconly_api.config import settings
+from reconly_core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # Session cookie configuration
@@ -272,17 +275,75 @@ async def verify_auth(request: Request) -> bool:
     )
 
 
-def set_session_cookie(response: Response) -> None:
-    """Set a session cookie on the response."""
+def is_https(request: Optional[Request]) -> bool:
+    """
+    Detect if the request is using HTTPS.
+
+    Checks X-Forwarded-Proto header (proxy/load balancer) and direct URL scheme.
+
+    Args:
+        request: The FastAPI request object (optional)
+
+    Returns:
+        True if HTTPS detected, False otherwise
+    """
+    if request is None:
+        return False
+
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "").lower()
+    return forwarded_proto == "https" or request.url.scheme == "https"
+
+
+def _should_use_secure_cookies(request: Optional[Request]) -> bool:
+    """
+    Determine if secure cookies should be used based on configuration and request.
+
+    The SECURE_COOKIES setting controls behavior:
+    - "auto" (default): Detect from request (HTTPS = secure)
+    - "true": Always use secure cookies (for HTTPS environments)
+    - "false": Never use secure cookies (for development/testing)
+    """
+    secure_mode = settings.secure_cookies.lower()
+
+    if secure_mode == "true":
+        return True
+    if secure_mode == "false":
+        return False
+    # "auto" or any other value defaults to auto-detection
+    return is_https(request)
+
+
+def set_session_cookie(response: Response, request: Optional[Request] = None) -> None:
+    """Set a session cookie on the response.
+
+    The cookie's secure flag is determined by:
+    1. SECURE_COOKIES environment variable ("auto", "true", "false")
+    2. If "auto", detect HTTPS from request headers/scheme
+
+    Args:
+        response: The FastAPI response object
+        request: The FastAPI request object (optional, used for HTTPS detection)
+    """
     expires_at = datetime.utcnow() + timedelta(seconds=SESSION_COOKIE_MAX_AGE)
     token = create_session_token(settings.secret_key, expires_at)
+
+    use_secure = _should_use_secure_cookies(request)
+
+    # Log warning in development when using insecure cookies
+    if not use_secure and request is not None:
+        logger.warning(
+            "Setting insecure session cookie over HTTP",
+            hint="Use HTTPS in production or set SECURE_COOKIES=true",
+            scheme=request.url.scheme,
+            secure_cookies_setting=settings.secure_cookies,
+        )
 
     response.set_cookie(
         key=SESSION_COOKIE_NAME,
         value=token,
         max_age=SESSION_COOKIE_MAX_AGE,
         httponly=True,
-        secure=False,  # Set to True in production with HTTPS
+        secure=use_secure,
         samesite="lax",
     )
 

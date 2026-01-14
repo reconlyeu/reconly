@@ -4,8 +4,6 @@ from fastapi.responses import Response
 from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session, joinedload
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from reconly_core.exporters import get_exporter, list_exporters
 
@@ -21,7 +19,7 @@ from reconly_api.schemas.digest import (
 from reconly_api.schemas.batch import BatchDeleteRequest, BatchDeleteResponse
 from reconly_api.schemas.exporters import ExportByIdsRequest, ExportToPathRequest, ExportToPathResponse
 from reconly_api.config import settings
-from reconly_api.dependencies import get_db
+from reconly_api.dependencies import get_db, limiter
 from reconly_core.services.digest_service import DigestService, ProcessOptions
 from reconly_core.services.batch_service import BatchService, BatchOptions
 
@@ -30,8 +28,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("", response_model=DigestResponse, status_code=201)

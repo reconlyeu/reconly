@@ -4,9 +4,13 @@ Provides endpoints for:
 - POST /api/auth/login - Authenticate with password, get session cookie
 - POST /api/auth/logout - Clear session cookie
 - GET /api/config - Check if auth is required (public endpoint)
+
+All authentication events are logged via the audit logging system for
+security monitoring and compliance.
 """
 from fastapi import APIRouter, HTTPException, Request, Response, status
 
+from reconly_api.audit import AuditEventType, audit_log
 from reconly_api.config import settings
 from reconly_api.auth.password import (
     ConfigResponse,
@@ -31,11 +35,18 @@ async def login(request: Request, body: LoginRequest, response: Response):
     Authenticate with password and receive a session cookie.
 
     Rate limited to 5 failed attempts per IP per minute.
+    All login attempts (success and failure) are logged for security auditing.
     """
     client_ip = get_client_ip(request)
 
     # Check rate limiting
     if _is_rate_limited(client_ip):
+        # Log rate limit event
+        audit_log(
+            AuditEventType.RATE_LIMITED,
+            ip=client_ip,
+            details={"endpoint": "/auth/login", "reason": "too_many_failed_attempts"},
+        )
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many failed login attempts. Please try again later.",
@@ -51,6 +62,14 @@ async def login(request: Request, body: LoginRequest, response: Response):
     # Verify password using timing-safe comparison
     if not timing_safe_compare(body.password, settings.reconly_auth_password or ""):
         _record_failed_attempt(client_ip)
+
+        # Log failed authentication attempt (never log the actual password)
+        audit_log(
+            AuditEventType.AUTH_FAILURE,
+            ip=client_ip,
+            details={"reason": "invalid_password"},
+        )
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid password",
@@ -58,7 +77,13 @@ async def login(request: Request, body: LoginRequest, response: Response):
 
     # Success - clear failed attempts and set session cookie
     _clear_failed_attempts(client_ip)
-    set_session_cookie(response)
+    set_session_cookie(response, request)
+
+    # Log successful authentication
+    audit_log(
+        AuditEventType.AUTH_SUCCESS,
+        ip=client_ip,
+    )
 
     return LoginResponse(
         success=True,

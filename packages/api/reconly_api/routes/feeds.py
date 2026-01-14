@@ -1,19 +1,19 @@
-import logging
 """Feed management API routes."""
+import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Request
 from sqlalchemy.orm import Session
 from datetime import datetime
 from croniter import croniter
 
 from reconly_core.database.models import Feed, FeedSource
-from reconly_api.dependencies import get_db
+from reconly_api.dependencies import get_db, limiter
 from reconly_api.schemas.feeds import FeedCreate, FeedUpdate, FeedResponse
 from reconly_api.schemas.batch import BatchDeleteRequest, BatchDeleteResponse
 from reconly_api.tasks.feed_tasks import run_feed_task
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -54,11 +54,16 @@ async def list_feeds(
 
 
 @router.post("", response_model=FeedResponse, status_code=201)
+@limiter.limit("10/minute")
 async def create_feed(
+    request: Request,
     feed: FeedCreate,
     db: Session = Depends(get_db)
 ):
-    """Create a new feed."""
+    """Create a new feed.
+
+    Rate limited to 10 requests per minute per IP.
+    """
     db_feed = Feed(
         name=feed.name,
         description=feed.description,

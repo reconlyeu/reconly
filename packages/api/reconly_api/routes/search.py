@@ -2,11 +2,11 @@
 import time
 from typing import Literal
 
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from reconly_api.dependencies import get_db
+from reconly_api.dependencies import get_db, limiter
 from reconly_api.schemas.search import (
     SearchResponse,
     SearchResult,
@@ -18,7 +18,9 @@ router = APIRouter()
 
 
 @router.get("/hybrid", response_model=SearchResponse)
+@limiter.limit("60/minute")
 async def hybrid_search(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),
     source_id: int | None = Query(None, description="Filter by source ID"),
@@ -36,6 +38,8 @@ async def hybrid_search(
 ) -> SearchResponse:
     """
     Search digests using hybrid vector + full-text search.
+
+    Rate limited to 60 requests per minute per IP.
 
     Combines semantic vector search (using pgvector) with PostgreSQL
     full-text search, merging results using Reciprocal Rank Fusion (RRF).
@@ -163,7 +167,9 @@ async def get_search_stats(
 
 
 @router.get("/vector", response_model=SearchResponse)
+@limiter.limit("60/minute")
 async def vector_search(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),
     source_id: int | None = Query(None, description="Filter by source ID"),
@@ -175,6 +181,8 @@ async def vector_search(
 ) -> SearchResponse:
     """
     Search digests using vector similarity only.
+
+    Rate limited to 60 requests per minute per IP.
 
     Uses pgvector's cosine distance for semantic search based on embeddings.
 
@@ -257,7 +265,9 @@ async def vector_search(
 
 
 @router.get("/fts", response_model=SearchResponse)
+@limiter.limit("60/minute")
 async def fts_search(
+    request: Request,
     q: str = Query(..., min_length=1, description="Search query text"),
     feed_id: int | None = Query(None, description="Filter by feed ID"),
     source_id: int | None = Query(None, description="Filter by source ID"),
@@ -267,6 +277,8 @@ async def fts_search(
 ) -> SearchResponse:
     """
     Search digests using full-text search only.
+
+    Rate limited to 60 requests per minute per IP.
 
     Uses PostgreSQL's to_tsvector and plainto_tsquery for text search.
     Results include relevance ranking using ts_rank and highlighted snippets.

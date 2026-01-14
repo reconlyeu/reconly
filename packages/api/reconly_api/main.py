@@ -14,15 +14,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-import traceback
 
-from reconly_core.logging import configure_logging, get_logger
+from reconly_core.logging import configure_logging, get_logger, generate_trace_id, get_trace_id
 from reconly_core.database import Base, seed_default_templates
-from reconly_api.config import settings
-from reconly_api.dependencies import SessionLocal, engine
+from reconly_api.config import settings, validate_secret_key, validate_configuration, SecretKeyValidationError
+from reconly_api.dependencies import SessionLocal, engine, limiter
+from reconly_api.middleware import SecurityHeadersMiddleware
 from reconly_api.routes import (
     digests, health, sources, feeds, feed_runs, templates,
     analytics, providers, dashboard, auth, exporters, fetchers, tags, bundles,
@@ -30,10 +29,6 @@ from reconly_api.routes import (
 )
 from reconly_api.routes import settings as settings_routes
 from reconly_api.auth.password import is_public_route
-
-
-# Initialize rate limiter
-limiter = Limiter(key_func=get_remote_address, default_limits=[f"{settings.rate_limit_per_minute}/minute"])
 
 
 def cleanup_stale_feed_runs(stale_threshold_hours: int = 1) -> int:
@@ -91,6 +86,18 @@ async def lifespan(app: FastAPI):
     logger = get_logger(__name__)
     logger.info("Starting Reconly API", version=settings.app_version)
 
+    # Validate SECRET_KEY configuration
+    # This will raise SecretKeyValidationError in production if the key is insecure
+    try:
+        validate_secret_key(settings)
+    except SecretKeyValidationError as e:
+        logger.error("SECRET_KEY validation failed - aborting startup", error=str(e))
+        raise SystemExit(f"FATAL: {e}") from e
+
+    # Validate configuration and log summary
+    # This tests DB connection, checks LLM keys, validates CORS - warns but doesn't abort
+    validate_configuration(settings, db_session_factory=SessionLocal)
+
     # Create database tables if they don't exist
     logger.info("Initializing database tables")
     Base.metadata.create_all(bind=engine)
@@ -142,16 +149,54 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
-# Debug exception handler to log all unhandled exceptions
+# Secure exception handler - hides internal errors in production
 @app.exception_handler(Exception)
-async def debug_exception_handler(request: Request, exc: Exception):
-    """Catch all unhandled exceptions and log them."""
-    error_msg = f"Unhandled exception: {type(exc).__name__}: {exc}"
-    print(f"[ERROR] {error_msg}")
-    traceback.print_exc()
+async def secure_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions and log them securely.
+
+    In production (debug=False):
+    - Returns generic "Internal server error" message
+    - Logs full exception details with structlog for debugging
+
+    In development (debug=True):
+    - Returns detailed error message for debugging
+    - Logs full exception details
+    """
+    logger = get_logger(__name__)
+
+    # Generate or get request_id for correlation
+    request_id = get_trace_id()
+    if not request_id:
+        request_id = generate_trace_id()
+
+    # Always log the full exception with traceback
+    logger.error(
+        "Unhandled exception",
+        request_id=request_id,
+        exception_type=type(exc).__name__,
+        exception_message=str(exc),
+        path=str(request.url.path),
+        method=request.method,
+        exc_info=True,  # Include full traceback in logs
+    )
+
+    # In debug mode, return detailed error info
+    if settings.debug:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": f"Unhandled exception: {type(exc).__name__}: {exc}",
+                "request_id": request_id,
+            }
+        )
+
+    # In production, return generic error with request_id for correlation
     return JSONResponse(
         status_code=500,
-        content={"detail": error_msg}
+        content={
+            "detail": "Internal server error",
+            "request_id": request_id,
+        }
     )
 
 # CORS middleware
@@ -162,6 +207,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+app.add_middleware(SecurityHeadersMiddleware, csp_policy=settings.csp_policy)
 
 # Auth middleware - protect all routes when password is configured
 @app.middleware("http")

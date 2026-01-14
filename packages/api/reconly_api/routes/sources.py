@@ -1,10 +1,10 @@
 """Source management API routes."""
 from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 
 from reconly_core.database.models import Source
-from reconly_api.dependencies import get_db
+from reconly_api.dependencies import get_db, limiter
 from reconly_api.schemas.sources import SourceCreate, SourceUpdate, SourceResponse
 from reconly_api.schemas.batch import BatchDeleteRequest, BatchDeleteResponse
 
@@ -30,11 +30,16 @@ async def list_sources(
 
 
 @router.post("", response_model=SourceResponse, status_code=201)
+@limiter.limit("10/minute")
 async def create_source(
+    request: Request,
     source: SourceCreate,
     db: Session = Depends(get_db)
 ):
-    """Create a new source."""
+    """Create a new source.
+
+    Rate limited to 10 requests per minute per IP.
+    """
     db_source = Source(
         name=source.name,
         type=source.type,
