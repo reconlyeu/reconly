@@ -136,7 +136,7 @@ class AgentFetcher(BaseFetcher):
         Returns:
             Dict formatted as a fetcher result with metadata
         """
-        from reconly_core.agents import ResearchAgent, AgentSettings
+        from reconly_core.agents import ResearchAgent
         from reconly_core.summarizers.factory import get_summarizer
 
         agent_run: Optional["AgentRun"] = None
