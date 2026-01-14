@@ -83,7 +83,7 @@ class TestRAGService:
         from reconly_core.database.models import Digest, Source
 
         # Create test digest
-        source = Source(name="Test", type="manual", data={"url": "https://example.com"})
+        source = Source(name="Test", type="manual", url="https://example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -182,7 +182,7 @@ class TestRAGService:
         from reconly_core.database.models import Digest, Source
 
         # Create test data
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -216,7 +216,7 @@ class TestRAGService:
         """Test search_only convenience method."""
         from reconly_core.database.models import Digest, Source
 
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -397,7 +397,7 @@ class TestRAGServiceIntegration:
         mock_summarizer.get_model_info = Mock(return_value={'model': 'gpt-test'})
 
         # Create test data
-        source = Source(name="Tech News", type="manual", data={"url": "https://tech.com"})
+        source = Source(name="Tech News", type="manual", url="https://tech.com", config={})
         db_session.add(source)
         db_session.flush()
 

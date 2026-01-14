@@ -342,7 +342,7 @@ class TestHybridSearchService:
         from reconly_core.database.models import Digest, Source
 
         # Create test digest
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 

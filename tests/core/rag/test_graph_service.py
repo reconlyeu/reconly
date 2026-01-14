@@ -45,7 +45,7 @@ class TestGraphService:
     @pytest.fixture
     def sample_digests(self, db_session):
         """Create sample digests for testing."""
-        source = Source(name="Test Source", type="manual", data={})
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -485,7 +485,7 @@ class TestGraphServiceIntegration:
         service = GraphService(db_session, mock_provider)
 
         # Create test data
-        source = Source(name="Tech News", type="manual", data={})
+        source = Source(name="Tech News", type="manual", url="https://tech.example.com", config={})
         db_session.add(source)
         db_session.flush()
 

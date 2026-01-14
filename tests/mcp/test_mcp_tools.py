@@ -108,7 +108,7 @@ class TestSemanticSearchHandler:
     @pytest.fixture
     def context_with_data(self, db_session):
         """Create context with test data."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -217,7 +217,7 @@ class TestRAGQueryHandler:
     @pytest.fixture
     def context_with_data(self, db_session):
         """Create context with test data."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -339,7 +339,7 @@ class TestGetRelatedDigestsHandler:
     @pytest.fixture
     def context_with_graph(self, db_session):
         """Create context with graph data."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -426,7 +426,7 @@ class TestMCPToolIntegration:
     def full_context(self, db_session):
         """Create fully populated test context."""
         # Create source
-        source = Source(name="Tech News", type="manual", data={"url": "https://tech.com"})
+        source = Source(name="Tech News", type="manual", url="https://tech.com", config={})
         db_session.add(source)
         db_session.flush()
 

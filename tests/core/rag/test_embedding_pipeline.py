@@ -49,7 +49,7 @@ class TestEmbeddingPipeline:
     @pytest.fixture
     def sample_digest(self, db_session):
         """Create a sample digest for testing."""
-        source = Source(name="Test Source", type="manual", data={})
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -213,7 +213,7 @@ education, transportation, and many other fields.
     @pytest.mark.asyncio
     async def test_empty_digest(self, embedding_service, db_session):
         """Test embedding a digest with no content."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -233,7 +233,7 @@ education, transportation, and many other fields.
     @pytest.mark.asyncio
     async def test_batching(self, embedding_service, db_session):
         """Test that embeddings are batched correctly."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -279,7 +279,7 @@ education, transportation, and many other fields.
     @pytest.mark.asyncio
     async def test_multiple_digests(self, embedding_service, db_session):
         """Test embedding multiple digests."""
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -320,7 +320,7 @@ class TestChunkingIntegration:
         from reconly_core.rag.chunking import ChunkingService
 
         # Create source and digest
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 
@@ -351,7 +351,7 @@ class TestChunkingIntegration:
         """Test that chunking preserves document structure."""
         from reconly_core.rag.chunking import ChunkingService
 
-        source = Source(name="Test", type="manual", data={})
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
         db_session.add(source)
         db_session.flush()
 

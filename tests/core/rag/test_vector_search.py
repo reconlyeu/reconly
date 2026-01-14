@@ -35,7 +35,7 @@ class TestVectorSearchService:
         source = Source(
             name="Test Source",
             type="manual",
-            data={"url": "https://example.com"}
+            url="https://example.com", config={}
         )
         db_session.add(source)
         db_session.flush()
@@ -133,7 +133,7 @@ class TestVectorSearchService:
         # Create feed and feed run
         from reconly_core.database.models import Feed
 
-        feed = Feed(name="Test Feed", type="rss", data={"url": "https://example.com"})
+        feed = Feed(name="Test Feed", type="rss", url="https://example.com", config={})
         db_session.add(feed)
         db_session.flush()
 
