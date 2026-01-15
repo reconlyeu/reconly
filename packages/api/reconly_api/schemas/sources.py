@@ -6,11 +6,14 @@ from datetime import datetime
 
 
 FilterMode = Literal["title_only", "content", "both"]
+SourceType = Literal["rss", "youtube", "website", "blog", "imap", "agent"]
+AuthStatus = Literal["active", "pending_oauth", "auth_failed"]
+IMAPProvider = Literal["gmail", "outlook", "generic"]
 
 
 class SourceBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    type: str = Field(..., pattern="^(rss|youtube|website|blog)$")
+    type: SourceType = Field(..., description="Source type")
     url: str = Field(..., max_length=2048)
     config: Optional[Dict[str, Any]] = None
     enabled: Optional[bool] = True
@@ -43,7 +46,7 @@ class SourceCreate(SourceBase):
 
 class SourceUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
-    type: Optional[str] = Field(None, pattern="^(rss|youtube|website|blog)$")
+    type: Optional[SourceType] = Field(None, description="Source type")
     url: Optional[str] = Field(None, max_length=2048)
     config: Optional[Dict[str, Any]] = None
     enabled: Optional[bool] = None
@@ -75,5 +78,65 @@ class SourceResponse(SourceBase):
     user_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    # IMAP-specific fields
+    auth_status: Optional[AuthStatus] = Field(
+        None,
+        description="Authentication status for IMAP sources: active, pending_oauth, auth_failed"
+    )
+    oauth_credential_id: Optional[int] = Field(
+        None,
+        description="ID of associated OAuth credential (for Gmail/Outlook sources)"
+    )
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class IMAPSourceCreateRequest(BaseModel):
+    """Request schema for creating an IMAP source.
+
+    For OAuth providers (gmail, outlook), credentials are handled via OAuth flow.
+    For generic IMAP, password is validated and encrypted before storage.
+    """
+    name: str = Field(..., min_length=1, max_length=255, description="Source name")
+    provider: IMAPProvider = Field(..., description="IMAP provider type")
+    # Content filtering (optional)
+    include_keywords: Optional[List[str]] = Field(None, description="Keywords to include")
+    exclude_keywords: Optional[List[str]] = Field(None, description="Keywords to exclude")
+    filter_mode: Optional[FilterMode] = Field("both", description="Filter mode")
+    use_regex: Optional[bool] = Field(False, description="Interpret keywords as regex")
+    # Email filtering
+    folders: Optional[List[str]] = Field(None, description="IMAP folders to fetch (default: INBOX)")
+    from_filter: Optional[str] = Field(None, description="Filter emails by sender pattern")
+    subject_filter: Optional[str] = Field(None, description="Filter emails by subject pattern")
+    # Generic IMAP only
+    imap_host: Optional[str] = Field(None, description="IMAP server hostname (required for generic)")
+    imap_port: Optional[int] = Field(993, description="IMAP server port")
+    imap_username: Optional[str] = Field(None, description="IMAP username (required for generic)")
+    imap_password: Optional[str] = Field(None, description="IMAP password (required for generic, never returned)")
+    imap_use_ssl: Optional[bool] = Field(True, description="Use SSL/TLS for connection")
+
+    @model_validator(mode='after')
+    def validate_generic_imap_fields(self):
+        """Validate that generic IMAP has required fields."""
+        if self.provider == "generic":
+            if not self.imap_host:
+                raise ValueError("imap_host is required for generic IMAP provider")
+            if not self.imap_username:
+                raise ValueError("imap_username is required for generic IMAP provider")
+            if not self.imap_password:
+                raise ValueError("imap_password is required for generic IMAP provider")
+        return self
+
+
+class IMAPSourceCreateResponse(BaseModel):
+    """Response schema for IMAP source creation.
+
+    For OAuth providers, includes oauth_url for user to complete OAuth flow.
+    For generic IMAP, returns created source directly.
+    """
+    source: SourceResponse = Field(..., description="Created source")
+    oauth_url: Optional[str] = Field(
+        None,
+        description="OAuth authorization URL (for gmail/outlook providers)"
+    )
+    message: str = Field(..., description="Status message")

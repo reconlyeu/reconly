@@ -5,9 +5,10 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { sourcesApi } from '@/services/api';
-import type { Source, FilterMode, SourceConfig } from '@/types/entities';
-import { X, Loader2, Filter, Plus, AlertCircle } from 'lucide-vue-next';
+import type { Source, FilterMode, SourceConfig, IMAPProvider, IMAPSourceCreate } from '@/types/entities';
+import { X, Loader2, Filter, Plus, AlertCircle, ExternalLink } from 'lucide-vue-next';
 import AgentSourceForm from './AgentSourceForm.vue';
+import ImapSourceForm from './ImapSourceForm.vue';
 
 interface Props {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface Props {
 interface Emits {
   (e: 'close'): void;
   (e: 'success'): void;
+  (e: 'oauth-redirect', url: string): void;
 }
 
 const props = defineProps<Props>();
@@ -24,18 +26,18 @@ const emit = defineEmits<Emits>();
 
 const queryClient = useQueryClient();
 
-// Validation schema - URL is required for all types except 'agent'
+// Validation schema - URL is required for types except 'agent' and 'imap'
 const formSchema = toTypedSchema(
   z.object({
     name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
-    type: z.enum(['rss', 'youtube', 'website', 'blog', 'agent'], {
+    type: z.enum(['rss', 'youtube', 'website', 'blog', 'agent', 'imap'], {
       errorMap: () => ({ message: 'Please select a source type' }),
     }),
     url: z.string(),
     enabled: z.boolean(),
   }).superRefine((data, ctx) => {
-    // URL is required for non-agent types
-    if (data.type !== 'agent') {
+    // URL is required for non-agent and non-imap types
+    if (data.type !== 'agent' && data.type !== 'imap') {
       if (!data.url) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -87,6 +89,19 @@ const regexError = ref<string | null>(null);
 // Agent-specific fields
 const agentConfig = ref<SourceConfig>({});
 const agentPrompt = ref('');
+
+// IMAP-specific fields
+const imapProvider = ref<IMAPProvider>('gmail');
+const imapFolders = ref('');
+const imapFromFilter = ref('');
+const imapSubjectFilter = ref('');
+const imapHost = ref('');
+const imapPort = ref(993);
+const imapUsername = ref('');
+const imapPassword = ref('');
+const imapUseSsl = ref(true);
+const imapConfig = ref<SourceConfig>({});
+const oauthUrl = ref<string | null>(null);
 
 // Validate regex pattern
 const validateRegex = (pattern: string): boolean => {
@@ -149,6 +164,18 @@ const resetFilterFields = () => {
   // Reset agent fields
   agentConfig.value = {};
   agentPrompt.value = '';
+  // Reset IMAP fields
+  imapProvider.value = 'gmail';
+  imapFolders.value = '';
+  imapFromFilter.value = '';
+  imapSubjectFilter.value = '';
+  imapHost.value = '';
+  imapPort.value = 993;
+  imapUsername.value = '';
+  imapPassword.value = '';
+  imapUseSsl.value = true;
+  imapConfig.value = {};
+  oauthUrl.value = null;
 };
 
 // Watch for source prop changes (edit mode)
@@ -159,7 +186,7 @@ watch(
       resetForm({
         values: {
           name: newSource.name,
-          type: newSource.type as 'rss' | 'youtube' | 'website' | 'blog' | 'agent',
+          type: newSource.type as 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'imap',
           url: newSource.url,
           enabled: newSource.enabled,
         },
@@ -180,6 +207,28 @@ watch(
         agentConfig.value = {};
         agentPrompt.value = '';
       }
+      // Restore IMAP fields
+      if (newSource.type === 'imap') {
+        imapProvider.value = newSource.config?.provider || 'generic';
+        imapFolders.value = newSource.config?.folders?.join(', ') || '';
+        imapFromFilter.value = newSource.config?.from_filter || '';
+        imapSubjectFilter.value = newSource.config?.subject_filter || '';
+        imapHost.value = newSource.config?.imap_host || '';
+        imapPort.value = newSource.config?.imap_port || 993;
+        imapUsername.value = newSource.config?.imap_username || '';
+        imapUseSsl.value = newSource.config?.imap_use_ssl ?? true;
+        imapConfig.value = newSource.config || {};
+      } else {
+        imapProvider.value = 'gmail';
+        imapFolders.value = '';
+        imapFromFilter.value = '';
+        imapSubjectFilter.value = '';
+        imapHost.value = '';
+        imapPort.value = 993;
+        imapUsername.value = '';
+        imapUseSsl.value = true;
+        imapConfig.value = {};
+      }
     } else {
       resetForm();
       resetFilterFields();
@@ -193,6 +242,40 @@ const isEditMode = computed(() => !!props.source);
 // Create/Update mutation
 const saveMutation = useMutation({
   mutationFn: async (data: any) => {
+    // Handle IMAP sources separately
+    if (data.type === 'imap' && !isEditMode.value) {
+      // Build IMAP-specific request
+      const imapRequest: IMAPSourceCreate = {
+        name: data.name,
+        provider: imapProvider.value,
+        folders: imapFolders.value ? imapFolders.value.split(',').map((f: string) => f.trim()).filter(Boolean) : undefined,
+        from_filter: imapFromFilter.value || undefined,
+        subject_filter: imapSubjectFilter.value || undefined,
+        include_keywords: includeKeywords.value.length > 0 ? includeKeywords.value : undefined,
+        exclude_keywords: excludeKeywords.value.length > 0 ? excludeKeywords.value : undefined,
+        filter_mode: filterMode.value,
+        use_regex: useRegex.value,
+      };
+
+      // Add generic IMAP fields if provider is 'generic'
+      if (imapProvider.value === 'generic') {
+        imapRequest.imap_host = imapHost.value;
+        imapRequest.imap_port = imapPort.value;
+        imapRequest.imap_username = imapUsername.value;
+        imapRequest.imap_password = imapPassword.value;
+        imapRequest.imap_use_ssl = imapUseSsl.value;
+      }
+
+      const response = await sourcesApi.createImap(imapRequest);
+
+      // If OAuth URL is returned, store it for redirect
+      if (response.oauth_url) {
+        oauthUrl.value = response.oauth_url;
+      }
+
+      return response.source;
+    }
+
     // Build config object based on source type
     let config: SourceConfig | null = null;
     if (data.type === 'agent') {
@@ -222,6 +305,14 @@ const saveMutation = useMutation({
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['sources'] });
+
+    // If OAuth URL was returned, redirect to it
+    if (oauthUrl.value) {
+      emit('oauth-redirect', oauthUrl.value);
+      window.location.href = oauthUrl.value;
+      return;
+    }
+
     emit('success');
     emit('close');
     resetForm();
@@ -361,6 +452,7 @@ const urlPlaceholder = computed(() => {
                 <option value="youtube">YouTube</option>
                 <option value="website">Website</option>
                 <option value="blog">Blog</option>
+                <option value="imap">Email (IMAP)</option>
                 <option value="agent">AI Research Agent</option>
               </select>
               <Transition name="error">
@@ -377,7 +469,23 @@ const urlPlaceholder = computed(() => {
               v-model:prompt="agentPrompt"
             />
 
-            <!-- URL Field (hidden for agent type) -->
+            <!-- IMAP Source Form (shown when type is 'imap') -->
+            <ImapSourceForm
+              v-else-if="type === 'imap'"
+              v-model:config="imapConfig"
+              v-model:provider="imapProvider"
+              v-model:folders="imapFolders"
+              v-model:from-filter="imapFromFilter"
+              v-model:subject-filter="imapSubjectFilter"
+              v-model:imap-host="imapHost"
+              v-model:imap-port="imapPort"
+              v-model:imap-username="imapUsername"
+              v-model:imap-password="imapPassword"
+              v-model:imap-use-ssl="imapUseSsl"
+              :is-loading="isSaving"
+            />
+
+            <!-- URL Field (hidden for agent and imap types) -->
             <div v-else>
               <label for="url" class="mb-2 block text-sm font-medium text-text-primary">
                 URL
@@ -433,8 +541,8 @@ const urlPlaceholder = computed(() => {
               </button>
             </div>
 
-            <!-- Filters Section (hidden for agent type - agents use prompts not keyword filters) -->
-            <div v-if="type !== 'agent'" class="rounded-lg border border-border-subtle bg-bg-surface">
+            <!-- Filters Section (hidden for agent and imap types - they have their own filtering) -->
+            <div v-if="type !== 'agent' && type !== 'imap'" class="rounded-lg border border-border-subtle bg-bg-surface">
               <!-- Toggle Header -->
               <button
                 type="button"

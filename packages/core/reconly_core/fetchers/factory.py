@@ -22,6 +22,7 @@ from reconly_core.fetchers import rss  # noqa: F401
 from reconly_core.fetchers import youtube  # noqa: F401
 from reconly_core.fetchers import website  # noqa: F401
 from reconly_core.fetchers import agent  # noqa: F401
+from reconly_core.fetchers import imap  # noqa: F401
 
 # Track whether extensions have been loaded (lazy loading to avoid circular imports)
 _extensions_loaded = False

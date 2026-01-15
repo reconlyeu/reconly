@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Rss, Youtube, Globe, BookOpen, Edit, Trash2 } from 'lucide-vue-next';
+import { Rss, Youtube, Globe, BookOpen, Edit, Trash2, Mail, Bot, RefreshCw } from 'lucide-vue-next';
 import type { Source } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
+import {
+  getAuthStatusConfig,
+  needsReauthentication,
+  handleReauthenticate,
+  getReauthButtonText,
+  getReauthButtonTitle,
+} from '@/composables/useAuthStatus';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 
@@ -14,6 +21,7 @@ interface Emits {
   (e: 'toggle', sourceId: number, enabled: boolean): void;
   (e: 'edit', source: Source): void;
   (e: 'delete', sourceId: number): void;
+  (e: 'reauthenticate', source: Source): void;
 }
 
 const props = defineProps<Props>();
@@ -51,6 +59,13 @@ const typeConfig = computed(() => {
       bgColor: 'bg-orange-400/10',
       glow: 'orange' as const,
     },
+    youtube: {
+      icon: Youtube,
+      label: 'YouTube',
+      color: 'text-red-500',
+      bgColor: 'bg-red-500/10',
+      glow: 'error' as const,
+    },
     website: {
       icon: Globe,
       label: 'Website',
@@ -65,9 +80,38 @@ const typeConfig = computed(() => {
       bgColor: 'bg-green-400/10',
       glow: 'success' as const,
     },
+    imap: {
+      icon: Mail,
+      label: 'Email (IMAP)',
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-400/10',
+      glow: 'purple' as const,
+    },
+    agent: {
+      icon: Bot,
+      label: 'AI Agent',
+      color: 'text-cyan-400',
+      bgColor: 'bg-cyan-400/10',
+      glow: 'blue' as const,
+    },
   };
   return configs[props.source.type as keyof typeof configs] || configs.rss;
 });
+
+// Auth status configuration for IMAP sources
+const authStatusConfig = computed(() => {
+  if (props.source.type !== 'imap') return null;
+  return getAuthStatusConfig(props.source.auth_status);
+});
+
+// Handle re-authentication for failed or pending OAuth
+const onReauthenticate = async () => {
+  const isOAuthRedirect = await handleReauthenticate(props.source);
+  if (!isOAuthRedirect) {
+    // For generic IMAP, emit event to edit the source
+    emit('reauthenticate', props.source);
+  }
+};
 
 const handleToggle = (value: boolean) => {
   emit('toggle', props.source.id, value);
@@ -106,16 +150,28 @@ const handleDelete = () => {
           </div>
         </div>
 
-        <!-- Status Badge -->
-        <div
-          class="rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
-          :class="
-            source.enabled
-              ? 'bg-status-success/10 text-status-success'
-              : 'bg-text-muted/10 text-text-muted'
-          "
-        >
-          {{ source.enabled ? 'Active' : 'Disabled' }}
+        <!-- Status Badges -->
+        <div class="flex items-center gap-2">
+          <!-- Auth Status Badge (for IMAP sources) -->
+          <div
+            v-if="authStatusConfig"
+            class="rounded-full px-3 py-1 text-xs font-medium"
+            :class="[authStatusConfig.bgColor, authStatusConfig.textColor]"
+          >
+            {{ authStatusConfig.label }}
+          </div>
+
+          <!-- Enabled/Disabled Badge -->
+          <div
+            class="rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
+            :class="
+              source.enabled
+                ? 'bg-status-success/10 text-status-success'
+                : 'bg-text-muted/10 text-text-muted'
+            "
+          >
+            {{ source.enabled ? 'Active' : 'Disabled' }}
+          </div>
         </div>
       </div>
     </template>
@@ -141,8 +197,22 @@ const handleDelete = () => {
           label="Toggle source"
         />
 
-        <!-- Edit & Delete Buttons -->
+        <!-- Action Buttons -->
         <div class="flex gap-2">
+          <!-- Re-authenticate Button (for IMAP sources with pending/failed auth) -->
+          <button
+            v-if="needsReauthentication(source)"
+            @click="onReauthenticate"
+            class="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-300"
+            :class="source.auth_status === 'pending_oauth'
+              ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20'
+              : 'bg-status-failed/10 text-status-failed hover:bg-status-failed/20'"
+            :title="getReauthButtonTitle(source.auth_status)"
+          >
+            <RefreshCw :size="14" :stroke-width="2" />
+            {{ getReauthButtonText(source.auth_status) }}
+          </button>
+
           <button
             @click="handleEdit"
             class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-bg-hover hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"

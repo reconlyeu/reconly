@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { strings } from '@/i18n/en';
 import { sourcesApi } from '@/services/api';
@@ -12,7 +12,7 @@ import { useViewMode } from '@/composables/useViewMode';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import type { Source } from '@/types/entities';
-import { Plus } from 'lucide-vue-next';
+import { Plus, CheckCircle, AlertCircle } from 'lucide-vue-next';
 
 // View mode state
 const { viewMode, isCardView, isTableView } = useViewMode('sources');
@@ -25,6 +25,46 @@ const activeType = ref('all');
 const isModalOpen = ref(false);
 const editingSource = ref<Source | null>(null);
 const sourceTableRef = ref<InstanceType<typeof SourceTable> | null>(null);
+
+// OAuth callback message state
+const oauthMessage = ref<{ type: 'success' | 'error'; message: string } | null>(null);
+
+// Handle OAuth callback parameters from URL
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+
+  // Check for OAuth success
+  if (urlParams.get('oauth_success') === 'true') {
+    const provider = urlParams.get('oauth_provider') || 'email';
+    oauthMessage.value = {
+      type: 'success',
+      message: `Successfully connected to ${provider.charAt(0).toUpperCase() + provider.slice(1)}. Your email source is now active.`
+    };
+    toast.success(oauthMessage.value.message);
+    // Clean up URL parameters
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  // Check for OAuth error
+  const oauthError = urlParams.get('oauth_error');
+  if (oauthError) {
+    const errorDescription = urlParams.get('oauth_error_description') || 'Authentication failed';
+    oauthMessage.value = {
+      type: 'error',
+      message: `OAuth Error: ${decodeURIComponent(errorDescription)}`
+    };
+    toast.error(oauthMessage.value.message);
+    // Clean up URL parameters
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+
+  // Auto-dismiss message after 10 seconds
+  if (oauthMessage.value) {
+    setTimeout(() => {
+      oauthMessage.value = null;
+    }, 10000);
+  }
+});
 
 // Fetch sources for table view
 const {
@@ -144,10 +184,45 @@ const handleSuccess = () => {
       </div>
     </div>
 
+    <!-- OAuth Callback Message Banner -->
+    <Transition name="banner">
+      <div
+        v-if="oauthMessage"
+        class="mb-6 flex items-center gap-3 rounded-lg border p-4"
+        :class="oauthMessage.type === 'success'
+          ? 'border-status-success/30 bg-status-success/10'
+          : 'border-status-failed/30 bg-status-failed/10'"
+      >
+        <CheckCircle
+          v-if="oauthMessage.type === 'success'"
+          :size="20"
+          class="flex-shrink-0 text-status-success"
+        />
+        <AlertCircle
+          v-else
+          :size="20"
+          class="flex-shrink-0 text-status-failed"
+        />
+        <span
+          class="flex-1 text-sm"
+          :class="oauthMessage.type === 'success' ? 'text-status-success' : 'text-status-failed'"
+        >
+          {{ oauthMessage.message }}
+        </span>
+        <button
+          @click="oauthMessage = null"
+          class="rounded p-1 transition-colors hover:bg-white/10"
+          :class="oauthMessage.type === 'success' ? 'text-status-success' : 'text-status-failed'"
+        >
+          &times;
+        </button>
+      </div>
+    </Transition>
+
     <!-- Type filter tabs -->
     <div class="mb-6 flex gap-2 border-b border-border-subtle">
       <button
-        v-for="type in ['all', 'rss', 'youtube', 'website', 'blog']"
+        v-for="type in ['all', 'rss', 'youtube', 'website', 'blog', 'imap', 'agent']"
         :key="type"
         @click="activeType = type"
         class="border-b-2 px-4 py-3 text-sm font-medium transition-all"
@@ -157,7 +232,7 @@ const handleSuccess = () => {
             : 'border-transparent text-text-muted hover:text-text-primary'
         "
       >
-        {{ strings.sources.types[type as keyof typeof strings.sources.types] }}
+        {{ strings.sources.types[type as keyof typeof strings.sources.types] || type.toUpperCase() }}
       </button>
     </div>
 
@@ -192,3 +267,16 @@ const handleSuccess = () => {
   </div>
 </template>
 
+<style scoped>
+/* Banner transition */
+.banner-enter-active,
+.banner-leave-active {
+  transition: all 0.3s ease;
+}
+
+.banner-enter-from,
+.banner-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>

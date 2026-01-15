@@ -124,7 +124,7 @@ class Source(Base):
     """
     Content source definition - replaces YAML-based SourceConfig.
 
-    Supports: RSS feeds, YouTube channels, websites, blogs, etc.
+    Supports: RSS feeds, YouTube channels, websites, blogs, IMAP email, etc.
     Each source can specify default LLM settings that can be overridden at feed level.
     """
     __tablename__ = 'sources'
@@ -134,13 +134,20 @@ class Source(Base):
 
     # Core fields
     name = Column(String(255), nullable=False)
-    type = Column(String(50), nullable=False, index=True)  # rss, youtube, website, blog
+    type = Column(String(50), nullable=False, index=True)  # rss, youtube, website, blog, imap, agent
     url = Column(String(2048), nullable=False)
 
     # Type-specific configuration (JSON for flexibility)
     config = Column(JSON, nullable=True)  # e.g., {"fetch_full_content": true, "max_items": 10}
 
     enabled = Column(Boolean, default=True, nullable=False)
+
+    # Authentication status for sources requiring credentials (IMAP, etc.)
+    # - NULL: No authentication required (RSS, websites)
+    # - 'active': Authenticated and working
+    # - 'pending_oauth': OAuth flow not completed
+    # - 'auth_failed': Authentication failed, needs re-authentication
+    auth_status = Column(String(20), nullable=True, index=True)
 
     # Default LLM settings (can be overridden at feed level)
     default_language = Column(String(10), nullable=True)  # de, en, etc.
@@ -160,6 +167,7 @@ class Source(Base):
     # Relationships
     user = relationship('User', back_populates='sources')
     feed_sources = relationship('FeedSource', back_populates='source', cascade='all, delete-orphan')
+    oauth_credentials = relationship('OAuthCredential', back_populates='source', cascade='all, delete-orphan', uselist=False)
 
     # Indexes
     __table_args__ = (
@@ -170,7 +178,7 @@ class Source(Base):
         return f"<Source(id={self.id}, name='{self.name}', type='{self.type}')>"
 
     def to_dict(self):
-        return {
+        result = {
             'id': self.id,
             'user_id': self.user_id,
             'name': self.name,
@@ -178,6 +186,7 @@ class Source(Base):
             'url': self.url,
             'config': self.config,
             'enabled': self.enabled,
+            'auth_status': self.auth_status,
             'default_language': self.default_language,
             'default_provider': self.default_provider,
             'default_model': self.default_model,
@@ -188,6 +197,12 @@ class Source(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+        # Add OAuth credential ID if source has one (uselist=False so it's a single object)
+        if hasattr(self, 'oauth_credentials') and self.oauth_credentials:
+            result['oauth_credential_id'] = self.oauth_credentials.id
+        else:
+            result['oauth_credential_id'] = None
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -958,8 +973,62 @@ class DigestRelationship(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# OAUTH CREDENTIAL (Email OAuth2 Token Storage)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class OAuthCredential(Base):
+    """
+    Stores encrypted OAuth2 credentials for email providers.
+
+    Used by GmailProvider and OutlookProvider to store access and refresh tokens
+    securely. Tokens are encrypted using Fernet symmetric encryption with the
+    SECRET_KEY from environment.
+
+    Never expose tokens in API responses or logs.
+    """
+    __tablename__ = 'oauth_credentials'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_id = Column(Integer, ForeignKey('sources.id', ondelete='CASCADE'), nullable=False, index=True, unique=True)
+    provider = Column(String(50), nullable=False)  # gmail, outlook
+
+    # Encrypted tokens - use Fernet encryption via crypto module
+    access_token_encrypted = Column(Text, nullable=False)
+    refresh_token_encrypted = Column(Text, nullable=True)
+
+    # Token metadata
+    expires_at = Column(DateTime, nullable=True)
+    scopes = Column(JSON, nullable=True)  # List of OAuth scopes
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    source = relationship('Source', back_populates='oauth_credentials')
+
+    def __repr__(self):
+        return f"<OAuthCredential(id={self.id}, source_id={self.source_id}, provider='{self.provider}')>"
+
+    def to_dict(self):
+        """Convert to dictionary format, EXCLUDING sensitive token data."""
+        return {
+            'id': self.id,
+            'source_id': self.source_id,
+            'provider': self.provider,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'scopes': self.scopes,
+            'has_refresh_token': self.refresh_token_encrypted is not None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # AGENT RUN
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class AgentRun(Base):
     """

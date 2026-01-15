@@ -26,6 +26,9 @@ dependencies = [
     "psycopg2-binary>=2.9.0",  # PostgreSQL driver
     "tiktoken>=0.7.0",  # Token counting for text chunking
     "numpy>=1.24.0",  # Array operations for embeddings
+    "html2text>=2024.2.0",  # HTML to text conversion for email content
+    "python-dateutil>=2.9.0",  # Date parsing for email headers
+    "cryptography>=42.0.0",  # Fernet encryption for OAuth tokens
 ]
 
 [project.scripts]

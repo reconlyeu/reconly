@@ -55,6 +55,7 @@ export const strings = {
       youtube: 'YouTube',
       website: 'Website',
       blog: 'Blog',
+      imap: 'Email',
       agent: 'AI Agent',
     },
     fields: {

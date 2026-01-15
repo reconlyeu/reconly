@@ -75,6 +75,14 @@ import type {
   AgentRun,
   AgentRunStatus,
   AgentRunListResponse,
+  // IMAP & OAuth types
+  IMAPSourceCreate,
+  IMAPSourceCreateResponse,
+  OAuthProvider,
+  OAuthProvidersResponse,
+  OAuthAuthorizeResponse,
+  OAuthStatusResponse,
+  OAuthRevokeResponse,
 } from '@/types/entities';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -188,6 +196,61 @@ export const sourcesApi = {
 
   batchDelete: async (ids: number[]): Promise<BatchDeleteResponse> => {
     const { data } = await apiClient.post<BatchDeleteResponse>('/sources/batch-delete', { ids });
+    return data;
+  },
+
+  /**
+   * Create an IMAP email source.
+   * For OAuth providers (gmail, outlook), returns oauth_url to complete authentication.
+   * For generic IMAP, creates source directly with provided credentials.
+   */
+  createImap: async (source: IMAPSourceCreate): Promise<IMAPSourceCreateResponse> => {
+    const { data } = await apiClient.post<IMAPSourceCreateResponse>('/sources/imap', source);
+    return data;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OAUTH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const oauthApi = {
+  /**
+   * Get list of available OAuth providers and their configuration status.
+   */
+  getProviders: async (): Promise<OAuthProvidersResponse> => {
+    const { data } = await apiClient.get<OAuthProvidersResponse>('/oauth/providers');
+    return data;
+  },
+
+  /**
+   * Get OAuth authorization URL for a provider.
+   * User should be redirected to this URL to complete OAuth flow.
+   */
+  getAuthorizationUrl: async (
+    provider: OAuthProvider,
+    sourceId: number
+  ): Promise<OAuthAuthorizeResponse> => {
+    const { data } = await apiClient.get<OAuthAuthorizeResponse>(
+      `/oauth/${provider}/authorize`,
+      { params: { source_id: sourceId } }
+    );
+    return data;
+  },
+
+  /**
+   * Get OAuth connection status for a source.
+   */
+  getStatus: async (sourceId: number): Promise<OAuthStatusResponse> => {
+    const { data } = await apiClient.get<OAuthStatusResponse>(`/oauth/${sourceId}/status`);
+    return data;
+  },
+
+  /**
+   * Revoke OAuth tokens and delete credentials for a source.
+   */
+  revoke: async (sourceId: number): Promise<OAuthRevokeResponse> => {
+    const { data } = await apiClient.delete<OAuthRevokeResponse>(`/oauth/${sourceId}`);
     return data;
   },
 };
