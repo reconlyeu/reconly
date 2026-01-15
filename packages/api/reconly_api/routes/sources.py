@@ -260,7 +260,7 @@ async def create_imap_source(
             return IMAPSourceCreateResponse(
                 source=_source_to_response(db_source),
                 oauth_url=auth_url,
-                message=f"Source created. Complete OAuth authentication at the provided URL.",
+                message="Source created. Complete OAuth authentication at the provided URL.",
             )
 
         except Exception as e:

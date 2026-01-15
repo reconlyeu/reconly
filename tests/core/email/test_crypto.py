@@ -4,10 +4,8 @@ Tests the Fernet-based encryption used to securely store OAuth tokens
 in the database. Verifies round-trip encryption, key derivation, and error handling.
 """
 import os
-from unittest.mock import patch
 
 import pytest
-from cryptography.fernet import InvalidToken
 
 from reconly_core.email.crypto import (
     TokenEncryptionError,

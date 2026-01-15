@@ -27,7 +27,6 @@ from reconly_core.email.gmail import (
     revoke_gmail_token,
 )
 from reconly_core.email.oauth import (
-    OAuthState,
     OAuthStateError,
     create_oauth_state,
     generate_pkce_pair,

@@ -7,15 +7,14 @@ import base64
 import hashlib
 import json
 import logging
-import os
 import secrets
 import time
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Tuple
 
 from cryptography.fernet import Fernet, InvalidToken
 
-from reconly_core.email.crypto import _derive_fernet_key, _get_secret_key
+from reconly_core.email.crypto import _get_secret_key
 
 logger = logging.getLogger(__name__)
 

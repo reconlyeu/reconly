@@ -11,13 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from reconly_api.config import settings
 from reconly_api.dependencies import get_db
 from reconly_api.schemas.oauth import (
     OAuthAuthorizeResponse,
-    OAuthCallbackResponse,
     OAuthCredentialResponse,
-    OAuthErrorResponse,
     OAuthProviderInfo,
     OAuthProvidersResponse,
     OAuthRevokeResponse,

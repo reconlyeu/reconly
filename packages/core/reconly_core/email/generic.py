@@ -23,7 +23,6 @@ from reconly_core.email.errors import (
     IMAPConnectionError,
     IMAPFetchError,
     IMAPFolderError,
-    IMAPParseError,
 )
 
 logger = logging.getLogger(__name__)

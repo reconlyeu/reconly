@@ -1,5 +1,4 @@
 """Tests for email content extraction utilities."""
-import pytest
 
 from reconly_core.email.content import (
     extract_email_content,

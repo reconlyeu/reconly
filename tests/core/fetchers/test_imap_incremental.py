@@ -1,7 +1,6 @@
 """Tests for IMAP fetcher incremental fetching / deduplication."""
 from unittest.mock import MagicMock, patch
 
-import pytest
 
 from reconly_core.fetchers.imap import (
     IMAPFetcher,

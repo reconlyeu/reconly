@@ -9,7 +9,6 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from email.utils import parsedate_to_datetime
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 

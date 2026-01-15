@@ -303,6 +303,7 @@ class TestFetchEmails:
 
         # Should only fetch 2 emails even though 5 were found
         assert mock_conn.fetch.call_count == 2
+        assert len(emails) == 2
 
     @patch("imaplib.IMAP4_SSL")
     def test_fetch_emails_no_results(self, mock_imap_class, basic_config):
