@@ -678,9 +678,10 @@ export const extensionsApi = {
     return data.extensions;
   },
 
-  install: async (packageName: string, upgrade = false): Promise<ExtensionInstallResponse> => {
+  install: async (packageName?: string, githubUrl?: string, upgrade = false): Promise<ExtensionInstallResponse> => {
     const { data } = await apiClient.post<ExtensionInstallResponse>('/extensions/install', {
       package: packageName,
+      github_url: githubUrl,
       upgrade,
     });
     return data;

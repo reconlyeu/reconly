@@ -13,6 +13,8 @@ Extensions add new capabilities to Reconly:
 
 ### Via the Catalog (Recommended)
 
+The easiest way to install extensions is through Reconly's built-in catalog:
+
 1. Open Reconly
 2. Go to **Settings > Extensions**
 3. Click **Browse Catalog**
@@ -20,11 +22,44 @@ Extensions add new capabilities to Reconly:
 5. Click **Install**
 6. Restart Reconly when prompted
 
-The catalog shows extensions that have been reviewed and listed by the Reconly community.
+The catalog shows both **verified** and **community** extensions:
 
-### Via pip (Manual)
+**Verified Extensions:**
+- Reviewed by the Reconly team
+- Hosted in the official [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) repository
+- One-click installation from GitHub
+- Display a "Verified" badge in the UI
+- Automatically updated when you refresh the catalog
 
-Extensions are standard Python packages. Install directly with pip:
+**Community Extensions:**
+- Created by community members
+- May be hosted in individual repositories
+- Can be installed via GitHub URLs or PyPI
+- No verification badge, use with appropriate caution
+
+### Via GitHub URL (Advanced)
+
+You can install extensions directly from GitHub:
+
+```bash
+# Install from a GitHub repository
+pip install git+https://github.com/username/reconly-ext-myformat.git
+
+# Install from a monorepo subdirectory (like reconly-extensions)
+pip install git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-txt
+```
+
+Then restart Reconly.
+
+**When to use GitHub installation:**
+- Installing pre-release versions
+- Testing development branches
+- Installing community extensions not yet in catalog
+- Working with extensions in monorepos
+
+### Via pip from PyPI (Traditional)
+
+Extensions published to PyPI can be installed like any Python package:
 
 ```bash
 pip install reconly-ext-notion
@@ -32,18 +67,16 @@ pip install reconly-ext-notion
 
 Then restart Reconly.
 
-**For development versions:**
+### For Local Development
 
-```bash
-pip install git+https://github.com/author/reconly-ext-myformat.git
-```
-
-**For local development:**
+If you're developing an extension locally:
 
 ```bash
 cd /path/to/reconly-ext-myformat
 pip install -e .
 ```
+
+This installs the extension in "editable" mode so changes take effect immediately (after restart).
 
 ---
 
@@ -200,6 +233,37 @@ To reset an extension's configuration:
 
 Browse the built-in catalog via **Settings > Extensions > Browse Catalog**.
 
+The catalog is fetched from the [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) repository and includes:
+
+- **Verified Extensions**: Official extensions reviewed by the Reconly team
+- **Community Extensions**: Extensions submitted by community members
+- **Install Source Badge**: Shows whether the extension is from GitHub or PyPI
+- **One-Click Install**: Install directly from the UI for GitHub-based extensions
+
+**Catalog Features:**
+- Search by name or description
+- Filter by type (exporter, fetcher, provider)
+- Filter to show only verified extensions
+- View source code links
+- See minimum Reconly version required
+
+### Catalog Sources
+
+Extensions in the catalog can be installed from different sources:
+
+| Source | Badge | Description |
+|--------|-------|-------------|
+| **GitHub (Verified)** | Verified | Official extensions in reconly-extensions monorepo |
+| **GitHub (Community)** | - | Community extensions in their own repositories |
+| **PyPI** | - | Traditional PyPI packages |
+
+**GitHub-based extensions** are preferred because:
+- No need to publish to PyPI
+- Faster iteration and updates
+- Easier code review process
+- Direct source code access
+- Monorepo benefits for verified extensions
+
 ### PyPI
 
 Search PyPI for `reconly-ext-*`:
@@ -209,7 +273,10 @@ https://pypi.org/search/?q=reconly-ext-
 
 ### GitHub
 
-Search GitHub for the `reconly-extension` topic or `reconly-ext-` prefix.
+Search GitHub for repositories with:
+- `reconly-ext-` prefix
+- `reconly-extension` topic
+- Visit [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) for verified extensions
 
 ---
 

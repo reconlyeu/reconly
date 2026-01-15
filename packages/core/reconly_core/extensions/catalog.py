@@ -3,13 +3,19 @@
 This module provides functionality to fetch and search a curated catalog
 of available Reconly extensions. The catalog is hosted as a JSON file
 in the Reconly repository.
+
+Catalog entries can specify different install sources:
+- "pypi": Traditional PyPI package installation
+- "github": Git-based installation from GitHub URLs
+- "local": Local file path (development only)
 """
 import json
 import logging
 import os
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import httpx
 
@@ -18,9 +24,13 @@ from reconly_core.extensions.loader import get_extension_loader
 
 logger = logging.getLogger(__name__)
 
-# Default catalog URL (GitHub raw content)
+
+# Install source types
+InstallSource = Literal["pypi", "github", "local"]
+
+# Default catalog URL (GitHub raw content from reconly-extensions repo)
 DEFAULT_CATALOG_URL = (
-    "https://raw.githubusercontent.com/reconly/reconly/main/extensions-catalog.json"
+    "https://raw.githubusercontent.com/reconlyeu/reconly-extensions/main/catalog.json"
 )
 
 # Local fallback catalog path (relative to project root)
@@ -35,15 +45,17 @@ class CatalogEntry:
     """Entry in the extension catalog.
 
     Attributes:
-        package: PyPI package name (e.g., 'reconly-ext-notion')
+        package: Package name (e.g., 'reconly-ext-notion')
         name: Human-readable name (e.g., 'Notion Exporter')
         type: Extension type (exporter, fetcher, provider)
         description: Brief description of what the extension does
         author: Author name or organization
-        version: Latest available version on PyPI
+        version: Latest available version
         verified: Whether this extension is verified/curated by maintainers
         homepage: URL to extension homepage or repository
-        pypi_url: URL to PyPI page
+        pypi_url: URL to PyPI page (for pypi install_source)
+        install_source: Installation source type ('pypi', 'github', 'local')
+        github_url: GitHub URL for git-based installation (for github install_source)
         installed: Whether this extension is currently installed (computed)
         installed_version: Currently installed version if installed
     """
@@ -56,6 +68,8 @@ class CatalogEntry:
     verified: bool = False
     homepage: Optional[str] = None
     pypi_url: Optional[str] = None
+    install_source: InstallSource = "pypi"
+    github_url: Optional[str] = None
     installed: bool = False
     installed_version: Optional[str] = None
 
@@ -71,9 +85,21 @@ class CatalogEntry:
             "verified": self.verified,
             "homepage": self.homepage,
             "pypi_url": self.pypi_url,
+            "install_source": self.install_source,
+            "github_url": self.github_url,
             "installed": self.installed,
             "installed_version": self.installed_version,
         }
+
+    def get_install_target(self) -> str:
+        """Get the installation target (package name or GitHub URL).
+
+        Returns:
+            GitHub URL if install_source is 'github', otherwise package name.
+        """
+        if self.install_source == "github" and self.github_url:
+            return self.github_url
+        return self.package
 
 
 @dataclass
@@ -219,6 +245,16 @@ class CatalogFetcher:
 
         for ext_data in data.get("extensions", []):
             package = ext_data.get("package", "")
+            # Parse install_source with fallback to "pypi" for backward compatibility
+            install_source_raw = ext_data.get("install_source", "pypi")
+            # Validate install_source is one of the allowed values
+            if install_source_raw not in ("pypi", "github", "local"):
+                logger.warning(
+                    f"Unknown install_source '{install_source_raw}' for package '{package}', "
+                    f"defaulting to 'pypi'"
+                )
+                install_source_raw = "pypi"
+
             entry = CatalogEntry(
                 package=package,
                 name=ext_data.get("name", package),
@@ -229,6 +265,8 @@ class CatalogFetcher:
                 verified=ext_data.get("verified", False),
                 homepage=ext_data.get("homepage"),
                 pypi_url=ext_data.get("pypi_url"),
+                install_source=install_source_raw,
+                github_url=ext_data.get("github_url"),
                 installed=package in installed,
                 installed_version=installed.get(package),
             )

@@ -615,7 +615,125 @@ class TestIntegration:
 
 ## Publishing
 
-### To PyPI
+You have two options for publishing your extension:
+
+### Option 1: GitHub Marketplace (Recommended for Verified Extensions)
+
+The official [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) repository hosts verified extensions with one-click installation.
+
+**Benefits:**
+- One-click install from Reconly UI
+- "Verified" badge in catalog
+- Official community support
+- No PyPI publishing required
+
+**Steps:**
+
+1. **Fork the repository**: Fork [reconly-extensions](https://github.com/reconlyeu/reconly-extensions)
+
+2. **Add your extension** to `extensions/reconly-ext-{name}/`:
+   ```
+   extensions/
+     reconly-ext-myformat/
+       pyproject.toml
+       README.md
+       src/
+         reconly_ext_myformat/
+           __init__.py
+           exporter.py  # or fetcher.py
+   ```
+
+3. **Update catalog.json** at repo root:
+   ```json
+   {
+     "version": "2.0",
+     "extensions": [
+       {
+         "package": "reconly-ext-myformat",
+         "name": "MyFormat Exporter",
+         "type": "exporter",
+         "description": "Export digests to MyFormat",
+         "author": "Your Name",
+         "version": "1.0.0",
+         "verified": true,
+         "install_source": "github",
+         "github_url": "git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-myformat",
+         "homepage": "https://github.com/reconlyeu/reconly-extensions/tree/main/extensions/reconly-ext-myformat",
+         "min_reconly_version": "1.0.0"
+       }
+     ]
+   }
+   ```
+
+4. **Submit Pull Request** with:
+   - Clear description of functionality
+   - Any special requirements
+   - Testing instructions
+
+5. **Review Process**:
+   - Code review for security and quality
+   - Testing by maintainers
+   - Merge and automatic catalog update
+   - "Verified" badge in UI
+
+**Catalog Fields:**
+- `package`: Package name (must start with `reconly-ext-`)
+- `name`: Display name shown in UI
+- `type`: `exporter`, `fetcher`, or `provider`
+- `description`: Brief description
+- `author`: Your name
+- `version`: Extension version
+- `verified`: true for verified extensions
+- `install_source`: `"github"` for GitHub installations
+- `github_url`: Full GitHub URL with subdirectory
+- `homepage`: Link to extension documentation
+- `min_reconly_version`: Minimum Reconly version required
+
+### Option 2: Community Extensions (Your Own Repository)
+
+You can also publish extensions in your own GitHub repository.
+
+**Steps:**
+
+1. **Create your repository**: `your-username/reconly-ext-myformat`
+
+2. **Structure your extension**:
+   ```
+   reconly-ext-myformat/
+     pyproject.toml
+     README.md
+     src/
+       reconly_ext_myformat/
+         __init__.py
+         exporter.py
+   ```
+
+3. **Users install via GitHub URL**:
+   ```bash
+   pip install git+https://github.com/your-username/reconly-ext-myformat.git
+   ```
+
+4. **Optional: Submit to community catalog**:
+   Submit a PR to add your extension to the catalog as a community extension:
+   ```json
+   {
+     "package": "reconly-ext-myformat",
+     "name": "MyFormat Exporter",
+     "type": "exporter",
+     "description": "Export digests to MyFormat",
+     "author": "Your Name",
+     "version": "1.0.0",
+     "verified": false,
+     "install_source": "github",
+     "github_url": "git+https://github.com/your-username/reconly-ext-myformat.git",
+     "homepage": "https://github.com/your-username/reconly-ext-myformat",
+     "min_reconly_version": "1.0.0"
+   }
+   ```
+
+### Option 3: PyPI (Traditional)
+
+You can also publish to PyPI for traditional pip installation.
 
 ```bash
 # Build
@@ -627,36 +745,28 @@ pip install twine
 twine upload dist/*
 ```
 
-### To Extension Catalog
-
-To have your extension listed in Reconly's built-in catalog, submit a PR to add it to `extensions-catalog.json`:
-
+Then add to catalog:
 ```json
 {
-  "extensions": [
-    {
-      "package": "reconly-ext-myformat",
-      "name": "MyFormat Exporter",
-      "type": "exporter",
-      "description": "Export digests to MyFormat",
-      "author": "Your Name",
-      "homepage": "https://github.com/you/reconly-ext-myformat",
-      "verified": false,
-      "tags": ["export", "myformat"]
-    }
-  ]
+  "package": "reconly-ext-myformat",
+  "name": "MyFormat Exporter",
+  "type": "exporter",
+  "install_source": "pypi",
+  "homepage": "https://pypi.org/project/reconly-ext-myformat/"
 }
 ```
 
-**Fields:**
-- `package`: PyPI package name (must start with `reconly-ext-`)
-- `name`: Display name
-- `type`: `exporter`, `fetcher`, or `provider`
-- `description`: Brief description
-- `author`: Author name
-- `homepage`: Repository or docs URL
-- `verified`: Set by Reconly team after review
-- `tags`: Searchable tags
+## Installation Sources
+
+Extensions can be installed from three sources:
+
+| Source | When to Use | Example |
+|--------|-------------|---------|
+| **GitHub (Verified)** | Official verified extensions in monorepo | Automatic via catalog |
+| **GitHub (Community)** | Your own repository, community extensions | `pip install git+https://github.com/user/repo.git` |
+| **PyPI** | Traditional package distribution | `pip install reconly-ext-myformat` |
+
+Users can install from any source, but verified extensions get a badge in the UI and one-click installation.
 
 ---
 

@@ -111,7 +111,7 @@ class TestExtensionToggleAPI:
         mock_is_ext.return_value = False
 
         response = client.put(
-            "/api/v1/extensions/exporter/nonexistentenabled",
+            "/api/v1/extensions/exporter/nonexistent/enabled",
             json={"enabled": True}
         )
         assert response.status_code == 404
@@ -131,7 +131,7 @@ class TestExtensionToggleAPI:
         mock_can.return_value = False
 
         response = client.put(
-            "/api/v1/extensions/exporter/testenabled",
+            "/api/v1/extensions/exporter/test/enabled",
             json={"enabled": True}
         )
         assert response.status_code == 400
@@ -198,7 +198,7 @@ class TestCatalogAPI:
 
 @pytest.mark.api
 class TestCatalogSearchAPI:
-    """Test suite for GET /api/v1/extensions/catalogsearch/ endpoint."""
+    """Test suite for GET /api/v1/extensions/catalog/search/ endpoint."""
 
     @patch('reconly_api.routes.extensions.get_catalog_fetcher')
     def test_search_catalog_by_query(self, mock_get_fetcher, client):
@@ -220,7 +220,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = catalog.extensions
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalogsearch/?q=notion")
+        response = client.get("/api/v1/extensions/catalog/search?q=notion")
         assert response.status_code == 200
 
         mock_fetcher.search.assert_called_once()
@@ -233,7 +233,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = []
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalogsearch/?type=exporter")
+        response = client.get("/api/v1/extensions/catalog/search?type=exporter")
         assert response.status_code == 200
 
         mock_fetcher.search.assert_called_once()
@@ -248,7 +248,7 @@ class TestCatalogSearchAPI:
         mock_fetcher.search.return_value = []
         mock_get_fetcher.return_value = mock_fetcher
 
-        response = client.get("/api/v1/extensions/catalogsearch/?verified_only=true")
+        response = client.get("/api/v1/extensions/catalog/search?verified_only=true")
         assert response.status_code == 200
 
         call_args = mock_fetcher.search.call_args
@@ -388,7 +388,7 @@ class TestDeprecatedSettingsAPI:
     def test_settings_endpoint_returns_410(self, client):
         """Test deprecated settings endpoint returns 410 Gone."""
         response = client.put(
-            "/api/v1/extensions/exporter/testsettings",
+            "/api/v1/extensions/exporter/test/settings",
             json={"settings": {}}
         )
         assert response.status_code == 410

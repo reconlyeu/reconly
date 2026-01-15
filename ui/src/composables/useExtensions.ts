@@ -137,6 +137,7 @@ export function useCatalogSearch(
 
 /**
  * Hook for installing an extension
+ * Supports both PyPI package names and GitHub URLs
  */
 export function useInstallExtension(options?: {
   onSuccess?: (data: ExtensionInstallResponse) => void;
@@ -145,8 +146,8 @@ export function useInstallExtension(options?: {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ packageName, upgrade }: { packageName: string; upgrade?: boolean }) =>
-      extensionsApi.install(packageName, upgrade),
+    mutationFn: ({ packageName, githubUrl, upgrade }: { packageName?: string; githubUrl?: string; upgrade?: boolean }) =>
+      extensionsApi.install(packageName, githubUrl, upgrade),
     onSuccess: (data) => {
       // Invalidate catalog to refresh installed status
       queryClient.invalidateQueries({ queryKey: CATALOG_QUERY_KEY });

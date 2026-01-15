@@ -451,6 +451,11 @@ export const strings = {
         noResultsDescription: 'Try a different search term or filter.',
         loading: 'Loading catalog...',
         error: 'Failed to load catalog',
+        // Install source badges
+        sourceGitHub: 'GitHub',
+        sourcePyPI: 'PyPI',
+        sourceLocal: 'Local',
+        viewSource: 'View Source',
       },
     },
   },

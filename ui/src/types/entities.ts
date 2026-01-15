@@ -726,6 +726,8 @@ export interface ExtensionToggleRequest {
 // Extension Catalog (Phase 2)
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type InstallSource = 'pypi' | 'github' | 'local';
+
 export interface CatalogEntry {
   package: string;
   name: string;
@@ -738,6 +740,9 @@ export interface CatalogEntry {
   pypi_url: string | null;
   installed: boolean;
   installed_version: string | null;
+  // GitHub marketplace fields
+  install_source: InstallSource;
+  github_url: string | null;
 }
 
 export interface CatalogResponse {
@@ -747,7 +752,8 @@ export interface CatalogResponse {
 }
 
 export interface ExtensionInstallRequest {
-  package: string;
+  package?: string;
+  github_url?: string;
   upgrade?: boolean;
 }
 

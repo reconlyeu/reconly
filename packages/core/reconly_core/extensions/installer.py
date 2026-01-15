@@ -1,10 +1,16 @@
 """Extension installer using pip subprocess.
 
 This module provides functionality to install and uninstall extension
-packages using pip. It validates package names to ensure only authorized
-Reconly extension packages can be installed.
+packages using pip. It validates package names and GitHub URLs to ensure
+only authorized Reconly extension packages can be installed.
+
+Supported installation sources:
+- PyPI package names: reconly-ext-notion
+- GitHub URLs: git+https://github.com/user/repo.git
+- GitHub subdirectory URLs: git+https://github.com/user/repo.git#subdirectory=path
 """
 import logging
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -14,6 +20,10 @@ logger = logging.getLogger(__name__)
 
 # Required prefix for extension package names
 EXTENSION_PACKAGE_PREFIX = "reconly-ext-"
+
+# GitHub URL prefixes for git-based installations
+GITHUB_HTTPS_PREFIX = "git+https://github.com/"
+GITHUB_SSH_PREFIX = "git+ssh://git@github.com/"
 
 
 @dataclass
@@ -70,6 +80,79 @@ class ExtensionInstaller:
             pip_timeout: Timeout in seconds for pip operations (default: 5 minutes)
         """
         self.pip_timeout = pip_timeout
+
+    def _validate_install_target(self, target: str) -> Optional[str]:
+        """Validate an install target (package name or GitHub URL).
+
+        Routes to the appropriate validation based on target format.
+
+        Args:
+            target: Package name or GitHub URL to validate
+
+        Returns:
+            Error message if invalid, None if valid
+        """
+        if not target:
+            return "Install target cannot be empty"
+
+        # GitHub URL (HTTPS or SSH)
+        if target.startswith("git+https://") or target.startswith("git+ssh://"):
+            return self._validate_github_url(target)
+
+        # Package name (PyPI)
+        return self._validate_package_name(target)
+
+    def _validate_github_url(self, url: str) -> Optional[str]:
+        """Validate that a GitHub URL is a valid extension source.
+
+        Args:
+            url: GitHub URL to validate. Supported formats:
+                - git+https://github.com/user/repo.git
+                - git+ssh://git@github.com/user/repo.git
+
+        Returns:
+            Error message if invalid, None if valid
+        """
+        # Must be GitHub URL (HTTPS or SSH)
+        is_https = url.startswith(GITHUB_HTTPS_PREFIX)
+        is_ssh = url.startswith(GITHUB_SSH_PREFIX)
+        if not is_https and not is_ssh:
+            return (
+                "Only GitHub URLs are supported. URL must start with "
+                "'git+https://github.com/' or 'git+ssh://git@github.com/'"
+            )
+
+        # Must reference reconly-ext-* package (security check)
+        if EXTENSION_PACKAGE_PREFIX not in url:
+            return (
+                f"GitHub URL must reference a '{EXTENSION_PACKAGE_PREFIX}*' package. "
+                f"The URL should contain '{EXTENSION_PACKAGE_PREFIX}' in the repository name or subdirectory."
+            )
+
+        # Basic URL structure validation
+        # Pattern: git+https://github.com/user/repo.git or git+ssh://git@github.com/user/repo.git
+        if is_https:
+            url_pattern = r"^git\+https://github\.com/[\w\-\.]+/[\w\-\.]+\.git"
+        else:
+            url_pattern = r"^git\+ssh://git@github\.com/[\w\-\.]+/[\w\-\.]+\.git"
+
+        if not re.match(url_pattern, url):
+            return (
+                "Invalid GitHub URL format. Expected: "
+                "git+https://github.com/user/repo.git or "
+                "git+ssh://git@github.com/user/repo.git"
+            )
+
+        # Validate subdirectory fragment if present
+        if "#" in url:
+            fragment = url.split("#", 1)[1]
+            # Fragment should be subdirectory=path or @version (or both)
+            if fragment and not fragment.startswith("subdirectory=") and "@" not in url:
+                return (
+                    "Invalid URL fragment. Use '#subdirectory=path' for monorepo installations."
+                )
+
+        return None
 
     def _validate_package_name(self, package_name: str) -> Optional[str]:
         """Validate that a package name is a valid Reconly extension.
@@ -144,33 +227,139 @@ class ExtensionInstaller:
                             return version_part[1:]
         return None
 
-    def install(self, package_name: str, upgrade: bool = False) -> InstallResult:
-        """Install an extension package using pip.
+    def _is_github_url(self, target: str) -> bool:
+        """Check if target is a GitHub URL (HTTPS or SSH)."""
+        return target.startswith("git+https://") or target.startswith("git+ssh://")
+
+    def _extract_package_name_from_url(self, url: str) -> str:
+        """Extract package name from GitHub URL for result reporting.
 
         Args:
-            package_name: Name of the package to install (must start with 'reconly-ext-')
+            url: GitHub URL (git+https://github.com/user/repo.git#subdirectory=path)
+
+        Returns:
+            Package name extracted from URL, or the URL itself if extraction fails
+        """
+        # Try to extract from subdirectory first (monorepo pattern)
+        if "#subdirectory=" in url:
+            # git+https://github.com/user/repo.git#subdirectory=extensions/reconly-ext-reddit
+            subdir = url.split("#subdirectory=")[1].split("@")[0]  # Remove version if present
+            # Get the last part of the path which should be the package name
+            parts = subdir.rstrip("/").split("/")
+            for part in reversed(parts):
+                if part.startswith(EXTENSION_PACKAGE_PREFIX):
+                    return part
+            return parts[-1] if parts else url
+
+        # Try to extract from repository name
+        # git+https://github.com/user/reconly-ext-reddit.git
+        match = re.search(r"/([^/]+)\.git", url)
+        if match:
+            return match.group(1)
+
+        return url
+
+    def _format_github_error(self, stderr: str) -> str:
+        """Format GitHub-specific error messages into user-friendly text.
+
+        Args:
+            stderr: Standard error from pip
+
+        Returns:
+            User-friendly error message
+        """
+        if not stderr:
+            return "Installation failed"
+
+        error_lower = stderr.lower()
+
+        # Map error patterns to user-friendly messages
+        # Each tuple: (patterns_list, message, match_mode)
+        # match_mode: "any" = OR logic, "all" = AND logic (default)
+        error_mappings = [
+            # Git clone / repository access failures (any pattern matches)
+            (["git clone", "repository not found"],
+             "Failed to download extension. Repository may be private or unavailable.",
+             "any"),
+            (["fatal: unable to access"],
+             "Failed to download extension. Check your internet connection or repository URL.",
+             "any"),
+            (["permission denied"],
+             "Failed to download extension. Repository may be private.",
+             "any"),
+            # Subdirectory issues
+            (["does not appear to be a python project"],
+             "Extension not found in repository. The subdirectory may be incorrect.",
+             "any"),
+            (["subdirectory", "not exist"],
+             "Extension not found in repository. The specified subdirectory does not exist.",
+             "all"),
+            # Version/tag issues
+            (["could not find a tag or branch"],
+             "Specified version not found. Check the tag or branch name.",
+             "any"),
+            (["could not find a version"],
+             "Extension package not found or has no valid version.",
+             "any"),
+            (["no matching distribution"],
+             "Extension not found or incompatible with your Python version.",
+             "any"),
+        ]
+
+        for patterns, message, match_mode in error_mappings:
+            matcher = any if match_mode == "any" else all
+            if matcher(pattern in error_lower for pattern in patterns):
+                return message
+
+        return stderr.strip()
+
+    def install(self, target: str, upgrade: bool = False) -> InstallResult:
+        """Install an extension package using pip.
+
+        Supports both PyPI package names and GitHub URLs.
+
+        Args:
+            target: Package name (reconly-ext-*) or GitHub URL (git+https://github.com/...)
             upgrade: If True, upgrade the package if already installed
 
         Returns:
             InstallResult with success status and details
+
+        Examples:
+            # Install from PyPI
+            installer.install("reconly-ext-notion")
+
+            # Install from GitHub
+            installer.install("git+https://github.com/reconlyeu/reconly-ext-notion.git")
+
+            # Install from GitHub monorepo subdirectory
+            installer.install("git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-reddit")
         """
-        # Validate package name
-        error = self._validate_package_name(package_name)
+        is_github = self._is_github_url(target)
+
+        # Validate install target
+        error = self._validate_install_target(target)
         if error:
             return InstallResult(
                 success=False,
-                package=package_name,
+                package=target,
                 error=error,
                 requires_restart=False,
             )
+
+        # Extract package name for logging and results
+        if is_github:
+            package_name = self._extract_package_name_from_url(target)
+        else:
+            package_name = target
 
         # Build pip install command
         args = ["install"]
         if upgrade:
             args.append("--upgrade")
-        args.append(package_name)
+        args.append(target)
 
-        logger.info(f"Installing extension package: {package_name}")
+        logger.info(f"Installing extension: {package_name}" + (f" from {target}" if is_github else ""))
 
         # Run pip install
         returncode, stdout, stderr = self._run_pip(args)
@@ -188,12 +377,16 @@ class ExtensionInstaller:
                 stderr=stderr,
             )
         else:
-            error_msg = stderr.strip() if stderr else "Installation failed"
-            # Simplify common error messages
-            if "Could not find a version" in error_msg:
-                error_msg = f"Package '{package_name}' not found on PyPI"
-            elif "No matching distribution" in error_msg:
-                error_msg = f"Package '{package_name}' not found or incompatible"
+            # Format error message based on source type
+            if is_github:
+                error_msg = self._format_github_error(stderr)
+            else:
+                error_msg = stderr.strip() if stderr else "Installation failed"
+                # Simplify common PyPI error messages
+                if "Could not find a version" in error_msg:
+                    error_msg = f"Package '{package_name}' not found on PyPI"
+                elif "No matching distribution" in error_msg:
+                    error_msg = f"Package '{package_name}' not found or incompatible"
 
             logger.error(f"Failed to install {package_name}: {error_msg}")
             return InstallResult(

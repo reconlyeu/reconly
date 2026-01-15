@@ -54,11 +54,14 @@ from reconly_core.extensions.installer import (
     InstallResult,
     get_extension_installer,
     EXTENSION_PACKAGE_PREFIX,
+    GITHUB_HTTPS_PREFIX,
+    GITHUB_SSH_PREFIX,
 )
 from reconly_core.extensions.catalog import (
     CatalogEntry,
     Catalog,
     CatalogFetcher,
+    InstallSource,
     get_catalog_fetcher,
     fetch_catalog,
     fetch_catalog_sync,
@@ -110,10 +113,13 @@ __all__ = [
     "InstallResult",
     "get_extension_installer",
     "EXTENSION_PACKAGE_PREFIX",
+    "GITHUB_HTTPS_PREFIX",
+    "GITHUB_SSH_PREFIX",
     # Catalog
     "CatalogEntry",
     "Catalog",
     "CatalogFetcher",
+    "InstallSource",
     "get_catalog_fetcher",
     "fetch_catalog",
     "fetch_catalog_sync",
