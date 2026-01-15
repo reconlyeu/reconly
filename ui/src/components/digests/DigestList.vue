@@ -34,7 +34,6 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<Emits>();
-const digestsStore = useDigestsStore();
 
 // Convert props to refs for reactivity in queryKey
 const { searchQuery, feedFilter, sourceFilter, tagFilter, page } = toRefs(props);
@@ -53,6 +52,8 @@ const { data, isLoading, isError, error, refetch } = useQuery({
       page.value,
       props.pageSize
     );
+    // Access store inside queryFn to ensure Pinia is initialized
+    const digestsStore = useDigestsStore();
     digestsStore.setDigests(result.digests || []);
     return result;
   },

@@ -17,7 +17,6 @@ import { Plus } from 'lucide-vue-next';
 // View mode state
 const { viewMode, isCardView, isTableView } = useViewMode('feeds');
 const queryClient = useQueryClient();
-const feedsStore = useFeedsStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -37,6 +36,8 @@ const {
   queryKey: ['feeds'],
   queryFn: async () => {
     const result = await feedsApi.list();
+    // Access store inside queryFn to ensure Pinia is initialized
+    const feedsStore = useFeedsStore();
     feedsStore.setFeeds(result);
     return result;
   },

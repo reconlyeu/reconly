@@ -18,7 +18,6 @@ import type { PromptTemplate, ReportTemplate } from '@/types/entities';
 // View mode state
 const { viewMode, isCardView, isTableView } = useViewMode('templates');
 const queryClient = useQueryClient();
-const templatesStore = useTemplatesStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -43,6 +42,8 @@ const {
   queryKey: ['prompt-templates'],
   queryFn: async () => {
     const result = await promptTemplatesApi.list();
+    // Access store inside queryFn to ensure Pinia is initialized
+    const templatesStore = useTemplatesStore();
     templatesStore.setPromptTemplates(result);
     return result;
   },
@@ -62,6 +63,8 @@ const {
   queryKey: ['report-templates'],
   queryFn: async () => {
     const result = await reportTemplatesApi.list();
+    // Access store inside queryFn to ensure Pinia is initialized
+    const templatesStore = useTemplatesStore();
     templatesStore.setReportTemplates(result);
     return result;
   },

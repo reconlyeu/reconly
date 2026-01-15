@@ -17,7 +17,6 @@ import { Plus, CheckCircle, AlertCircle } from 'lucide-vue-next';
 // View mode state
 const { viewMode, isCardView, isTableView } = useViewMode('sources');
 const queryClient = useQueryClient();
-const sourcesStore = useSourcesStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -78,6 +77,8 @@ const {
   queryFn: async () => {
     const type = activeType.value === 'all' ? undefined : activeType.value;
     const result = await sourcesApi.list(type);
+    // Access store inside queryFn to ensure Pinia is initialized
+    const sourcesStore = useSourcesStore();
     sourcesStore.setSources(result);
     return result;
   },

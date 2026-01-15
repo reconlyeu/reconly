@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, shallowRef } from 'vue';
 import {
   LayoutDashboard,
   FileText,
@@ -26,17 +26,20 @@ const props = defineProps<{
   currentPath: string;
 }>();
 
-const authStore = useAuthStore();
+// Store reference - initialized in onMounted to ensure Pinia is available
+const authStore = shallowRef<ReturnType<typeof useAuthStore> | null>(null);
 const showLogout = ref(false);
 
 // Check auth config on mount
 onMounted(async () => {
-  await authStore.checkAuthConfig();
-  showLogout.value = authStore.authRequired;
+  // Access store inside onMounted to ensure Pinia is initialized
+  authStore.value = useAuthStore();
+  await authStore.value.checkAuthConfig();
+  showLogout.value = authStore.value.authRequired;
 });
 
 const handleLogout = async () => {
-  await authStore.logout();
+  await authStore.value?.logout();
 };
 
 const navItems: NavItem[] = [

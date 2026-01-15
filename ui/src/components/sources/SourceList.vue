@@ -24,7 +24,6 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 const queryClient = useQueryClient();
-const sourcesStore = useSourcesStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -37,6 +36,8 @@ const { data: sources, isLoading, isError, error, refetch } = useQuery({
   queryFn: async () => {
     const type = props.filterType === 'all' ? undefined : props.filterType;
     const result = await sourcesApi.list(type);
+    // Access store inside queryFn to ensure Pinia is initialized
+    const sourcesStore = useSourcesStore();
     sourcesStore.setSources(result);
     return result;
   },

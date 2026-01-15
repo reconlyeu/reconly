@@ -17,7 +17,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 const queryClient = useQueryClient();
-const feedsStore = useFeedsStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -29,6 +28,8 @@ const { data: feeds, isLoading, isError, error, refetch } = useQuery({
   queryKey: ['feeds'],
   queryFn: async () => {
     const result = await feedsApi.list();
+    // Access store inside queryFn to ensure Pinia is initialized
+    const feedsStore = useFeedsStore();
     feedsStore.setFeeds(result);
     return result;
   },

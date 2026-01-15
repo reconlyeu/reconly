@@ -9,10 +9,11 @@ import { onMounted, ref } from 'vue';
 import { Loader2 } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth';
 
-const authStore = useAuthStore();
 const isChecking = ref(true);
 
 onMounted(async () => {
+  // Access store inside onMounted to ensure Pinia is initialized
+  const authStore = useAuthStore();
   await authStore.checkAuthConfig();
 
   // If auth is required and not authenticated, redirect to login

@@ -18,7 +18,6 @@ interface Emits {
 
 const emit = defineEmits<Emits>();
 const queryClient = useQueryClient();
-const templatesStore = useTemplatesStore();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
@@ -27,6 +26,8 @@ const { data: templates, isLoading, isError, error, refetch } = useQuery({
   queryKey: ['prompt-templates'],
   queryFn: async () => {
     const result = await promptTemplatesApi.list();
+    // Access store inside queryFn to ensure Pinia is initialized
+    const templatesStore = useTemplatesStore();
     templatesStore.setPromptTemplates(result);
     return result;
   },
