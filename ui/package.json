@@ -6,7 +6,16 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3.0.4",
+    "@vue/test-utils": "^2.4.6",
+    "happy-dom": "^16.6.0",
+    "vitest": "^3.0.4"
   },
   "dependencies": {
     "@astrojs/node": "^9.5.1",
