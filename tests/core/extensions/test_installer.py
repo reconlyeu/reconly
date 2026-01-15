@@ -419,3 +419,240 @@ class TestSingleton:
         installer1 = get_extension_installer()
         installer2 = get_extension_installer()
         assert installer1 is installer2
+
+
+class TestGitHubUrlValidation:
+    """Tests for GitHub URL validation."""
+
+    def setup_method(self):
+        """Create fresh installer for each test."""
+        self.installer = ExtensionInstaller()
+
+    def test_valid_github_url_simple(self):
+        """Test valid simple GitHub URL passes validation."""
+        url = "git+https://github.com/reconlyeu/reconly-ext-reddit.git"
+        error = self.installer._validate_github_url(url)
+        assert error is None
+
+    def test_valid_github_url_with_subdirectory(self):
+        """Test valid GitHub URL with subdirectory passes validation."""
+        url = "git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-reddit"
+        error = self.installer._validate_github_url(url)
+        assert error is None
+
+    def test_valid_github_url_with_version(self):
+        """Test valid GitHub URL with version tag passes validation."""
+        url = "git+https://github.com/reconlyeu/reconly-ext-reddit.git@v1.0.0"
+        error = self.installer._validate_github_url(url)
+        assert error is None
+
+    def test_invalid_github_url_wrong_host(self):
+        """Test non-GitHub URL fails validation."""
+        url = "git+https://gitlab.com/user/reconly-ext-test.git"
+        error = self.installer._validate_github_url(url)
+        assert error is not None
+        assert "github" in error.lower()
+
+    def test_invalid_github_url_missing_ext_prefix(self):
+        """Test GitHub URL without reconly-ext- fails validation."""
+        url = "git+https://github.com/user/some-other-package.git"
+        error = self.installer._validate_github_url(url)
+        assert error is not None
+        assert EXTENSION_PACKAGE_PREFIX in error
+
+    def test_invalid_github_url_malformed(self):
+        """Test malformed GitHub URL fails validation."""
+        url = "git+https://github.com/invalid-url"
+        error = self.installer._validate_github_url(url)
+        assert error is not None
+        # Malformed URLs fail either for missing reconly-ext- or invalid format
+        assert "reconly-ext" in error.lower() or "invalid" in error.lower()
+
+    def test_invalid_github_url_http_not_https(self):
+        """Test HTTP (not HTTPS) URL fails validation."""
+        url = "git+http://github.com/user/reconly-ext-test.git"
+        error = self.installer._validate_github_url(url)
+        assert error is not None
+
+
+class TestInstallTargetValidation:
+    """Tests for install target validation (package name or GitHub URL)."""
+
+    def setup_method(self):
+        """Create fresh installer for each test."""
+        self.installer = ExtensionInstaller()
+
+    def test_validate_package_name(self):
+        """Test validation routes package names correctly."""
+        error = self.installer._validate_install_target("reconly-ext-test")
+        assert error is None
+
+    def test_validate_github_url(self):
+        """Test validation routes GitHub URLs correctly."""
+        url = "git+https://github.com/reconlyeu/reconly-ext-test.git"
+        error = self.installer._validate_install_target(url)
+        assert error is None
+
+    def test_validate_empty_target(self):
+        """Test empty target fails validation."""
+        error = self.installer._validate_install_target("")
+        assert error is not None
+        assert "empty" in error.lower()
+
+    def test_validate_invalid_package_name(self):
+        """Test invalid package name fails."""
+        error = self.installer._validate_install_target("invalid-package")
+        assert error is not None
+
+    def test_validate_invalid_github_url(self):
+        """Test invalid GitHub URL fails."""
+        error = self.installer._validate_install_target("git+https://github.com/invalid")
+        assert error is not None
+
+
+class TestExtractPackageNameFromUrl:
+    """Tests for extracting package name from GitHub URL."""
+
+    def setup_method(self):
+        """Create fresh installer for each test."""
+        self.installer = ExtensionInstaller()
+
+    def test_extract_from_simple_repo(self):
+        """Test extracting package name from simple repo URL."""
+        url = "git+https://github.com/user/reconly-ext-reddit.git"
+        name = self.installer._extract_package_name_from_url(url)
+        assert name == "reconly-ext-reddit"
+
+    def test_extract_from_subdirectory(self):
+        """Test extracting package name from subdirectory URL."""
+        url = "git+https://github.com/user/repo.git#subdirectory=extensions/reconly-ext-notion"
+        name = self.installer._extract_package_name_from_url(url)
+        assert name == "reconly-ext-notion"
+
+    def test_extract_from_nested_subdirectory(self):
+        """Test extracting package name from nested subdirectory."""
+        url = "git+https://github.com/user/repo.git#subdirectory=packages/extensions/reconly-ext-test"
+        name = self.installer._extract_package_name_from_url(url)
+        assert name == "reconly-ext-test"
+
+    def test_extract_with_version_tag(self):
+        """Test extracting package name when URL has version tag."""
+        url = "git+https://github.com/user/reconly-ext-test.git@v1.0.0"
+        name = self.installer._extract_package_name_from_url(url)
+        assert name == "reconly-ext-test"
+
+
+class TestInstallFromGitHub:
+    """Tests for installing from GitHub URLs."""
+
+    def setup_method(self):
+        """Create fresh installer for each test."""
+        self.installer = ExtensionInstaller()
+
+    def test_install_invalid_github_url(self):
+        """Test install with invalid GitHub URL."""
+        result = self.installer.install("git+https://github.com/invalid-url")
+
+        assert result.success is False
+        assert result.error is not None
+
+    def test_install_github_url_missing_ext_prefix(self):
+        """Test install with GitHub URL missing reconly-ext- prefix."""
+        result = self.installer.install("git+https://github.com/user/other-package.git")
+
+        assert result.success is False
+        assert EXTENSION_PACKAGE_PREFIX in result.error
+
+    @patch.object(ExtensionInstaller, '_run_pip')
+    def test_install_github_url_success(self, mock_run_pip):
+        """Test successful installation from GitHub URL."""
+        mock_run_pip.return_value = (
+            0,
+            "Successfully installed reconly-ext-reddit-0.3.0",
+            ""
+        )
+
+        url = "git+https://github.com/reconlyeu/reconly-ext-reddit.git"
+        result = self.installer.install(url)
+
+        assert result.success is True
+        assert result.package == "reconly-ext-reddit"
+        assert result.version == "0.3.0"
+        assert result.requires_restart is True
+        mock_run_pip.assert_called_once_with(["install", url])
+
+    @patch.object(ExtensionInstaller, '_run_pip')
+    def test_install_github_url_with_subdirectory(self, mock_run_pip):
+        """Test installation from GitHub URL with subdirectory."""
+        mock_run_pip.return_value = (
+            0,
+            "Successfully installed reconly-ext-notion-1.0.0",
+            ""
+        )
+
+        url = "git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-notion"
+        result = self.installer.install(url)
+
+        assert result.success is True
+        assert result.package == "reconly-ext-notion"
+        assert result.version == "1.0.0"
+        mock_run_pip.assert_called_once_with(["install", url])
+
+    @patch.object(ExtensionInstaller, '_run_pip')
+    def test_install_github_url_with_upgrade(self, mock_run_pip):
+        """Test upgrade installation from GitHub URL."""
+        mock_run_pip.return_value = (
+            0,
+            "Successfully installed reconly-ext-test-2.0.0",
+            ""
+        )
+
+        url = "git+https://github.com/user/reconly-ext-test.git"
+        result = self.installer.install(url, upgrade=True)
+
+        assert result.success is True
+        mock_run_pip.assert_called_once_with(["install", "--upgrade", url])
+
+
+class TestGitHubErrorFormatting:
+    """Tests for GitHub-specific error message formatting."""
+
+    def setup_method(self):
+        """Create fresh installer for each test."""
+        self.installer = ExtensionInstaller()
+
+    def test_format_clone_failed_error(self):
+        """Test formatting of git clone failure error."""
+        stderr = "fatal: repository not found"
+        error = self.installer._format_github_error(stderr)
+
+        assert "repository" in error.lower()
+        assert "private" in error.lower() or "unavailable" in error.lower()
+
+    def test_format_access_denied_error(self):
+        """Test formatting of access denied error."""
+        stderr = "fatal: unable to access 'https://github.com/...'"
+        error = self.installer._format_github_error(stderr)
+
+        assert "download" in error.lower() or "connection" in error.lower()
+
+    def test_format_subdirectory_not_found_error(self):
+        """Test formatting of subdirectory not found error."""
+        stderr = "does not appear to be a python project"
+        error = self.installer._format_github_error(stderr)
+
+        assert "not found" in error.lower() or "subdirectory" in error.lower()
+
+    def test_format_tag_not_found_error(self):
+        """Test formatting of tag/branch not found error."""
+        stderr = "could not find a tag or branch 'v999.0.0'"
+        error = self.installer._format_github_error(stderr)
+
+        assert "version" in error.lower() or "tag" in error.lower() or "branch" in error.lower()
+
+    def test_format_generic_error_passes_through(self):
+        """Test that unknown errors pass through."""
+        stderr = "Some unexpected error message"
+        error = self.installer._format_github_error(stderr)
+
+        assert error == "Some unexpected error message"

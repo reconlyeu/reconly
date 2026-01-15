@@ -3,6 +3,7 @@
  * Card for displaying an extension from the catalog.
  * Shows package info, verified badge, install status, and action buttons.
  * Type is indicated visually via icon color/shape with tooltip.
+ * Install source badge shows GitHub/PyPI indicator.
  */
 import { computed } from 'vue';
 import {
@@ -15,6 +16,10 @@ import {
   ExternalLink,
   ShieldCheck,
   Loader2,
+  Github,
+  Package,
+  FolderOpen,
+  Code,
 } from 'lucide-vue-next';
 import type { CatalogEntry } from '@/types/entities';
 import { strings } from '@/i18n/en';
@@ -53,6 +58,18 @@ const typeIconConfig = computed(() => {
     provider: { bg: 'bg-orange-500/10', text: 'text-orange-400', label: 'Provider' },
   };
   return configMap[props.entry.type] || { bg: 'bg-gray-500/10', text: 'text-gray-400', label: 'Extension' };
+});
+
+// Install source badge configuration
+const INSTALL_SOURCE_CONFIG = {
+  github: { bg: 'bg-gray-500/10', text: 'text-gray-300', label: strings.settings.extensions.catalog.sourceGitHub, icon: 'github' },
+  pypi: { bg: 'bg-yellow-500/10', text: 'text-yellow-400', label: strings.settings.extensions.catalog.sourcePyPI, icon: 'package' },
+  local: { bg: 'bg-green-500/10', text: 'text-green-400', label: strings.settings.extensions.catalog.sourceLocal, icon: 'folder' },
+} as const;
+
+const installSourceConfig = computed(() => {
+  const source = props.entry.install_source || 'pypi';
+  return INSTALL_SOURCE_CONFIG[source] || INSTALL_SOURCE_CONFIG.pypi;
 });
 
 // Check if action is in progress
@@ -109,6 +126,17 @@ const isActionInProgress = computed(() => props.isInstalling || props.isUninstal
             <span>{{ strings.settings.extensions.version.replace('{version}', entry.version) }}</span>
             <span>·</span>
             <span>{{ strings.settings.extensions.author.replace('{author}', entry.author) }}</span>
+            <span>·</span>
+            <!-- Install source badge -->
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5"
+              :class="[installSourceConfig.bg, installSourceConfig.text]"
+            >
+              <Github v-if="installSourceConfig.icon === 'github'" :size="10" />
+              <Package v-else-if="installSourceConfig.icon === 'package'" :size="10" />
+              <FolderOpen v-else :size="10" />
+              {{ installSourceConfig.label }}
+            </span>
           </div>
         </div>
       </div>
@@ -143,6 +171,18 @@ const isActionInProgress = computed(() => props.isInstalling || props.isUninstal
           >
             <ExternalLink :size="12" />
             PyPI
+          </a>
+
+          <!-- View Source link (for GitHub extensions) -->
+          <a
+            v-if="entry.github_url"
+            :href="entry.github_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded-full bg-bg-surface px-2.5 py-1 text-xs font-medium text-text-muted hover:bg-bg-elevated hover:text-text-primary transition-colors"
+          >
+            <Code :size="12" />
+            {{ strings.settings.extensions.catalog.viewSource }}
           </a>
         </div>
 

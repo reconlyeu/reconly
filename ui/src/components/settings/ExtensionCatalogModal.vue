@@ -115,9 +115,14 @@ const filteredCatalog = computed(() => {
 });
 
 // Handle install
+// For GitHub extensions, use github_url; for PyPI extensions, use package name
 const handleInstall = (entry: CatalogEntry) => {
   installingPackage.value = entry.package;
-  installMutation.mutate({ packageName: entry.package });
+  if (entry.install_source === 'github' && entry.github_url) {
+    installMutation.mutate({ githubUrl: entry.github_url });
+  } else {
+    installMutation.mutate({ packageName: entry.package });
+  }
 };
 
 // Handle uninstall

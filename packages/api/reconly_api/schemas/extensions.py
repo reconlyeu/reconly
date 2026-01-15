@@ -7,7 +7,7 @@ Configuration details are available via component-specific APIs:
 - /api/v1/providers/{name}/ for provider configuration
 """
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ExtensionMetadataResponse(BaseModel):
@@ -119,7 +119,7 @@ class ExtensionToggleRequest(BaseModel):
 
 class CatalogEntryResponse(BaseModel):
     """Schema for a single extension in the catalog."""
-    package: str = Field(..., description="PyPI package name (e.g., 'reconly-ext-notion')")
+    package: str = Field(..., description="Package name (e.g., 'reconly-ext-notion')")
     name: str = Field(..., description="Human-readable name")
     type: str = Field(..., description="Extension type (exporter, fetcher, provider)")
     description: str = Field(..., description="Brief description")
@@ -127,21 +127,31 @@ class CatalogEntryResponse(BaseModel):
     version: str = Field(default="0.0.0", description="Latest available version")
     verified: bool = Field(default=False, description="Whether extension is verified/curated")
     homepage: Optional[str] = Field(default=None, description="Extension homepage URL")
-    pypi_url: Optional[str] = Field(default=None, description="PyPI package URL")
+    pypi_url: Optional[str] = Field(default=None, description="PyPI package URL (for pypi install_source)")
+    install_source: str = Field(
+        default="pypi",
+        description="Installation source type: 'pypi', 'github', or 'local'"
+    )
+    github_url: Optional[str] = Field(
+        default=None,
+        description="GitHub URL for git-based installation (for github install_source)"
+    )
     installed: bool = Field(default=False, description="Whether currently installed")
     installed_version: Optional[str] = Field(default=None, description="Installed version if installed")
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
-            "package": "reconly-ext-notion",
-            "name": "Notion Exporter",
-            "type": "exporter",
-            "description": "Export digests to Notion databases",
-            "author": "Community",
-            "version": "1.0.0",
+            "package": "reconly-ext-reddit",
+            "name": "Reddit Fetcher",
+            "type": "fetcher",
+            "description": "Fetch posts from Reddit subreddits",
+            "author": "Reconly Team",
+            "version": "0.3.0",
             "verified": True,
-            "homepage": "https://github.com/reconly/reconly-extensions",
-            "pypi_url": "https://pypi.org/project/reconly-ext-notion/",
+            "homepage": "https://github.com/reconlyeu/reconly-extensions/tree/main/extensions/reconly-ext-reddit",
+            "pypi_url": None,
+            "install_source": "github",
+            "github_url": "git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-reddit",
             "installed": False,
             "installed_version": None
         }
@@ -175,19 +185,44 @@ class CatalogResponse(BaseModel):
 
 
 class ExtensionInstallRequest(BaseModel):
-    """Schema for installing an extension."""
-    package: str = Field(
-        ...,
+    """Schema for installing an extension.
+
+    Supports two installation methods:
+    1. Package name: Traditional PyPI package installation
+    2. GitHub URL: Git-based installation from GitHub
+
+    Exactly one of `package` or `github_url` must be provided.
+    """
+    package: Optional[str] = Field(
+        default=None,
         description="Package name to install (must start with 'reconly-ext-')",
-        min_length=14  # len("reconly-ext-") = 14
+    )
+    github_url: Optional[str] = Field(
+        default=None,
+        description="GitHub URL to install from (must start with 'git+https://github.com/')"
     )
     upgrade: bool = Field(default=False, description="Upgrade if already installed")
 
+    @model_validator(mode="after")
+    def validate_install_target(self) -> "ExtensionInstallRequest":
+        """Ensure exactly one of package or github_url is provided."""
+        if self.package and self.github_url:
+            raise ValueError("Provide either 'package' or 'github_url', not both")
+        if not self.package and not self.github_url:
+            raise ValueError("Either 'package' or 'github_url' must be provided")
+        return self
+
     model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "package": "reconly-ext-notion",
-            "upgrade": False
-        }
+        "examples": [
+            {
+                "package": "reconly-ext-notion",
+                "upgrade": False
+            },
+            {
+                "github_url": "git+https://github.com/reconlyeu/reconly-extensions.git#subdirectory=extensions/reconly-ext-reddit",
+                "upgrade": False
+            }
+        ]
     })
 
 

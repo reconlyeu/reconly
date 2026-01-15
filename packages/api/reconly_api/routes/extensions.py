@@ -239,6 +239,8 @@ async def get_catalog(
                     verified=e.verified,
                     homepage=e.homepage,
                     pypi_url=e.pypi_url,
+                    install_source=e.install_source,
+                    github_url=e.github_url,
                     installed=e.installed,
                     installed_version=e.installed_version,
                 )
@@ -294,6 +296,8 @@ async def search_catalog_endpoint(
                     verified=e.verified,
                     homepage=e.homepage,
                     pypi_url=e.pypi_url,
+                    install_source=e.install_source,
+                    github_url=e.github_url,
                     installed=e.installed,
                     installed_version=e.installed_version,
                 )
@@ -316,49 +320,47 @@ async def install_extension(
     """
     Install an extension package using pip.
 
-    This endpoint wraps `pip install` to install extension packages.
-    Only packages starting with 'reconly-ext-' are allowed.
+    This endpoint supports two installation methods:
+    1. Package name: Traditional PyPI package installation
+    2. GitHub URL: Git-based installation from GitHub
+
+    Exactly one of `package` or `github_url` must be provided.
+    Only packages/URLs containing 'reconly-ext-' are allowed.
 
     After installation, a restart is required for the extension to be loaded.
 
     Args:
-        request: Install request with package name
+        request: Install request with package name or GitHub URL
 
     Returns:
         Install result with success status and version
     """
-    package = request.package
+    # Request validation ensures exactly one is provided
+    install_target = request.github_url or request.package
+    assert install_target is not None  # Guaranteed by Pydantic validator
 
-    # Validate package name prefix
-    if not package.startswith(EXTENSION_PACKAGE_PREFIX):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid package name. Must start with '{EXTENSION_PACKAGE_PREFIX}'"
-        )
-
-    logger.info(f"Installing extension package: {package}")
+    logger.info(f"Installing extension: {install_target}")
 
     installer = get_extension_installer()
-    result = installer.install(package, upgrade=request.upgrade)
+    result = installer.install(install_target, upgrade=request.upgrade)
 
     if not result.success:
-        logger.error(f"Failed to install {package}: {result.error}")
-        # Provide helpful error message for dev mode
+        logger.error(f"Failed to install {install_target}: {result.error}")
         error_msg = result.error or "Installation failed"
-        if "not found" in error_msg.lower():
-            error_msg = (
-                f"Package '{package}' not found on PyPI. "
-                f"In development mode, install extensions manually with:\n\n"
-                f"  pip install -e /path/to/{package}\n\n"
-                f"Or from a git repository:\n\n"
-                f"  pip install git+https://github.com/reconly/{package}.git"
-            )
-        raise HTTPException(
-            status_code=400,
-            detail=error_msg
-        )
 
-    logger.info(f"Successfully installed {package} v{result.version}")
+        # Add dev mode hint for PyPI package not found errors
+        if "not found on PyPI" in error_msg and request.package:
+            error_msg = (
+                f"{error_msg}\n\n"
+                f"In development mode, install extensions manually with:\n"
+                f"  pip install -e /path/to/{request.package}\n\n"
+                f"Or from a git repository:\n"
+                f"  pip install git+https://github.com/reconlyeu/{request.package}.git"
+            )
+
+        raise HTTPException(status_code=400, detail=error_msg)
+
+    logger.info(f"Successfully installed {result.package} v{result.version}")
 
     return ExtensionInstallResponse(
         success=True,
