@@ -120,6 +120,14 @@ const filteredSources = computed(() => {
   );
 });
 
+// Track selected disabled sources to show warning
+const selectedDisabledSources = computed(() => {
+  if (!sources.value) return [];
+  return sources.value.filter(s =>
+    source_ids.value.includes(s.id) && s.enabled === false
+  );
+});
+
 // Digest mode options
 const digestModeOptions = [
   { value: 'individual', label: 'Individual', description: 'One digest per item (default)' },
@@ -458,6 +466,7 @@ const handleClose = () => {
                   v-for="source in filteredSources"
                   :key="source.id"
                   class="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-bg-hover cursor-pointer"
+                  :class="{ 'opacity-60': source.enabled === false }"
                 >
                   <input
                     type="checkbox"
@@ -466,7 +475,15 @@ const handleClose = () => {
                     class="h-4 w-4 rounded border-border-default bg-bg-elevated text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
                   />
                   <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-text-primary">{{ source.name }}</div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-medium text-text-primary">{{ source.name }}</span>
+                      <span
+                        v-if="source.enabled === false"
+                        class="text-xs font-medium px-1.5 py-0.5 rounded bg-text-muted/20 text-text-muted"
+                      >
+                        Disabled
+                      </span>
+                    </div>
                     <div class="text-xs text-text-muted truncate">{{ source.url }}</div>
                   </div>
                   <span
@@ -486,6 +503,20 @@ const handleClose = () => {
                   No sources found
                 </div>
               </div>
+
+              <!-- Warning for disabled sources selected -->
+              <Transition name="error">
+                <div
+                  v-if="selectedDisabledSources.length > 0"
+                  class="mt-2 flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3"
+                >
+                  <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
+                  <p class="text-xs text-amber-200">
+                    {{ selectedDisabledSources.length }} disabled source{{ selectedDisabledSources.length > 1 ? 's' : '' }}
+                    selected. Disabled sources will be skipped during feed runs.
+                  </p>
+                </div>
+              </Transition>
 
               <Transition name="error">
                 <p v-if="errors.source_ids" class="mt-2 text-sm text-status-failed">{{ errors.source_ids }}</p>

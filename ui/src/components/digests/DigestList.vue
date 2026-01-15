@@ -43,12 +43,16 @@ const { searchQuery, feedFilter, sourceFilter, tagFilter, page } = toRefs(props)
 const { data, isLoading, isError, error, refetch } = useQuery({
   queryKey: ['digests', searchQuery, feedFilter, sourceFilter, tagFilter, page],
   queryFn: async () => {
-    const result = await digestsApi.list({
-      search: searchQuery.value || undefined,
-      feed_id: feedFilter.value || undefined,
-      source_id: sourceFilter.value || undefined,
-      tags: tagFilter.value || undefined,
-    });
+    const result = await digestsApi.list(
+      {
+        search: searchQuery.value || undefined,
+        feed_id: feedFilter.value || undefined,
+        source_id: sourceFilter.value || undefined,
+        tags: tagFilter.value || undefined,
+      },
+      page.value,
+      props.pageSize
+    );
     digestsStore.setDigests(result.digests || []);
     return result;
   },

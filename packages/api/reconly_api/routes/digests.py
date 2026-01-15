@@ -103,6 +103,7 @@ async def list_digests(
     source_type: Optional[str] = Query(None, description="Filter by source type"),
     search: Optional[str] = Query(None, description="Search in title, content, summary"),
     limit: int = Query(10, ge=1, le=100, description="Result limit"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
     db: Session = Depends(get_db)
 ):
     """
@@ -114,6 +115,7 @@ async def list_digests(
     - **source_type**: Filter by source type (website/youtube/rss)
     - **search**: Search query (uses PostgreSQL full-text search)
     - **limit**: Maximum results (1-100)
+    - **offset**: Offset for pagination
     """
     try:
         from reconly_core.database.models import Digest, DigestTag, Tag, FeedRun
@@ -158,8 +160,8 @@ async def list_digests(
         # Get total count before applying limit
         total_count = query.count()
 
-        # Order by created_at descending and limit
-        query = query.order_by(Digest.created_at.desc()).limit(limit)
+        # Order by created_at descending and apply pagination
+        query = query.order_by(Digest.created_at.desc()).offset(offset).limit(limit)
 
         # Execute query
         digests_data = query.all()

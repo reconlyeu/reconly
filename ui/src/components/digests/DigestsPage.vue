@@ -92,12 +92,16 @@ const {
 } = useQuery({
   queryKey: ['digests', debouncedSearchQuery, feedFilter, sourceFilter, tagFilter, currentPage],
   queryFn: () =>
-    digestsApi.list({
-      search: debouncedSearchQuery.value || undefined,
-      feed_id: feedFilter.value || undefined,
-      source_id: sourceFilter.value || undefined,
-      tags: tagFilter.value || undefined,
-    }),
+    digestsApi.list(
+      {
+        search: debouncedSearchQuery.value || undefined,
+        feed_id: feedFilter.value || undefined,
+        source_id: sourceFilter.value || undefined,
+        tags: tagFilter.value || undefined,
+      },
+      currentPage.value,
+      pageSize
+    ),
   staleTime: 30000,
   refetchInterval: 30000,
   enabled: isTableView,

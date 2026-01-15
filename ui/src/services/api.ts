@@ -501,8 +501,9 @@ export const digestsApi = {
     page = 1,
     perPage = 20
   ): Promise<{ total: number; digests: Digest[] }> => {
+    const offset = (page - 1) * perPage;
     const { data } = await apiClient.get<{ total: number; digests: Digest[] }>('/digests', {
-      params: { ...filters, limit: perPage },
+      params: { ...filters, limit: perPage, offset },
     });
     return data;
   },
