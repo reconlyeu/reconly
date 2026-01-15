@@ -9,8 +9,10 @@
 // SOURCE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type SourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent';
+export type SourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'imap';
 export type FilterMode = 'title_only' | 'content' | 'both';
+export type AuthStatus = 'active' | 'pending_oauth' | 'auth_failed';
+export type IMAPProvider = 'gmail' | 'outlook' | 'generic';
 
 export interface SourceConfig {
   // RSS-specific
@@ -26,6 +28,15 @@ export interface SourceConfig {
   };
   // Agent-specific
   max_iterations?: number;
+  // IMAP-specific
+  provider?: IMAPProvider;
+  folders?: string[];
+  from_filter?: string;
+  subject_filter?: string;
+  imap_host?: string;
+  imap_port?: number;
+  imap_username?: string;
+  imap_use_ssl?: boolean;
 }
 
 export interface Source {
@@ -46,6 +57,9 @@ export interface Source {
   use_regex?: boolean;
   created_at: string;
   updated_at?: string | null;
+  // IMAP-specific fields
+  auth_status?: AuthStatus | null;
+  oauth_credential_id?: number | null;
 }
 
 export interface SourceCreate {
@@ -998,4 +1012,71 @@ export interface GraphFilters {
   from_date?: string;
   to_date?: string;
   tags?: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// IMAP SOURCE (Email)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface IMAPSourceCreate {
+  name: string;
+  provider: IMAPProvider;
+  // Content filtering (optional)
+  include_keywords?: string[] | null;
+  exclude_keywords?: string[] | null;
+  filter_mode?: FilterMode;
+  use_regex?: boolean;
+  // Email filtering
+  folders?: string[];
+  from_filter?: string;
+  subject_filter?: string;
+  // Generic IMAP only
+  imap_host?: string;
+  imap_port?: number;
+  imap_username?: string;
+  imap_password?: string;
+  imap_use_ssl?: boolean;
+}
+
+export interface IMAPSourceCreateResponse {
+  source: Source;
+  oauth_url?: string | null;
+  message: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OAUTH
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type OAuthProvider = 'gmail' | 'outlook';
+
+export interface OAuthProviderInfo {
+  provider: OAuthProvider;
+  display_name: string;
+  scopes: string[];
+  configured: boolean;
+}
+
+export interface OAuthProvidersResponse {
+  providers: OAuthProviderInfo[];
+}
+
+export interface OAuthAuthorizeResponse {
+  authorization_url: string;
+  provider: OAuthProvider;
+}
+
+export interface OAuthStatusResponse {
+  connected: boolean;
+  provider?: OAuthProvider | null;
+  expires_at?: string | null;
+  needs_refresh: boolean;
+  has_refresh_token: boolean;
+}
+
+export interface OAuthRevokeResponse {
+  success: boolean;
+  source_id: number;
+  provider: OAuthProvider;
+  message: string;
 }

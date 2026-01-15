@@ -21,6 +21,10 @@ dependencies = [
     "croniter>=2.0.0",
     "apscheduler>=3.10.0",
     "tzlocal>=5.0",
+    # OAuth2 dependencies
+    "google-auth>=2.29.0",  # Google OAuth2 authentication
+    "google-auth-oauthlib>=1.2.0",  # Google OAuth2 flow helpers
+    "msal>=1.28.0",  # Microsoft Authentication Library for Outlook
 ]
 
 [project.optional-dependencies]

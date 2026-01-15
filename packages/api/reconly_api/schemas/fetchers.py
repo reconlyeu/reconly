@@ -1,5 +1,5 @@
 """Fetcher-related schemas."""
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconly_api.schemas.common import ConfigFieldResponse
@@ -14,7 +14,7 @@ class FetcherConfigSchemaResponse(BaseModel):
 
 class FetcherResponse(BaseModel):
     """Schema for single fetcher in list response."""
-    name: str = Field(..., description="Source type name (e.g., 'rss', 'youtube')")
+    name: str = Field(..., description="Source type name (e.g., 'rss', 'youtube', 'imap')")
     description: str = Field(..., description="Human-readable description")
     config_schema: FetcherConfigSchemaResponse = Field(
         ..., description="Configuration options"
@@ -25,6 +25,11 @@ class FetcherResponse(BaseModel):
     can_enable: bool = Field(default=True, description="Whether fetcher can be enabled")
     # Extension flag
     is_extension: bool = Field(default=False, description="Whether this is an external extension")
+    # OAuth provider support (for fetchers like IMAP that support OAuth)
+    oauth_providers: Optional[List[str]] = Field(
+        None,
+        description="List of OAuth providers supported by this fetcher (e.g., ['gmail', 'outlook'])"
+    )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -36,7 +41,8 @@ class FetcherResponse(BaseModel):
             "enabled": True,
             "is_configured": True,
             "can_enable": True,
-            "is_extension": False
+            "is_extension": False,
+            "oauth_providers": None
         }
     })
 

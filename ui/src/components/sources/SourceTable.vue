@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Rss, Youtube, Globe, BookOpen, Edit, Trash2, ExternalLink } from 'lucide-vue-next';
+import { Rss, Youtube, Globe, BookOpen, Edit, Trash2, ExternalLink, Mail, Bot, RefreshCw } from 'lucide-vue-next';
 import BaseTable, { type TableColumn } from '@/components/common/BaseTable.vue';
 import BulkActionBar from '@/components/common/BulkActionBar.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 import type { Source } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
+import {
+  getAuthStatusConfig,
+  needsReauthentication,
+  handleReauthenticate,
+  getReauthButtonTitle,
+} from '@/composables/useAuthStatus';
 
 interface Props {
   sources: Source[];
@@ -20,6 +26,7 @@ interface Emits {
   (e: 'delete', sourceId: number): void;
   (e: 'delete-selected', ids: number[]): void;
   (e: 'retry'): void;
+  (e: 'reauthenticate', source: Source): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -52,8 +59,19 @@ const typeConfig = (type: string) => {
     youtube: { icon: Youtube, label: 'YouTube', color: 'text-red-500', bgColor: 'bg-red-500/10' },
     website: { icon: Globe, label: 'Website', color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
     blog: { icon: BookOpen, label: 'Blog', color: 'text-green-400', bgColor: 'bg-green-400/10' },
+    imap: { icon: Mail, label: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-400/10' },
+    agent: { icon: Bot, label: 'Agent', color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
   };
   return configs[type] || configs.rss;
+};
+
+// Handle re-authentication for IMAP sources
+const onReauthenticate = async (source: Source, e: Event) => {
+  e.stopPropagation();
+  const isOAuthRedirect = await handleReauthenticate(source);
+  if (!isOAuthRedirect) {
+    emit('reauthenticate', source);
+  }
 };
 
 const handleToggle = (source: Source, enabled: boolean) => {
@@ -163,7 +181,15 @@ defineExpose({
 
     <!-- Status Cell -->
     <template #cell-enabled="{ item }">
-      <div class="flex justify-center" @click.stop>
+      <div class="flex items-center justify-center gap-2" @click.stop>
+        <!-- Auth Status Badge for IMAP -->
+        <span
+          v-if="item.type === 'imap' && getAuthStatusConfig(item.auth_status, true)"
+          class="rounded-full px-2 py-0.5 text-xs font-medium"
+          :class="[getAuthStatusConfig(item.auth_status, true)?.bgColor, getAuthStatusConfig(item.auth_status, true)?.textColor]"
+        >
+          {{ getAuthStatusConfig(item.auth_status, true)?.label }}
+        </span>
         <ToggleSwitch
           :model-value="item.enabled"
           @update:model-value="(v) => handleToggle(item, v)"
@@ -175,6 +201,18 @@ defineExpose({
     <!-- Actions Cell -->
     <template #cell-actions="{ item }">
       <div class="flex items-center justify-end gap-1">
+        <!-- Re-authenticate button for IMAP with pending/failed auth -->
+        <button
+          v-if="needsReauthentication(item)"
+          @click="onReauthenticate(item, $event)"
+          class="rounded-lg p-1.5 transition-colors"
+          :class="item.auth_status === 'pending_oauth'
+            ? 'text-amber-500 hover:bg-amber-500/10'
+            : 'text-status-failed hover:bg-status-failed/10'"
+          :title="getReauthButtonTitle(item.auth_status)"
+        >
+          <RefreshCw :size="16" :stroke-width="2" />
+        </button>
         <button
           @click="handleEdit(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent-primary"

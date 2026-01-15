@@ -14,6 +14,7 @@ from reconly_core.database.models import (
     Digest,
     Tag,
     DigestTag,
+    OAuthCredential,
     TemplateOrigin,
     EmbeddingStatus,
 )
@@ -42,6 +43,7 @@ __all__ = [
     'FeedRun',
     'AgentRun',
     'LLMUsageLog',
+    'OAuthCredential',
     # Existing entities
     'Digest',
     'Tag',
