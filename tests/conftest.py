@@ -26,6 +26,10 @@ from reconly_core.database.models import (
     Tag,
 )
 
+# Import edition fixtures to make them available to all tests
+# These are imported via pytest_plugins for proper fixture discovery
+pytest_plugins = ["tests.edition_fixtures"]
+
 
 # =============================================================================
 # Database Configuration
