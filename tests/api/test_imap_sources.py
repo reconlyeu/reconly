@@ -9,6 +9,12 @@ import pytest
 from reconly_core.database.models import OAuthCredential, Source
 
 
+@pytest.fixture(autouse=True)
+def set_secret_key(monkeypatch):
+    """Set SECRET_KEY for all tests in this module."""
+    monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-imap-tests-minimum-32-chars")
+
+
 @pytest.mark.api
 class TestIMAPSourceCreation:
     """Test suite for IMAP source creation via POST /api/v1/sources/imap."""
