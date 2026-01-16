@@ -112,7 +112,7 @@ class TestSemanticSearchHandler:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="Test Digest", content="Test content", source_id=source.id)
+        digest = Digest(title="Test Digest", content="Test content", source_id=source.id, url="https://test.example.com/digest")
         db_session.add(digest)
         db_session.flush()
 
@@ -221,7 +221,7 @@ class TestRAGQueryHandler:
         db_session.add(source)
         db_session.flush()
 
-        digest = Digest(title="Test Digest", content="Test content", source_id=source.id)
+        digest = Digest(title="Test Digest", content="Test content", source_id=source.id, url="https://test.example.com/digest")
         db_session.add(digest)
         db_session.flush()
 
@@ -257,7 +257,9 @@ class TestRAGQueryHandler:
                         id=1,
                         digest_id=1,
                         digest_title="Title",
-                        text="text",
+                        chunk_text="Test chunk text",
+                        chunk_index=0,
+                        relevance_score=0.95,
                         url=None,
                     )
                 ],
@@ -344,8 +346,8 @@ class TestGetRelatedDigestsHandler:
         db_session.flush()
 
         # Create digests
-        digest1 = Digest(title="Digest 1", content="Content 1", source_id=source.id)
-        digest2 = Digest(title="Digest 2", content="Content 2", source_id=source.id)
+        digest1 = Digest(title="Digest 1", content="Content 1", source_id=source.id, url="https://test.example.com/digest-1")
+        digest2 = Digest(title="Digest 2", content="Content 2", source_id=source.id, url="https://test.example.com/digest-2")
         db_session.add_all([digest1, digest2])
         db_session.flush()
 
@@ -369,7 +371,7 @@ class TestGetRelatedDigestsHandler:
         result = await handle_get_related_digests(
             ctx=ctx,
             digest_id=digest.id,
-            limit=10,
+            depth=2,
         )
 
         # Should return formatted string
@@ -383,8 +385,8 @@ class TestGetRelatedDigestsHandler:
         result = await handle_get_related_digests(
             ctx=ctx,
             digest_id=digest.id,
-            limit=5,
-            min_score=0.8,
+            depth=1,
+            min_similarity=0.8,
         )
 
         assert isinstance(result, str)
@@ -435,11 +437,13 @@ class TestMCPToolIntegration:
             title="AI Advances",
             content="AI is making progress",
             source_id=source.id,
+            url="https://tech.com/ai-advances",
         )
         digest2 = Digest(
             title="ML Techniques",
             content="Machine learning techniques",
             source_id=source.id,
+            url="https://tech.com/ml-techniques",
         )
         db_session.add_all([digest1, digest2])
         db_session.flush()
