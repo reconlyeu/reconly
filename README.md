@@ -13,7 +13,7 @@
 <p align="center">
   <a href="#quick-start">Quick Start</a> •
   <a href="docs/setup.md">Documentation</a> •
-  <a href="#use-cases">Use Cases</a>
+  <a href="#why-reconly">Why Reconly?</a>
 </p>
 
 <p align="center">
@@ -34,12 +34,13 @@
 
 ## Why Reconly?
 
-- **Research Agents** — Autonomous agent web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, your e-mail inbox,...)
-- **Privacy-First** — Run completely offline with local AI (Ollama, more coming soon)
-- **Consolidated Digests** — Turn dozens of articles from multiple sources into topic-specific AI briefings — customized, scheduled, and delivered on your terms
-- **Smart Filtering** — Keyword-based content filters & tags
-- **Cost-Optimized** — From local models to cloud open-source to premium commercial, with automatic fallbacks
-- **Open Integration** — Webhooks, plugin system, and export to your knowledge repo of choice (Obsidian, Logseq, etc.) — full control of your data
+- **Research & Monitoring** — Aggregate RSS feeds, YouTube channels, websites, email (IMAP), and autonomous research agents into consolidated, topic-specific AI briefings
+- **Privacy-First Intelligence** — Run entirely offline with local AI (Ollama) and private search (SearXNG self-hosted, or Brave) — your data never leaves your machine
+- **Smart Filtering** — Keyword-based content filters and tags to focus on what matters
+- **Cost-Optimized** — From free local models to cloud open-source to premium commercial, with automatic fallbacks
+- **Knowledge Management** — Export digests to Obsidian, Logseq, or any PKM tool via Markdown, JSON, or custom formats
+- **Knowledge Graph** — Discover connections between topics with semantic search and AI-powered Q&A — MCP-enabled for AI assistants
+- **Automation & Extensibility** — Trigger webhooks for Zapier/n8n, connect new sources via plugins, or install community bundles
 - **Docker Ready** — Production setup in 5 minutes
 
 ---
@@ -47,7 +48,6 @@
 ## Table of Contents
 
 - [Quick Start](#quick-start)
-- [Use Cases](#use-cases)
 - [Features](#features)
 - [AI Providers](#ai-providers)
 - [AI Research Agents](#ai-research-agents)
@@ -116,17 +116,6 @@ npm run dev
 1. **Configure an AI Provider** — Start with [Ollama](https://ollama.com/) for free, private summarization
 2. **Add your first feed** — Via the UI at http://localhost:4321 or the API
 3. **Read the full guide** — [Setup Guide](docs/setup.md)
-
----
-
-## Use Cases
-
-- **Research & Monitoring** — Aggregate RSS feeds, YouTube channels, websites, email (IMAP), and autonomous research agents into consolidated briefings
-- **Privacy-First Intelligence** — Run entirely offline with local AI (Ollama) — your data never leaves your machine
-- **Knowledge Management** — Export digests to Obsidian, Logseq, or any PKM tool via Markdown, JSON, or custom formats
-- **Knowledge Graph** — Discover connections between topics with semantic search and AI-powered Q&A over your digest library
-- **Automation Workflows** — Trigger webhooks on feed completion for integration with Zapier, n8n, or custom pipelines
-- **Extensibility** — Connect new sources and destinations via plugins, or install community bundles from the marketplace
 
 ---
 
