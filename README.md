@@ -111,13 +111,12 @@ npm run dev
 
 ## Use Cases
 
-<!-- TODO: Review wording with user before finalizing -->
-
-- **News Monitoring** — Track industry news from 50+ sources, get daily briefings
-- **Research** — Monitor academic papers, tech blogs, and company announcements
-- **Market Intelligence** — Track competitors, market trends, and regulatory changes
-- **Learning** — Curate educational content from YouTube, blogs, and newsletters
-- **Team Knowledge** — Share curated digests with your team via email or webhooks
+- **Research & Monitoring** — Aggregate RSS feeds, YouTube channels, websites, email (IMAP), and autonomous research agents into consolidated briefings
+- **Privacy-First Intelligence** — Run entirely offline with local AI (Ollama) — your data never leaves your machine
+- **Knowledge Management** — Export digests to Obsidian, Logseq, or any PKM tool via Markdown, JSON, or custom formats
+- **Knowledge Graph** — Discover connections between topics with semantic search and AI-powered Q&A over your digest library
+- **Automation Workflows** — Trigger webhooks on feed completion for integration with Zapier, n8n, or custom pipelines
+- **Extensibility** — Connect new sources and destinations via plugins, or install community bundles from the marketplace
 
 ---
 
