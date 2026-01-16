@@ -34,10 +34,10 @@
 
 ## Why Reconly?
 
-- **AI Research Agents** — Autonomous web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, Your Email Inbox)
-- **Consolidated Digests** — Turn dozens of articles from multiple sources into topic-specific AI-summarized briefings, customized to your needs
-- **Smart Filtering** — Keyword-based content filters & tags
+- **Research Agents** — Autonomous web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, your e-mail inbox,...)
 - **Privacy-First** — Run completely offline with local AI (Ollama, more coming soon)
+- **Consolidated Digests** — Turn dozens of articles from multiple sources into topic-specific AI briefings — customized, scheduled, and delivered on your terms
+- **Smart Filtering** — Keyword-based content filters & tags
 - **Cost-Optimized** — From local models to cloud open-source to premium commercial, with automatic fallbacks
 - **Open Integration** — Webhooks, plugin system, and export to your knowledge repo of choice (Obsidian, Logseq, etc.) — full control of your data
 - **Docker Ready** — Production setup in 5 minutes
