@@ -19,16 +19,13 @@
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License: AGPL-3.0"/></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"/></a>
-  <img src="https://img.shields.io/badge/tests-447%20passing-brightgreen.svg" alt="Tests"/>
+  <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status: Beta"/>
+  <img src="https://img.shields.io/badge/tests-1632%20passing-brightgreen.svg" alt="Tests"/>
 </p>
 
 <p align="center">
   <img src="docs/images/demo.gif" alt="Reconly Demo - Feed Management, Configuration, and AI Digests" width="700"/>
 </p>
-
----
-
-> **Status:** Beta - Stable core, API may change. Actively developed.
 
 ---
 
