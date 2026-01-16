@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="reconly-logo.png" alt="Reconly Logo" width="200"/>
+  <img src="reconly-logo.png" alt="Reconly Logo" width="160"/>
 </p>
 
 <h1 align="center">Reconly — Privacy-first research intelligence platform.</h1>
