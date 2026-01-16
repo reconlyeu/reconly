@@ -1,15 +1,138 @@
-# Reconly - Privacy-First Research Intelligence
+<p align="center">
+  <img src="reconly-logo.png" alt="Reconly Logo" width="200"/>
+</p>
 
+<h1 align="center">Reconly — Privacy-first research intelligence platform.</h1>
 
-[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%203.0-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-447%20passing-brightgreen.svg)]()
+---
+
+<p align="center">
+  Aggregate all your sources, build knowledge in your system of choice, and keep full ownership of your data.
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> •
+  <a href="docs/setup.md">Documentation</a> •
+  <a href="#use-cases">Use Cases</a>
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License: AGPL-3.0"/></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"/></a>
+  <img src="https://img.shields.io/badge/tests-447%20passing-brightgreen.svg" alt="Tests"/>
+</p>
+
+<p align="center">
+  <img src="docs/images/demo.gif" alt="Reconly Demo - Feed Management, Configuration, and AI Digests" width="700"/>
+</p>
+
+---
+
+> **Status:** Beta - Stable core, API may change. Actively developed.
+
+---
+
+## Why Reconly?
+
+- **AI Research Agents** — Autonomous web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, Your Email Inbox)
+- **Consolidated Digests** — Turn dozens of articles from multiple sources into topic-specific AI-summarized briefings, customized to your needs
+- **Smart Filtering** — Keyword-based content filters & tags
+- **Privacy-First** — Run completely offline with local AI (Ollama, more coming soon)
+- **Cost-Optimized** — From local models to cloud open-source to premium commercial, with automatic fallbacks
+- **Open Integration** — Webhooks, plugin system, and export to your knowledge repo of choice (Obsidian, Logseq, etc.) — full control of your data
+- **Docker Ready** — Production setup in 5 minutes
+
+---
+
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Use Cases](#use-cases)
+- [Features](#features)
+- [AI Providers](#ai-providers)
+- [AI Research Agents](#ai-research-agents)
+- [RAG Knowledge System](#rag-knowledge-system-optional)
+- [Documentation](#documentation)
+- [Architecture](#architecture)
+- [Configuration](#configuration)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Quick Start
+
+### Option 1: Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/reconlyeu/reconly.git
+cd reconly
+
+# Start all services (API + UI + PostgreSQL with pgvector)
+cd docker/oss
+docker-compose up -d
+
+# Open the Web UI
+open http://localhost:8000
+```
+
+API docs available at http://localhost:8000/docs
+
+### Option 2: Manual Setup
+
+**Prerequisites:** Python 3.10+, PostgreSQL 16+ (or use Docker for database only)
+
+```bash
+# 1. Install Python packages
+pip install -e packages/core
+pip install -e packages/api
+
+# 2. Start PostgreSQL (if not running)
+docker-compose -f docker/docker-compose.postgres.yml up -d
+
+# 3. Configure database
+export DATABASE_URL=postgresql://reconly:reconly@localhost:5432/reconly
+
+# 4. Run migrations
+cd packages/api && python -m alembic upgrade head
+
+# 5. Start the API server
+python -m uvicorn reconly_api.main:app --reload --port 8000
+```
+
+### Optional: Web UI
+
+```bash
+cd ui
+npm install
+npm run dev
+# UI runs at http://localhost:4321
+```
+
+### Next Steps
+
+1. **Configure an AI Provider** — Start with [Ollama](https://ollama.com/) for free, private summarization
+2. **Add your first feed** — Via the UI at http://localhost:4321 or the API
+3. **Read the full guide** — [Setup Guide](docs/setup.md)
+
+---
+
+## Use Cases
+
+- **Research & Monitoring** — Aggregate RSS feeds, YouTube channels, websites, email (IMAP), and autonomous research agents into consolidated briefings
+- **Privacy-First Intelligence** — Run entirely offline with local AI (Ollama) — your data never leaves your machine
+- **Knowledge Management** — Export digests to Obsidian, Logseq, or any PKM tool via Markdown, JSON, or custom formats
+- **Knowledge Graph** — Discover connections between topics with semantic search and AI-powered Q&A over your digest library
+- **Automation Workflows** — Trigger webhooks on feed completion for integration with Zapier, n8n, or custom pipelines
+- **Extensibility** — Connect new sources and destinations via plugins, or install community bundles from the marketplace
+
+---
 
 ## Features
 
-- **Multi-Source Fetching**: RSS feeds, YouTube channels, and websites
 - **AI Research Agents**: Autonomous research agents that search the web and synthesize findings
-- **AI Summarization**: Local (Ollama), Free (HuggingFace), and Cloud (OpenAI, Anthropic)
 - **Consolidated Digests**: Combine multiple items into single briefings with source attribution
 - **Source Content Filters**: Include/exclude keywords to filter content before summarization
 - **Digest Tagging**: Organize and filter digests with tags and autocomplete
@@ -22,39 +145,19 @@
 - **Feed Bundles**: Export/import feed configurations as portable JSON packages
 - **Web UI**: Modern interface for managing everything
 - **Email Digests**: Send beautiful HTML digests via SMTP
-- **Extensible**: Plugin architecture for custom fetchers and exporters
 - **Docker Ready**: Get started in 5 minutes
 
-## Quick Start
+### Built-in & Extensible
 
-```bash
-cd reconly-oss
+All core components can be extended via the [plugin system](https://github.com/reconlyeu/reconly-extensions):
 
-# Install Python packages
-pip install -e packages/core
-pip install -e packages/api
+| Component | Built-in | Extensible |
+|-----------|----------|------------|
+| **Sources** | RSS, YouTube, Website, Email (IMAP), Research Agents | Custom fetchers |
+| **LLM Providers** | Ollama, HuggingFace, OpenAI, Anthropic | Custom providers |
+| **Exporters** | Obsidian, JSON, CSV | Custom formats |
 
-# Start the API server (database is created automatically)
-python -m uvicorn reconly_api.main:app --reload --port 8000
-```
-
-Open `http://localhost:8000` for the API docs.
-
-**Optional: Web UI (requires Node.js 18+)**
-
-```bash
-cd ui
-npm install
-npm run dev
-```
-
-UI runs at `http://localhost:4321`
-
-**Optional: Custom configuration**
-
-Copy `.env.example` to `.env` and edit to configure API keys, providers, etc.
-
-**Next**: [Full Setup Guide](docs/setup.md) | [Choose an AI Provider](docs/setup.md#4-choose-your-ai-provider)
+---
 
 ## AI Providers
 
@@ -67,43 +170,11 @@ Copy `.env.example` to `.env` and edit to configure API keys, providers, etc.
 
 **Recommendation**: Start with [Ollama](https://ollama.com/) for free, private, offline summarization.
 
-## RAG Knowledge System (Optional)
-
-Reconly includes semantic search and AI-powered question answering over your digest library.
-
-**Features:**
-- Semantic search across all digests using vector embeddings
-- Natural language Q&A with citations
-- Knowledge graph discovery
-- Multi-provider embedding support (Ollama, OpenAI, HuggingFace)
-
-**Requirements:**
-- PostgreSQL with pgvector extension (for production)
-- Embedding provider (Ollama recommended for local/free)
-
-**Quick Setup:**
-
-```bash
-# 1. Start PostgreSQL with pgvector
-docker-compose -f reconly-oss/docker/docker-compose.postgres.yml up -d
-
-# 2. Configure database
-export DATABASE_URL=postgresql://reconly:reconly_dev@localhost:5432/reconly
-
-# 3. Run migrations
-cd reconly-oss/packages/api
-python -m alembic upgrade head
-
-# 4. Configure embedding provider (optional, defaults to Ollama)
-export EMBEDDING_PROVIDER=ollama
-export EMBEDDING_MODEL=bge-m3
-```
-
-**Documentation:** See [ARCHITECTURE.md - RAG Knowledge System](../ARCHITECTURE.md#rag-knowledge-system) for complete details.
+---
 
 ## AI Research Agents
 
-Create autonomous research agents that investigate topics on schedule - like having a personal research assistant.
+Create autonomous research agents that investigate topics on schedule — like having a personal research assistant.
 
 **How it works:**
 1. You define a research prompt (e.g., "Latest developments in AI agents this week")
@@ -144,6 +215,44 @@ View detailed execution logs including:
 - Sources consulted
 - Token usage and costs
 
+---
+
+## RAG Knowledge System (Optional)
+
+Reconly includes semantic search and AI-powered question answering over your digest library.
+
+**Features:**
+- Semantic search across all digests using vector embeddings
+- Natural language Q&A with citations
+- Knowledge graph discovery
+- Multi-provider embedding support (Ollama, OpenAI, HuggingFace)
+
+**Requirements:**
+- PostgreSQL with pgvector extension (for production)
+- Embedding provider (Ollama recommended for local/free)
+
+**Quick Setup:**
+
+```bash
+# 1. Start PostgreSQL with pgvector
+docker-compose -f docker/docker-compose.postgres.yml up -d
+
+# 2. Configure database
+export DATABASE_URL=postgresql://reconly:reconly_dev@localhost:5432/reconly
+
+# 3. Run migrations
+cd packages/api
+python -m alembic upgrade head
+
+# 4. Configure embedding provider (optional, defaults to Ollama)
+export EMBEDDING_PROVIDER=ollama
+export EMBEDDING_MODEL=bge-m3
+```
+
+**Documentation:** See [RAG Setup Guide](docs/rag-setup.md) for complete details.
+
+---
+
 ## Documentation
 
 | Guide | Description |
@@ -158,10 +267,7 @@ View detailed execution logs including:
 | [Development Guide](docs/development.md) | Contributing, testing, UI development |
 | [Deployment](docs/deployment.md) | Docker, production, Nginx |
 
-## Packages
-
-- **reconly-core**: CLI, fetchers, summarizers, database models
-- **reconly-api**: FastAPI server, REST endpoints, built-in scheduler
+---
 
 ## Architecture
 
@@ -176,6 +282,11 @@ User
   └── Templates (prompts and reports)
 ```
 
+### Packages
+
+- **reconly-core**: CLI, fetchers, summarizers, database models
+- **reconly-api**: FastAPI server, REST endpoints, built-in scheduler
+
 ### Digest Modes
 
 Each feed has a configurable **digest mode** that controls how content is consolidated:
@@ -187,6 +298,8 @@ Each feed has a configurable **digest mode** that controls how content is consol
 | `all_sources` | One digest per feed run | Cross-source synthesis ("Daily Briefing") |
 
 For `per_source` and `all_sources` modes, provenance is tracked via `DigestSourceItems`, allowing you to trace "This briefing synthesized 3 items from Bloomberg, 2 from Reuters."
+
+---
 
 ## Configuration
 
@@ -223,11 +336,15 @@ When set:
 curl -u :your-password http://localhost:8000/api/v1/sources
 ```
 
+---
+
 ## Enterprise Features
 
 Need **multi-user authentication**, **team management**, or **managed hosting**?
 
 Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management, and managed SaaS.
+
+---
 
 ## Troubleshooting
 
@@ -259,13 +376,19 @@ Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management,
 | Embeddings not generating | Check `EMBEDDING_PROVIDER` config; ensure Ollama has `bge-m3` model |
 | Search returns no results | Embeddings may not be generated yet; check digest `embedding_status` |
 
+---
+
 ## Contributing
 
 We love contributions! See [Development Guide](docs/development.md) for setup and guidelines.
 
+---
+
 ## License
 
-**AGPL-3.0** - See [LICENSE](LICENSE) for details.
+**AGPL-3.0** — See [LICENSE](LICENSE) for details.
+
+---
 
 ## Support
 
@@ -274,4 +397,6 @@ We love contributions! See [Development Guide](docs/development.md) for setup an
 
 ---
 
-**Made with care for the self-hosting community**
+<p align="center">
+  <strong>Made with care for the self-hosting community</strong>
+</p>
