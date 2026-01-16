@@ -27,11 +27,11 @@
 
 ## Why Reconly?
 
-- **Privacy-First** — Run completely offline with local AI (Ollama)
+- **Privacy-First** — Run completely offline with local AI (Ollama, more coming soon)
 - **AI Research Agents** — Autonomous web research on any topic
-- **Consolidated Digests** — Turn dozens of articles into single briefings
+- **Consolidated Digests** — Turn dozens of articles from multiple sources into AI-summarized briefings, customized to your needs
 - **Smart Filtering** — Keyword-based content filters
-- **Cost-Optimized** — Free tier available, automatic provider fallbacks
+- **Cost-Optimized** — From local models to cloud open-source to premium commercial, with automatic fallbacks
 - **Docker Ready** — Production setup in 5 minutes
 
 ---
