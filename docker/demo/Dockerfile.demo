@@ -1,0 +1,70 @@
+# =============================================================================
+# Reconly Demo Mode Dockerfile
+#
+# This extends the base OSS build with:
+# - Demo-specific entrypoint script
+# - Seed data directory
+# - curl for health checks
+# =============================================================================
+
+# =============================================================================
+# Stage 1: Build UI (same as OSS)
+# =============================================================================
+FROM node:20-alpine AS ui-builder
+
+WORKDIR /app/ui
+
+# Copy UI package files
+COPY ui/package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy UI source
+COPY ui/ ./
+
+# Build the UI (static site generation)
+RUN npm run build
+
+# =============================================================================
+# Stage 2: Python API with Demo Extensions
+# =============================================================================
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies including curl for health checks and postgresql-client for pg_isready
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages
+COPY packages/core /app/packages/core
+COPY packages/api /app/packages/api
+
+# Install Python dependencies
+RUN pip install --no-cache-dir \
+    /app/packages/core \
+    /app/packages/api
+
+# Copy built UI from builder stage
+COPY --from=ui-builder /app/ui/dist /app/ui/dist
+
+# Create directories
+RUN mkdir -p /app/data /app/seed
+
+# Copy demo entrypoint
+COPY docker/demo/entrypoint-demo.sh /app/entrypoint-demo.sh
+
+# Copy seed data (directory may be empty initially)
+COPY docker/demo/seed/ /app/seed/
+
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint-demo.sh
+
+# Expose port
+EXPOSE 8000
+
+# Use demo entrypoint instead of direct uvicorn
+ENTRYPOINT ["/app/entrypoint-demo.sh"]

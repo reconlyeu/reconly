@@ -10,6 +10,7 @@ import Sidebar from '@components/common/Sidebar.vue';
 import ThemeToggle from '@components/common/ThemeToggle.vue';
 import ToastProvider from '@components/common/ToastProvider.vue';
 import AuthGuard from '@components/auth/AuthGuard.vue';
+import DemoBanner from '@components/common/DemoBanner.vue';
 
 interface Props {
   title?: string;
@@ -39,6 +40,9 @@ const { title = 'Reconly' } = Astro.props;
 
     <!-- Auth Guard - checks authentication before rendering content -->
     <AuthGuard client:load>
+      <!-- Demo Mode Banner -->
+      <DemoBanner client:load />
+
       <div class="flex min-h-screen">
         <!-- Sidebar Navigation -->
         <Sidebar client:load currentPath={Astro.url.pathname} />
