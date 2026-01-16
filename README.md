@@ -34,7 +34,7 @@
 
 ## Why Reconly?
 
-- **Research Agents** — Autonomous web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, your e-mail inbox,...)
+- **Research Agents** — Autonomous agent web research on any topic, or screen your favorite sources (RSS, YouTube, Web Pages, your e-mail inbox,...)
 - **Privacy-First** — Run completely offline with local AI (Ollama, more coming soon)
 - **Consolidated Digests** — Turn dozens of articles from multiple sources into topic-specific AI briefings — customized, scheduled, and delivered on your terms
 - **Smart Filtering** — Keyword-based content filters & tags
