@@ -635,7 +635,7 @@ Combine email sources with summarization:
 
 - [Adding Custom Fetchers](../ADDING_FETCHERS.md) - Extend email provider support
 - [Data Flow Architecture](../architecture/data-flow.md) - How emails flow through the system
-- [Security Documentation](../SECURITY.md) - Comprehensive security details
+- [Security Documentation](../../SECURITY.md) - Comprehensive security details
 
 ---
 
