@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>Privacy-first research intelligence platform that automatically gathers, summarizes, and organizes information from RSS feeds, YouTube channels, and websites using AI.</strong>
+  <strong>Privacy-first research intelligence platform. Aggregate all your sources, build knowledge in your system of choice, and keep full ownership of your data.</strong>
 </p>
 
 <p align="center">
