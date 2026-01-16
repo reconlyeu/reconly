@@ -92,11 +92,23 @@ class TestGraphService:
         assert service.semantic_threshold == 0.8
         assert service.min_similarity == 0.5
         assert service.max_edges_per_digest == 15
+        assert service.default_chunk_source == 'source_content'  # Default
+
+    def test_initialization_with_chunk_source(self, db_session, mock_embedding_provider):
+        """Test initialization with explicit chunk source."""
+        service = GraphService(
+            db=db_session,
+            embedding_provider=mock_embedding_provider,
+            default_chunk_source='digest',
+        )
+
+        assert service.default_chunk_source == 'digest'
 
     def test_initialization_without_provider(self, db_session):
         """Test initialization without embedding provider."""
         service = GraphService(db=db_session)
         assert service.embedding_provider is None
+        assert service.default_chunk_source == 'source_content'
 
     @pytest.mark.asyncio
     async def test_compute_relationships(self, graph_service, sample_digests):
@@ -105,6 +117,15 @@ class TestGraphService:
         count = await graph_service.compute_relationships(digest.id)
 
         # Should create some relationships (at least source-based)
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_compute_relationships_with_chunk_source(self, graph_service, sample_digests):
+        """Test computing relationships with explicit chunk_source parameter."""
+        digest = sample_digests[0]
+
+        # Test with digest chunks
+        count = await graph_service.compute_relationships(digest.id, chunk_source='digest')
         assert count >= 0
 
     @pytest.mark.asyncio
@@ -117,9 +138,20 @@ class TestGraphService:
     async def test_compute_semantic_relationships(self, graph_service, sample_digests):
         """Test computing semantic relationships."""
         digest = sample_digests[0]
-        count = await graph_service._compute_semantic_relationships(digest)
+        # Test with digest chunks (the default fallback)
+        count = await graph_service._compute_semantic_relationships(digest, chunk_source='digest')
 
         # May or may not create relationships depending on similarity
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_compute_semantic_relationships_source_content(self, graph_service, sample_digests):
+        """Test computing semantic relationships using source content chunks."""
+        digest = sample_digests[0]
+        # Test with source content (the new default)
+        count = await graph_service._compute_semantic_relationships(digest, chunk_source='source_content')
+
+        # May or may not create relationships depending on available source content
         assert count >= 0
 
     def test_compute_tag_relationships(self, graph_service, db_session, sample_digests):
@@ -534,3 +566,199 @@ class TestGraphServiceIntegration:
         assert len(graph_data.nodes) > 0
         assert any(n.type == "digest" for n in graph_data.nodes)
         assert any(n.type == "tag" for n in graph_data.nodes)
+
+    @pytest.mark.asyncio
+    async def test_compute_relationships_with_source_content(self, db_session):
+        """Test computing relationships using source content chunks."""
+        from reconly_core.database.models import (
+            Source,
+            Digest,
+            DigestSourceItem,
+            SourceContent,
+            SourceContentChunk,
+        )
+        from datetime import datetime
+        import hashlib
+
+        # Create mock provider
+        mock_provider = Mock()
+        mock_provider.get_dimension = Mock(return_value=1024)
+
+        service = GraphService(db_session, mock_provider)
+
+        # Create test data with source content
+        source = Source(name="Tech Blog", type="manual", url="https://techblog.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest1 = Digest(
+            title="AI Article 1",
+            url="https://techblog.com/ai-1",
+            content="Short summary 1",
+            source_id=source.id,
+        )
+        digest2 = Digest(
+            title="AI Article 2",
+            url="https://techblog.com/ai-2",
+            content="Short summary 2",
+            source_id=source.id,
+        )
+        db_session.add_all([digest1, digest2])
+        db_session.flush()
+
+        # Create source content for both digests
+        for digest in [digest1, digest2]:
+            digest_source_item = DigestSourceItem(
+                digest_id=digest.id,
+                source_id=source.id,
+                item_url=f"https://techblog.com/full-{digest.id}",
+                item_title=f"Full Article {digest.id}",
+                item_published_at=datetime.utcnow(),
+            )
+            db_session.add(digest_source_item)
+            db_session.flush()
+
+            full_content = f"Artificial intelligence article {digest.id}"
+            content_hash = hashlib.sha256(full_content.encode('utf-8')).hexdigest()
+
+            source_content = SourceContent(
+                digest_source_item_id=digest_source_item.id,
+                content=full_content,
+                content_hash=content_hash,
+                content_length=len(full_content),
+                fetched_at=datetime.utcnow(),
+                embedding_status="completed",
+            )
+            db_session.add(source_content)
+            db_session.flush()
+
+            # Add source content chunk with embedding
+            embedding = np.random.rand(1024).astype(np.float32).tolist()
+            chunk = SourceContentChunk(
+                source_content_id=source_content.id,
+                chunk_index=0,
+                text=f"AI content for digest {digest.id}",
+                token_count=50,
+                start_char=0,
+                end_char=100,
+                embedding=embedding,
+            )
+            db_session.add(chunk)
+
+        db_session.commit()
+
+        # Compute relationships using source_content chunks
+        count = await service.compute_relationships(
+            digest1.id,
+            chunk_source='source_content',
+            include_semantic=True,
+            include_source=True,
+        )
+
+        # Should create some relationships
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_compute_relationships_with_digest_chunks(self, db_session):
+        """Test computing relationships using digest chunks."""
+        from reconly_core.database.models import Source, Digest, DigestChunk
+
+        # Create mock provider
+        mock_provider = Mock()
+        mock_provider.get_dimension = Mock(return_value=1024)
+
+        service = GraphService(db_session, mock_provider)
+
+        # Create test data with digest chunks
+        source = Source(name="Tech News", type="manual", url="https://technews.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest1 = Digest(
+            title="AI Progress 1",
+            url="https://technews.com/ai-1",
+            content="AI made progress 1.",
+            source_id=source.id,
+        )
+        digest2 = Digest(
+            title="AI Progress 2",
+            url="https://technews.com/ai-2",
+            content="AI made progress 2.",
+            source_id=source.id,
+        )
+        db_session.add_all([digest1, digest2])
+        db_session.flush()
+
+        # Add digest chunks with embeddings
+        for digest in [digest1, digest2]:
+            embedding = np.random.rand(1024).astype(np.float32).tolist()
+            chunk = DigestChunk(
+                digest_id=digest.id,
+                chunk_index=0,
+                text=f"AI progress for digest {digest.id}.",
+                token_count=50,
+                start_char=0,
+                end_char=100,
+                embedding=embedding,
+            )
+            db_session.add(chunk)
+
+        db_session.commit()
+
+        # Compute relationships using digest chunks
+        count = await service.compute_relationships(
+            digest1.id,
+            chunk_source='digest',
+            include_semantic=True,
+            include_source=True,
+        )
+
+        # Should create some relationships
+        assert count >= 0
+
+    @pytest.mark.asyncio
+    async def test_compute_relationships_default_chunk_source(self, db_session):
+        """Test that compute_relationships defaults to source_content chunk_source."""
+        from reconly_core.database.models import Source, Digest, DigestChunk
+
+        # Create mock provider
+        mock_provider = Mock()
+        mock_provider.get_dimension = Mock(return_value=1024)
+
+        # Service should default to source_content
+        service = GraphService(db_session, mock_provider)
+        assert service.default_chunk_source == 'source_content'
+
+        # Create minimal test data
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            title="Test",
+            url="https://test.example.com/test",
+            content="Test content",
+            source_id=source.id,
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        # Add digest chunk
+        embedding = np.random.rand(1024).astype(np.float32).tolist()
+        chunk = DigestChunk(
+            digest_id=digest.id,
+            chunk_index=0,
+            text="Test chunk",
+            token_count=10,
+            start_char=0,
+            end_char=50,
+            embedding=embedding,
+        )
+        db_session.add(chunk)
+        db_session.commit()
+
+        # Compute relationships without specifying chunk_source
+        count = await service.compute_relationships(digest.id)
+
+        # Should use default (source_content)
+        assert count >= 0

@@ -10,6 +10,16 @@ class ExportFormat(str, Enum):
     json = "json"
 
 
+class ChunkSource(str, Enum):
+    """Which type of chunks to search.
+
+    - source_content: Search SourceContentChunk embeddings (cleaner, no template noise)
+    - digest: Search DigestChunk embeddings (includes formatted summaries)
+    """
+    source_content = "source_content"
+    digest = "digest"
+
+
 class RAGFilters(BaseModel):
     """Filters for RAG queries."""
     feed_id: int | None = Field(
@@ -25,12 +35,21 @@ class RAGFilters(BaseModel):
         ge=1,
         description="Filter for digests created within N days"
     )
+    chunk_source: ChunkSource | None = Field(
+        None,
+        description=(
+            "Which chunks to search: 'source_content' (default, cleaner results) "
+            "or 'digest' (includes template formatting). If not specified, defaults "
+            "to 'source_content'."
+        )
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
             "example": {
                 "feed_id": 1,
-                "days": 30
+                "days": 30,
+                "chunk_source": "source_content"
             }
         }
     )
@@ -154,6 +173,10 @@ class RAGQueryResponse(BaseModel):
         default=0.0,
         description="Total time for the RAG query in milliseconds"
     )
+    chunk_source: ChunkSource = Field(
+        default=ChunkSource.source_content,
+        description="Which chunk source was used for this search"
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -185,7 +208,8 @@ class RAGQueryResponse(BaseModel):
                 "model_used": "llama3.2",
                 "search_took_ms": 45.2,
                 "generation_took_ms": 1234.5,
-                "total_took_ms": 1279.7
+                "total_took_ms": 1279.7,
+                "chunk_source": "source_content"
             }
         }
     )
@@ -269,6 +293,10 @@ class RAGExportResponse(BaseModel):
         default=0.0,
         description="Time taken for the search in milliseconds"
     )
+    chunk_source: ChunkSource = Field(
+        default=ChunkSource.source_content,
+        description="Which chunk source was used for this search"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -290,7 +318,8 @@ class RAGExportResponse(BaseModel):
                 ],
                 "sources_count": 2,
                 "chunks_count": 5,
-                "search_took_ms": 45.2
+                "search_took_ms": 45.2,
+                "chunk_source": "source_content"
             }
         }
     )

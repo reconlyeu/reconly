@@ -16,12 +16,12 @@ import httpx
 
 from sqlalchemy.orm import Session
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import sessionmaker
 
 from reconly_core.database.models import (
     Base, Feed, Source, FeedSource, FeedRun, Digest, LLMUsageLog,
-    PromptTemplate, DigestSourceItem
+    PromptTemplate, DigestSourceItem, SourceContent
 )
 from reconly_core.database.crud import DEFAULT_DATABASE_URL
 from reconly_core.database.seed import get_default_prompt_template, get_default_consolidated_template
@@ -1378,6 +1378,67 @@ class FeedService:
             "cost": result.get("estimated_cost", 0.0),
         }
 
+    def _store_source_content(
+        self,
+        source_item: DigestSourceItem,
+        content: str,
+        session: Session,
+    ) -> Optional[SourceContent]:
+        """
+        Store source content for RAG embedding if enabled.
+
+        Respects settings:
+        - rag.source_content.enabled: Whether to store content
+        - rag.source_content.max_length: Maximum content length to store
+
+        Args:
+            source_item: The DigestSourceItem to attach content to
+            content: The original fetched content
+            session: Database session
+
+        Returns:
+            Created SourceContent record, or None if disabled/skipped
+        """
+        from hashlib import sha256
+        from reconly_core.services.settings_service import SettingsService
+
+        try:
+            settings = SettingsService(session)
+
+            # Check if source content storage is enabled
+            if not settings.get("rag.source_content.enabled"):
+                return None
+
+            # Skip if no content
+            if not content:
+                return None
+
+            # Get max length setting
+            max_length = settings.get("rag.source_content.max_length")
+
+            # Truncate if necessary
+            if len(content) > max_length:
+                content = content[:max_length]
+                logger.debug(f"Truncated content from {len(content)} to {max_length} chars")
+
+            # Calculate hash for deduplication
+            content_hash = sha256(content.encode('utf-8')).hexdigest()
+
+            # Create SourceContent record
+            source_content = SourceContent(
+                digest_source_item_id=source_item.id,
+                content=content,
+                content_hash=content_hash,
+                content_length=len(content),
+                fetched_at=datetime.utcnow(),
+            )
+            session.add(source_content)
+            return source_content
+
+        except Exception as e:
+            logger.error(f"Failed to store source content: {e}")
+            return None
+
     def _save_consolidated_digest(
         self,
         result: Dict[str, Any],
@@ -1449,6 +1510,11 @@ class FeedService:
                     item_published_at=published_at,
                 )
                 session.add(source_item)
+                session.flush()  # Get source_item.id for SourceContent FK
+
+                # Store source content for RAG
+                content = item.get('content', '')
+                self._store_source_content(source_item, content, session)
         else:
             # per_source mode - all items from same source
             for article in articles:
@@ -1467,6 +1533,11 @@ class FeedService:
                     item_published_at=published_at,
                 )
                 session.add(source_item)
+                session.flush()  # Get source_item.id for SourceContent FK
+
+                # Store source content for RAG
+                content = article.get('content', '')
+                self._store_source_content(source_item, content, session)
 
         return digest
 
@@ -2244,7 +2315,8 @@ class FeedService:
 
         Runs after feed completion to:
         1. Generate embeddings for new digests
-        2. Compute graph relationships
+        2. Generate embeddings for source content (original fetched content)
+        3. Compute graph relationships
 
         Args:
             feed_run: The completed feed run
@@ -2258,7 +2330,6 @@ class FeedService:
             from reconly_core.rag.embeddings import get_embedding_provider
             from reconly_core.rag.graph_service import GraphService
 
-            # Get digests from this run
             digests = session.query(Digest).filter(
                 Digest.feed_run_id == feed_run.id
             ).all()
@@ -2269,30 +2340,72 @@ class FeedService:
             if show_progress:
                 print(f"\n📊 Processing RAG for {len(digests)} digest(s)...")
 
-            # 1. Generate embeddings
             embedding_service = EmbeddingService(session)
             loop = asyncio.new_event_loop()
             try:
+                # 1. Generate embeddings for digests
                 for digest in digests:
                     if digest.embedding_status != 'completed':
                         loop.run_until_complete(
                             embedding_service.embed_digest(digest, update_status=True)
                         )
                 session.commit()
-            finally:
-                loop.close()
 
-            # 2. Compute graph relationships
-            provider = get_embedding_provider(db=session)
-            graph_service = GraphService(session, provider)
-
-            loop = asyncio.new_event_loop()
-            try:
-                for digest in digests:
-                    loop.run_until_complete(
-                        graph_service.compute_relationships(digest.id)
+                # 2. Generate embeddings for source content (if stored)
+                # Use or_() to handle NULL status since NULL != 'completed' is NULL in SQL
+                digest_ids = [d.id for d in digests]
+                source_contents = session.query(SourceContent).join(
+                    DigestSourceItem,
+                    SourceContent.digest_source_item_id == DigestSourceItem.id
+                ).filter(
+                    DigestSourceItem.digest_id.in_(digest_ids),
+                    or_(
+                        SourceContent.embedding_status.is_(None),
+                        SourceContent.embedding_status != 'completed'
                     )
-                session.commit()
+                ).all()
+
+                if source_contents:
+                    if show_progress:
+                        print(f"   📄 Embedding {len(source_contents)} source content record(s)...")
+
+                    for source_content in source_contents:
+                        try:
+                            loop.run_until_complete(
+                                embedding_service.embed_source_content(
+                                    source_content, update_status=True
+                                )
+                            )
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to embed source content {source_content.id}: {e}"
+                            )
+                    session.commit()
+
+                # 3. Compute graph relationships (if auto-compute enabled)
+                from reconly_core.services.settings_service import SettingsService
+                settings_service = SettingsService(session)
+
+                auto_compute = settings_service.get("rag.graph.auto_compute")
+                if auto_compute:
+                    provider = get_embedding_provider(db=session)
+                    default_chunk_source = settings_service.get("rag.source_content.default_chunk_source")
+                    semantic_threshold = settings_service.get("rag.graph.semantic_threshold")
+                    max_edges = settings_service.get("rag.graph.max_edges_per_digest")
+
+                    graph_service = GraphService(
+                        session,
+                        provider,
+                        semantic_threshold=semantic_threshold,
+                        max_edges_per_digest=max_edges,
+                        default_chunk_source=default_chunk_source,
+                    )
+
+                    for digest in digests:
+                        loop.run_until_complete(
+                            graph_service.compute_relationships(digest.id)
+                        )
+                    session.commit()
             finally:
                 loop.close()
 

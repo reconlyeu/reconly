@@ -18,6 +18,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License: AGPL-3.0"/></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"/></a>
   <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status: Beta"/>
   <img src="https://img.shields.io/badge/tests-1632%20passing-brightgreen.svg" alt="Tests"/>
   <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/code%20style-ruff-000000.svg" alt="Ruff"/></a>

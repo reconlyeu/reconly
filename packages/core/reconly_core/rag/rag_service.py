@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from reconly_core.rag.search.hybrid import HybridSearchService, SearchMode
+from reconly_core.rag.search.vector import ChunkSource
 from reconly_core.rag.citations import (
     Citation,
     CitationContext,
@@ -56,10 +57,13 @@ class RAGFilters:
         feed_id: Filter by feed ID
         source_id: Filter by source ID
         days: Filter for digests created within N days
+        chunk_source: Which chunks to search ('source_content' or 'digest').
+                      If None, uses RAGService's default_chunk_source.
     """
     feed_id: int | None = None
     source_id: int | None = None
     days: int | None = None
+    chunk_source: ChunkSource | None = None
 
 
 @dataclass
@@ -75,6 +79,7 @@ class RAGResult:
         search_took_ms: Time taken for the search
         generation_took_ms: Time taken for answer generation
         total_took_ms: Total time for the RAG query
+        chunk_source: Type of chunks that were searched ('source_content' or 'digest')
     """
     answer: str
     citations: list[Citation]
@@ -84,13 +89,18 @@ class RAGResult:
     search_took_ms: float = 0.0
     generation_took_ms: float = 0.0
     total_took_ms: float = 0.0
+    chunk_source: ChunkSource = 'source_content'
 
 
 class RAGService:
     """Service for Retrieval-Augmented Generation.
 
     Combines hybrid search with LLM generation to answer questions
-    based on indexed digest content.
+    based on indexed content.
+
+    By default, searches SourceContentChunk embeddings which provide cleaner
+    semantic search results without template noise. Can fall back to
+    DigestChunk search if needed.
 
     Example:
         >>> from reconly_core.rag import RAGService, get_embedding_provider
@@ -100,7 +110,11 @@ class RAGService:
         >>> summarizer = get_summarizer(db=db, enable_fallback=False)
         >>> rag = RAGService(db, provider, summarizer)
         >>>
+        >>> # Search source content (default, recommended)
         >>> result = await rag.query("What are the latest trends in AI?")
+        >>> # Fallback to digest chunks
+        >>> filters = RAGFilters(chunk_source='digest')
+        >>> result = await rag.query("...", filters=filters)
         >>> print(result.answer)
         >>> for citation in result.citations:
         ...     print(f"[{citation.id}] {citation.digest_title}")
@@ -114,6 +128,7 @@ class RAGService:
         system_prompt: str | None = None,
         max_chunks: int = 10,
         search_mode: SearchMode = 'hybrid',
+        default_chunk_source: ChunkSource = 'source_content',
     ):
         """Initialize the RAG service.
 
@@ -124,6 +139,7 @@ class RAGService:
             system_prompt: Custom system prompt (uses default if None)
             max_chunks: Maximum number of chunks to retrieve
             search_mode: Search mode ('hybrid', 'vector', 'fts')
+            default_chunk_source: Default chunk source ('source_content' or 'digest')
         """
         self.db = db
         self.embedding_provider = embedding_provider
@@ -131,6 +147,7 @@ class RAGService:
         self.system_prompt = system_prompt or RAG_SYSTEM_PROMPT
         self.max_chunks = max_chunks
         self.search_mode: SearchMode = search_mode
+        self.default_chunk_source: ChunkSource = default_chunk_source
 
         # Initialize search service
         self.search_service = HybridSearchService(
@@ -149,7 +166,7 @@ class RAGService:
 
         Args:
             question: The question to answer
-            filters: Optional filters for the search
+            filters: Optional filters for the search (includes chunk_source)
             max_chunks: Override default max chunks
             include_answer: If False, only return chunks without generating answer
 
@@ -160,6 +177,9 @@ class RAGService:
         filters = filters or RAGFilters()
         effective_max_chunks = max_chunks or self.max_chunks
 
+        # Determine which chunk source to use (explicit filter or service default)
+        chunk_source = filters.chunk_source if filters.chunk_source is not None else self.default_chunk_source
+
         # Step 1: Search for relevant chunks
         search_start = time.time()
         search_response = await self.search_service.search(
@@ -169,11 +189,12 @@ class RAGService:
             source_id=filters.source_id,
             days=filters.days,
             mode=self.search_mode,
+            chunk_source=chunk_source,
         )
         search_took_ms = (time.time() - search_start) * 1000
 
         logger.debug(
-            f"RAG search completed in {search_took_ms:.2f}ms, "
+            f"RAG search ({chunk_source}) completed in {search_took_ms:.2f}ms, "
             f"found {len(search_response.results)} results"
         )
 
@@ -200,6 +221,7 @@ class RAGService:
                 search_took_ms=search_took_ms,
                 generation_took_ms=0.0,
                 total_took_ms=(time.time() - start_time) * 1000,
+                chunk_source=chunk_source,
             )
 
         # If not generating answer, return just the chunks
@@ -213,6 +235,7 @@ class RAGService:
                 search_took_ms=search_took_ms,
                 generation_took_ms=0.0,
                 total_took_ms=(time.time() - start_time) * 1000,
+                chunk_source=chunk_source,
             )
 
         # Step 3: Generate answer with citations
@@ -270,6 +293,7 @@ class RAGService:
             search_took_ms=search_took_ms,
             generation_took_ms=generation_took_ms,
             total_took_ms=total_took_ms,
+            chunk_source=chunk_source,
         )
 
     def _verify_grounding(

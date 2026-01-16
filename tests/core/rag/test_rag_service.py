@@ -443,3 +443,202 @@ class TestRAGServiceIntegration:
             assert result.grounded is True
             assert result.model_used == 'gpt-test'
             assert result.total_took_ms > 0
+
+    @pytest.mark.asyncio
+    async def test_rag_with_source_content_chunks(self, db_session):
+        """Test RAG flow using source content chunks."""
+        from reconly_core.database.models import (
+            Source,
+            Digest,
+            DigestSourceItem,
+            SourceContent,
+            SourceContentChunk,
+        )
+        from datetime import datetime
+        import hashlib
+        import numpy as np
+
+        # Setup mocks
+        mock_provider = Mock()
+        mock_provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+        mock_provider.get_dimension = Mock(return_value=1024)
+        mock_provider.get_model_info = Mock(return_value={
+            'provider': 'test',
+            'model': 'test-model',
+        })
+
+        mock_summarizer = Mock()
+        mock_summarizer.summarize = Mock(return_value={
+            'summary': 'AI is transforming industries based on source content [1].',
+            'model_info': {'model': 'gpt-test'},
+        })
+        mock_summarizer.get_model_info = Mock(return_value={'model': 'gpt-test'})
+
+        # Create test data with source content
+        source = Source(name="Tech Blog", type="manual", url="https://techblog.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            title="AI Article",
+            url="https://techblog.com/ai-article",
+            content="Short summary",
+            source_id=source.id,
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://techblog.com/full-ai-article",
+            item_title="Full AI Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        full_content = "Artificial intelligence is transforming industries with advanced algorithms."
+        content_hash = hashlib.sha256(full_content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=full_content,
+            content_hash=content_hash,
+            content_length=len(full_content),
+            fetched_at=datetime.utcnow(),
+            embedding_status="completed",
+        )
+        db_session.add(source_content)
+        db_session.flush()
+
+        # Add source content chunk with embedding
+        embedding = np.random.rand(1024).astype(np.float32).tolist()
+        chunk = SourceContentChunk(
+            source_content_id=source_content.id,
+            chunk_index=0,
+            text="AI is transforming industries with advanced algorithms.",
+            token_count=50,
+            start_char=0,
+            end_char=100,
+            embedding=embedding,
+        )
+        db_session.add(chunk)
+        db_session.commit()
+
+        # Create service
+        service = RAGService(db_session, mock_provider, mock_summarizer)
+
+        # Query with source_content chunk_source
+        filters = RAGFilters(chunk_source='source_content')
+        result = await service.query("What is AI doing?", filters=filters)
+
+        # Verify result includes correct chunk_source
+        assert isinstance(result, RAGResult)
+        assert result.chunk_source == 'source_content'
+
+    @pytest.mark.asyncio
+    async def test_rag_with_digest_chunks(self, db_session):
+        """Test RAG flow using digest chunks."""
+        from reconly_core.database.models import Source, Digest, DigestChunk
+        import numpy as np
+
+        # Setup mocks
+        mock_provider = Mock()
+        mock_provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+        mock_provider.get_dimension = Mock(return_value=1024)
+        mock_provider.get_model_info = Mock(return_value={
+            'provider': 'test',
+            'model': 'test-model',
+        })
+
+        mock_summarizer = Mock()
+        mock_summarizer.summarize = Mock(return_value={
+            'summary': 'AI progress based on digest chunks [1].',
+            'model_info': {'model': 'gpt-test'},
+        })
+        mock_summarizer.get_model_info = Mock(return_value={'model': 'gpt-test'})
+
+        # Create test data with digest chunks
+        source = Source(name="Tech News", type="manual", url="https://technews.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            title="AI Progress",
+            url="https://technews.com/ai-progress",
+            content="AI made significant progress in 2024.",
+            source_id=source.id,
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        # Add digest chunk with embedding
+        embedding = np.random.rand(1024).astype(np.float32).tolist()
+        chunk = DigestChunk(
+            digest_id=digest.id,
+            chunk_index=0,
+            text="AI made significant progress in 2024.",
+            token_count=50,
+            start_char=0,
+            end_char=100,
+            embedding=embedding,
+        )
+        db_session.add(chunk)
+        db_session.commit()
+
+        # Create service
+        service = RAGService(db_session, mock_provider, mock_summarizer)
+
+        # Query with digest chunk_source
+        filters = RAGFilters(chunk_source='digest')
+        result = await service.query("What progress did AI make?", filters=filters)
+
+        # Verify result includes correct chunk_source
+        assert isinstance(result, RAGResult)
+        assert result.chunk_source == 'digest'
+
+    @pytest.mark.asyncio
+    async def test_rag_default_chunk_source(self, db_session):
+        """Test that RAG defaults to source_content chunk_source."""
+        from reconly_core.database.models import Source, Digest
+
+        # Setup mocks
+        mock_provider = Mock()
+        mock_provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+        mock_provider.get_dimension = Mock(return_value=1024)
+        mock_provider.get_model_info = Mock(return_value={
+            'provider': 'test',
+            'model': 'test-model',
+        })
+
+        mock_summarizer = Mock()
+        mock_summarizer.summarize = Mock(return_value={
+            'summary': 'Default chunk source answer [1].',
+            'model_info': {'model': 'gpt-test'},
+        })
+        mock_summarizer.get_model_info = Mock(return_value={'model': 'gpt-test'})
+
+        # Create minimal test data
+        source = Source(name="Test", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            title="Test",
+            url="https://test.example.com/test",
+            content="Test content",
+            source_id=source.id,
+        )
+        db_session.add(digest)
+        db_session.commit()
+
+        # Create service
+        service = RAGService(db_session, mock_provider, mock_summarizer)
+
+        # Query without specifying chunk_source
+        result = await service.query("Test question")
+
+        # Verify default chunk_source is source_content
+        assert isinstance(result, RAGResult)
+        assert result.chunk_source == 'source_content'
