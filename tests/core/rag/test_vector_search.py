@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 from unittest.mock import Mock, AsyncMock, patch
 
-from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult
+from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult, ChunkSource
 from reconly_core.database.models import Digest, DigestChunk, FeedRun, Source
 
 
@@ -94,8 +94,9 @@ class TestVectorSearchService:
 
     @pytest.mark.asyncio
     async def test_search_with_results(self, vector_service, sample_digest_with_chunks):
-        """Test search returns results."""
-        results = await vector_service.search("machine learning", limit=10)
+        """Test search returns results when searching digest chunks."""
+        # Use chunk_source='digest' to search DigestChunk (fixture creates DigestChunks)
+        results = await vector_service.search("machine learning", limit=10, chunk_source='digest')
 
         assert isinstance(results, list)
         # Should find chunks from sample digest
@@ -107,18 +108,19 @@ class TestVectorSearchService:
             assert result.digest_id == sample_digest_with_chunks.id
             assert result.text != ""
             assert 0.0 <= result.score <= 1.0
+            assert result.source_type == 'digest'
 
     @pytest.mark.asyncio
     async def test_search_empty_results(self, vector_service, db_session):
         """Test search with no matching chunks."""
-        # No digests in database
-        results = await vector_service.search("test query", limit=10)
+        # No digests in database - search digest chunks
+        results = await vector_service.search("test query", limit=10, chunk_source='digest')
         assert results == []
 
     @pytest.mark.asyncio
     async def test_search_with_limit(self, vector_service, sample_digest_with_chunks):
         """Test search respects limit parameter."""
-        results = await vector_service.search("test", limit=1)
+        results = await vector_service.search("test", limit=1, chunk_source='digest')
         assert len(results) <= 1
 
     @pytest.mark.asyncio
@@ -139,28 +141,28 @@ class TestVectorSearchService:
         sample_digest_with_chunks.feed_run_id = feed_run.id
         db_session.commit()
 
-        results = await vector_service.search("test", feed_id=feed.id)
+        results = await vector_service.search("test", feed_id=feed.id, chunk_source='digest')
         assert len(results) > 0
 
     @pytest.mark.asyncio
     async def test_search_with_source_filter(self, vector_service, sample_digest_with_chunks):
         """Test search with source_id filter."""
-        results = await vector_service.search("test", source_id=sample_digest_with_chunks.source_id)
+        results = await vector_service.search("test", source_id=sample_digest_with_chunks.source_id, chunk_source='digest')
         assert len(results) > 0
 
         # Search with different source_id should return no results
-        results = await vector_service.search("test", source_id=9999)
+        results = await vector_service.search("test", source_id=9999, chunk_source='digest')
         assert len(results) == 0
 
     @pytest.mark.asyncio
     async def test_search_with_days_filter(self, vector_service, sample_digest_with_chunks):
         """Test search with days filter."""
-        results = await vector_service.search("test", days=30)
+        results = await vector_service.search("test", days=30, chunk_source='digest')
         # Should find recent digest
         assert len(results) > 0
 
         # Search with 0 days might not find results depending on timing
-        results = await vector_service.search("test", days=0)
+        results = await vector_service.search("test", days=0, chunk_source='digest')
         # Just verify it doesn't error
         assert isinstance(results, list)
 
@@ -168,8 +170,8 @@ class TestVectorSearchService:
     async def test_search_with_min_score(self, vector_service, sample_digest_with_chunks):
         """Test search with minimum score filter."""
         # Search with high threshold might filter out results
-        results_high = await vector_service.search("test", min_score=0.95)
-        results_low = await vector_service.search("test", min_score=0.0)
+        results_high = await vector_service.search("test", min_score=0.95, chunk_source='digest')
+        results_low = await vector_service.search("test", min_score=0.0, chunk_source='digest')
 
         # Low threshold should return more or equal results
         assert len(results_low) >= len(results_high)
@@ -177,13 +179,14 @@ class TestVectorSearchService:
     def test_search_sync(self, vector_service, sample_digest_with_chunks):
         """Test synchronous search with pre-computed embedding."""
         query_embedding = [0.1] * 1024
-        results = vector_service.search_sync(query_embedding, limit=10)
+        results = vector_service.search_sync(query_embedding, limit=10, chunk_source='digest')
 
         assert isinstance(results, list)
         assert len(results) > 0
 
         for result in results:
             assert isinstance(result, VectorSearchResult)
+            assert result.source_type == 'digest'
 
 
 class TestVectorSearchResult:
@@ -207,6 +210,9 @@ class TestVectorSearchResult:
         assert result.score == 0.95
         assert result.distance == 0.05
         assert result.extra_data is None
+        assert result.source_type == 'digest'  # Default is 'digest'
+        assert result.source_item_title is None
+        assert result.source_item_url is None
 
     def test_result_with_extra_data(self):
         """Test VectorSearchResult with extra metadata."""
@@ -222,5 +228,23 @@ class TestVectorSearchResult:
 
         assert result.extra_data["heading"] == "Introduction"
         assert result.extra_data["source"] == "summary"
+
+    def test_result_with_source_content_metadata(self):
+        """Test VectorSearchResult with source content metadata."""
+        result = VectorSearchResult(
+            chunk_id=1,
+            digest_id=42,
+            chunk_index=0,
+            text="Original source content",
+            score=0.95,
+            distance=0.05,
+            source_type='source_content',
+            source_item_title="Article Title",
+            source_item_url="https://example.com/article",
+        )
+
+        assert result.source_type == 'source_content'
+        assert result.source_item_title == "Article Title"
+        assert result.source_item_url == "https://example.com/article"
 
 

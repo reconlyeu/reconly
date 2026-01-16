@@ -384,3 +384,284 @@ class TestRAGAPIEdgeCases:
         )
 
         assert response.status_code == 422  # Validation error
+
+
+class TestRAGAPISourceContent:
+    """Test suite for RAG with source content integration."""
+
+    @pytest.fixture
+    def sample_source_content_data(self, test_db):
+        """Create sample data with source content chunks."""
+        from reconly_core.database.models import (
+            Source,
+            Digest,
+            DigestSourceItem,
+            SourceContent,
+            SourceContentChunk,
+        )
+        from datetime import datetime
+        import hashlib
+
+        # Create source
+        source = Source(
+            name="Tech Blog",
+            type="manual",
+            url="https://techblog.com",
+            config={}
+        )
+        test_db.add(source)
+        test_db.flush()
+
+        # Create digest
+        digest = Digest(
+            url="https://techblog.com/ai-article",
+            title="Comprehensive AI Article",
+            content="Short summary",
+            source_id=source.id,
+        )
+        test_db.add(digest)
+        test_db.flush()
+
+        # Create digest source item
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://techblog.com/full-ai-article",
+            item_title="Full AI Article",
+            item_published_at=datetime.utcnow(),
+        )
+        test_db.add(digest_source_item)
+        test_db.flush()
+
+        # Create source content
+        full_content = """
+        Artificial intelligence is transforming industries at an unprecedented pace.
+        Machine learning algorithms are becoming more sophisticated, enabling applications
+        that were once thought impossible. Deep learning has revolutionized computer vision
+        and natural language processing.
+        """
+        content_hash = hashlib.sha256(full_content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=full_content,
+            content_hash=content_hash,
+            content_length=len(full_content),
+            fetched_at=datetime.utcnow(),
+            embedding_status="completed",
+        )
+        test_db.add(source_content)
+        test_db.flush()
+
+        # Add source content chunks with embeddings
+        for idx in range(3):
+            embedding = np.random.rand(1024).astype(np.float32).tolist()
+            chunk = SourceContentChunk(
+                source_content_id=source_content.id,
+                chunk_index=idx,
+                text=f"Source content chunk {idx} about AI and machine learning.",
+                token_count=50,
+                start_char=idx * 100,
+                end_char=(idx + 1) * 100,
+                embedding=embedding,
+            )
+            test_db.add(chunk)
+
+        test_db.commit()
+        return {"digest": digest, "source_content": source_content}
+
+    def test_rag_query_with_source_content_chunks(self, client, sample_source_content_data):
+        """Test RAG query using source_content chunks."""
+        with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
+             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+
+            # Mock embedding provider
+            provider = Mock()
+            provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+            provider.get_dimension = Mock(return_value=1024)
+            provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
+            mock_emb.return_value = provider
+
+            # Mock summarizer
+            summarizer = Mock()
+            summarizer.summarize = Mock(return_value={
+                'summary': 'AI is transforming industries [1].',
+                'model_info': {'model': 'test-model'},
+            })
+            summarizer.get_model_info = Mock(return_value={'model': 'test-model'})
+            mock_sum.return_value = summarizer
+
+            response = client.post(
+                "/api/v1/rag/query",
+                json={
+                    "question": "What is AI doing?",
+                    "filters": {
+                        "chunk_source": "source_content"
+                    }
+                }
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure includes chunk_source
+            assert "chunk_source" in data
+            assert data["chunk_source"] == "source_content"
+            assert "answer" in data
+            assert "citations" in data
+
+    def test_rag_query_with_digest_chunks(self, client, test_db):
+        """Test RAG query using digest chunks."""
+        # Create digest with chunks for this test
+        digest = Digest(
+            url="https://test.example.com/ai-digest",
+            title="AI Progress Article",
+            content="AI made significant progress in 2024.",
+            source_id=None,
+        )
+        test_db.add(digest)
+        test_db.flush()
+
+        # Add digest chunks with embeddings
+        for idx in range(2):
+            embedding = np.random.rand(1024).astype(np.float32).tolist()
+            chunk = DigestChunk(
+                digest_id=digest.id,
+                chunk_index=idx,
+                text=f"Digest chunk {idx} about AI progress.",
+                token_count=50,
+                start_char=idx * 100,
+                end_char=(idx + 1) * 100,
+                embedding=embedding,
+            )
+            test_db.add(chunk)
+
+        test_db.commit()
+
+        with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
+             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+
+            # Mock embedding provider
+            provider = Mock()
+            provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+            provider.get_dimension = Mock(return_value=1024)
+            provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
+            mock_emb.return_value = provider
+
+            # Mock summarizer
+            summarizer = Mock()
+            summarizer.summarize = Mock(return_value={
+                'summary': 'AI made progress [1].',
+                'model_info': {'model': 'test-model'},
+            })
+            summarizer.get_model_info = Mock(return_value={'model': 'test-model'})
+            mock_sum.return_value = summarizer
+
+            response = client.post(
+                "/api/v1/rag/query",
+                json={
+                    "question": "What progress did AI make?",
+                    "filters": {
+                        "chunk_source": "digest"
+                    }
+                }
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Verify response structure includes chunk_source
+            assert "chunk_source" in data
+            assert data["chunk_source"] == "digest"
+            assert "answer" in data
+            assert "citations" in data
+
+    def test_rag_query_default_chunk_source(self, client, sample_source_content_data):
+        """Test that default chunk_source is source_content."""
+        with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
+             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+
+            # Mock embedding provider
+            provider = Mock()
+            provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+            provider.get_dimension = Mock(return_value=1024)
+            provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
+            mock_emb.return_value = provider
+
+            # Mock summarizer
+            summarizer = Mock()
+            summarizer.summarize = Mock(return_value={
+                'summary': 'Default answer [1].',
+                'model_info': {'model': 'test-model'},
+            })
+            summarizer.get_model_info = Mock(return_value={'model': 'test-model'})
+            mock_sum.return_value = summarizer
+
+            # Query without specifying chunk_source
+            response = client.post(
+                "/api/v1/rag/query",
+                json={
+                    "question": "What is AI?",
+                }
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # Should default to source_content
+            assert data["chunk_source"] == "source_content"
+
+    def test_rag_query_chunk_source_in_response(self, client, test_db):
+        """Test that chunk_source is always included in response."""
+        # Create minimal digest for this test
+        digest = Digest(
+            url="https://test.example.com/test-digest",
+            title="Test Article",
+            content="Test content.",
+            source_id=None,
+        )
+        test_db.add(digest)
+        test_db.flush()
+
+        # Add digest chunk
+        embedding = np.random.rand(1024).astype(np.float32).tolist()
+        chunk = DigestChunk(
+            digest_id=digest.id,
+            chunk_index=0,
+            text="Test chunk content.",
+            token_count=10,
+            start_char=0,
+            end_char=50,
+            embedding=embedding,
+        )
+        test_db.add(chunk)
+        test_db.commit()
+
+        with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
+             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+
+            provider = Mock()
+            provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
+            provider.get_dimension = Mock(return_value=1024)
+            provider.get_model_info = Mock(return_value={'provider': 'test', 'model': 'test'})
+            mock_emb.return_value = provider
+
+            summarizer = Mock()
+            summarizer.summarize = Mock(return_value={
+                'summary': 'Test answer [1].',
+                'model_info': {'model': 'test-model'},
+            })
+            summarizer.get_model_info = Mock(return_value={'model': 'test-model'})
+            mock_sum.return_value = summarizer
+
+            response = client.post(
+                "/api/v1/rag/query",
+                json={"question": "Test question"}
+            )
+
+            assert response.status_code == 200
+            data = response.json()
+
+            # chunk_source must be in response
+            assert "chunk_source" in data
+            assert data["chunk_source"] in ["source_content", "digest"]

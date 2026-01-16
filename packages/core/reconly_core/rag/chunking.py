@@ -9,6 +9,7 @@ from typing import List, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+    from reconly_core.database.models import Digest, SourceContent
 
 
 # Try to import tiktoken for accurate token counting
@@ -483,9 +484,36 @@ class ChunkingService:
 
         return chunks
 
+    def chunk_source_content(self, source_content: "SourceContent") -> List[TextChunk]:
+        """
+        Chunk a SourceContent model instance.
+
+        Splits the original source content into chunks suitable for embedding.
+        Unlike chunk_digest(), this works with raw fetched content rather than
+        processed digest summaries, providing cleaner semantic search results.
+
+        Args:
+            source_content: SourceContent model instance
+
+        Returns:
+            List of TextChunk objects with source_content_id and
+            digest_source_item_id in extra_data
+        """
+        if not source_content.content or not source_content.content.strip():
+            return []
+
+        chunks = self.chunk_text(source_content.content)
+
+        for chunk in chunks:
+            chunk.extra_data['source'] = 'source_content'
+            chunk.extra_data['source_content_id'] = source_content.id
+            chunk.extra_data['digest_source_item_id'] = source_content.digest_source_item_id
+
+        return chunks
+
     def chunk_digest(
         self,
-        digest,
+        digest: "Digest",
         include_title: bool = True,
         include_summary: bool = True,
     ) -> List[TextChunk]:

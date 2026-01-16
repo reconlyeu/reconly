@@ -10,7 +10,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from typing import Literal, TYPE_CHECKING
 
-from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult
+from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult, ChunkSource
 from reconly_core.rag.search.fts import FTSService, FTSSearchResult
 
 if TYPE_CHECKING:
@@ -162,10 +162,16 @@ class ChunkMatch:
         text: The chunk text content
         score: Relevance score for this chunk
         chunk_index: Position within the digest
+        source_type: Type of chunk ('source_content' or 'digest')
+        source_item_title: Title of the source item (for source content chunks)
+        source_item_url: URL of the source item (for source content chunks)
     """
     text: str
     score: float
     chunk_index: int
+    source_type: ChunkSource = 'digest'
+    source_item_title: str | None = None
+    source_item_url: str | None = None
 
 
 @dataclass
@@ -182,6 +188,7 @@ class HybridSearchResult:
         vector_rank: Rank from vector search (None if not found)
         fts_rank: Rank from FTS (None if not found)
         sources: Which search methods found this result
+        chunk_source: Type of chunks searched ('source_content' or 'digest')
     """
     digest_id: int
     title: str | None
@@ -190,6 +197,7 @@ class HybridSearchResult:
     vector_rank: int | None = None
     fts_rank: int | None = None
     sources: list[str] = field(default_factory=list)
+    chunk_source: ChunkSource = 'source_content'
 
 
 @dataclass
@@ -203,6 +211,7 @@ class HybridSearchResponse:
         mode: Search mode used ('hybrid', 'vector', 'fts')
         vector_results_count: Number of results from vector search
         fts_results_count: Number of results from FTS
+        chunk_source: Type of chunks that were searched ('source_content' or 'digest')
     """
     results: list[HybridSearchResult]
     query_embedding: list[float] | None = None
@@ -210,6 +219,7 @@ class HybridSearchResponse:
     mode: str = 'hybrid'
     vector_results_count: int = 0
     fts_results_count: int = 0
+    chunk_source: ChunkSource = 'source_content'
 
 
 class HybridSearchService:
@@ -224,6 +234,10 @@ class HybridSearchService:
     Where k is a constant (default 60) that controls how much weight
     to give to lower-ranked results.
 
+    Supports searching both:
+    - SourceContentChunk: Original source content (default, cleaner semantics)
+    - DigestChunk: Processed/summarized content (fallback)
+
     Features:
         - Query embedding caching with configurable TTL (15 min default)
         - LRU eviction when cache reaches max size (1000 entries default)
@@ -232,7 +246,10 @@ class HybridSearchService:
     Example:
         >>> from reconly_core.rag.search import HybridSearchService
         >>> service = HybridSearchService(db, embedding_provider)
+        >>> # Search source content (default, recommended for RAG)
         >>> response = await service.search("machine learning trends")
+        >>> # Search digest chunks (fallback)
+        >>> response = await service.search("...", chunk_source='digest')
         >>> for r in response.results:
         ...     print(f"Digest {r.digest_id}: {r.score:.3f} - {r.title}")
         >>> # Check cache performance
@@ -302,6 +319,7 @@ class HybridSearchService:
         days: int | None = None,
         mode: SearchMode = 'hybrid',
         include_embedding: bool = False,
+        chunk_source: ChunkSource = 'source_content',
     ) -> HybridSearchResponse:
         """
         Search using hybrid vector + FTS approach.
@@ -314,6 +332,7 @@ class HybridSearchService:
             days: Optional filter for digests created within N days
             mode: Search mode ('hybrid', 'vector', 'fts')
             include_embedding: Include query embedding in response
+            chunk_source: Which chunks to search ('source_content' or 'digest')
 
         Returns:
             HybridSearchResponse with results and metadata
@@ -330,22 +349,24 @@ class HybridSearchService:
                 # Get query embedding (check cache first)
                 query_embedding = await self._get_query_embedding(query)
 
-                # Search using embedding
+                # Search using embedding (with chunk_source selection)
                 vector_results = self.vector_service.search_sync(
                     query_embedding,
                     limit=limit * 2,  # Get more results for fusion
                     feed_id=feed_id,
                     source_id=source_id,
                     days=days,
+                    chunk_source=chunk_source,
                 )
-                logger.debug(f"Vector search returned {len(vector_results)} results")
+                logger.debug(f"Vector search ({chunk_source}) returned {len(vector_results)} results")
             except Exception as e:
                 logger.error(f"Vector search failed: {e}")
                 if mode == 'vector':
                     # If vector-only mode, we need to raise
                     raise
 
-        # Get FTS results
+        # Get FTS results (always uses digest-level search for now)
+        # Note: FTS on source content chunks can be added later if needed
         if mode in ('hybrid', 'fts'):
             try:
                 fts_results = self.fts_service.search(
@@ -365,12 +386,12 @@ class HybridSearchService:
         # Merge results based on mode
         if mode == 'hybrid':
             merged_results = self._merge_with_rrf(
-                vector_results, fts_results, limit
+                vector_results, fts_results, limit, chunk_source
             )
         elif mode == 'vector':
-            merged_results = self._convert_vector_results(vector_results[:limit])
+            merged_results = self._convert_vector_results(vector_results[:limit], chunk_source)
         else:  # mode == 'fts'
-            merged_results = self._convert_fts_results(fts_results[:limit])
+            merged_results = self._convert_fts_results(fts_results[:limit], chunk_source)
 
         elapsed_ms = (time.time() - start_time) * 1000
 
@@ -381,6 +402,7 @@ class HybridSearchService:
             mode=mode,
             vector_results_count=len(vector_results),
             fts_results_count=len(fts_results),
+            chunk_source=chunk_source,
         )
 
     def _merge_with_rrf(
@@ -388,6 +410,7 @@ class HybridSearchService:
         vector_results: list[VectorSearchResult],
         fts_results: list[FTSSearchResult],
         limit: int,
+        chunk_source: ChunkSource = 'source_content',
     ) -> list[HybridSearchResult]:
         """
         Merge results using Reciprocal Rank Fusion.
@@ -411,11 +434,15 @@ class HybridSearchService:
 
             entry = digest_scores[vr.digest_id]
             entry['vector_rank'] = rank
-            entry['sources'].append('vector')
+            if 'vector' not in entry['sources']:
+                entry['sources'].append('vector')
             entry['chunks'].append(ChunkMatch(
                 text=vr.text,
                 score=vr.score,
                 chunk_index=vr.chunk_index,
+                source_type=vr.source_type,
+                source_item_title=vr.source_item_title,
+                source_item_url=vr.source_item_url,
             ))
 
         # Process FTS results
@@ -438,11 +465,13 @@ class HybridSearchService:
                 entry['title'] = fr.title
 
             # Add FTS match as a chunk if we have a snippet
+            # FTS always searches digest content, so source_type is 'digest'
             if fr.snippet:
                 entry['chunks'].append(ChunkMatch(
                     text=fr.snippet,
                     score=fr.score,
                     chunk_index=-1,  # -1 indicates FTS snippet, not a real chunk
+                    source_type='digest',  # FTS searches digests
                 ))
 
         # Calculate RRF scores
@@ -469,6 +498,7 @@ class HybridSearchService:
                 vector_rank=data['vector_rank'],
                 fts_rank=data['fts_rank'],
                 sources=list(set(data['sources'])),  # Dedupe
+                chunk_source=chunk_source,
             ))
 
         # Sort by RRF score and limit
@@ -478,6 +508,7 @@ class HybridSearchService:
     def _convert_vector_results(
         self,
         vector_results: list[VectorSearchResult],
+        chunk_source: ChunkSource = 'source_content',
     ) -> list[HybridSearchResult]:
         """Convert vector-only results to hybrid format."""
         # Group by digest
@@ -491,6 +522,9 @@ class HybridSearchService:
                 text=vr.text,
                 score=vr.score,
                 chunk_index=vr.chunk_index,
+                source_type=vr.source_type,
+                source_item_title=vr.source_item_title,
+                source_item_url=vr.source_item_url,
             ))
 
         results = []
@@ -507,6 +541,7 @@ class HybridSearchService:
                 vector_rank=idx,
                 fts_rank=None,
                 sources=['vector'],
+                chunk_source=chunk_source,
             ))
 
         return results
@@ -514,8 +549,14 @@ class HybridSearchService:
     def _convert_fts_results(
         self,
         fts_results: list[FTSSearchResult],
+        chunk_source: ChunkSource = 'source_content',
     ) -> list[HybridSearchResult]:
-        """Convert FTS-only results to hybrid format."""
+        """Convert FTS-only results to hybrid format.
+
+        Note: FTS always searches digest content (not source content chunks),
+        so the chunk_source here is just for consistency in the result object.
+        The actual chunks from FTS are always from digest.
+        """
         results = []
 
         for idx, fr in enumerate(fts_results, start=1):
@@ -525,6 +566,7 @@ class HybridSearchService:
                     text=fr.snippet,
                     score=fr.score,
                     chunk_index=-1,
+                    source_type='digest',  # FTS always searches digest content
                 ))
 
             results.append(HybridSearchResult(
@@ -535,6 +577,7 @@ class HybridSearchService:
                 vector_rank=None,
                 fts_rank=idx,
                 sources=['fts'],
+                chunk_source=chunk_source,
             ))
 
         return results

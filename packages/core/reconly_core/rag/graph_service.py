@@ -7,11 +7,17 @@ Relationship types:
 - semantic: Digests with similar embeddings (cosine similarity > threshold)
 - tag: Digests sharing one or more tags
 - source: Digests from the same source/feed
+
+Chunk Sources:
+- source_content: Use SourceContentChunk embeddings (cleaner, recommended)
+- digest: Use DigestChunk embeddings (fallback for legacy data)
 """
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Literal
+
+from reconly_core.rag.search.vector import ChunkSource
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -78,14 +84,21 @@ class GraphService:
     - Detect source-based relationships (same source)
     - Query the knowledge graph for visualization
 
+    Supports two chunk sources for semantic relationships:
+    - source_content: Uses SourceContentChunk embeddings (cleaner, recommended)
+    - digest: Uses DigestChunk embeddings (fallback for legacy data)
+
     Example:
         >>> from reconly_core.rag import GraphService, get_embedding_provider
         >>>
         >>> provider = get_embedding_provider(db=db)
         >>> graph = GraphService(db, provider)
         >>>
-        >>> # Compute relationships for a new digest
+        >>> # Compute relationships for a new digest (uses source content by default)
         >>> await graph.compute_relationships(digest_id=42)
+        >>>
+        >>> # Fallback to digest chunks for legacy data
+        >>> await graph.compute_relationships(digest_id=42, chunk_source='digest')
         >>>
         >>> # Query graph centered on a digest
         >>> data = graph.get_graph_data(center_digest_id=42, depth=2)
@@ -104,6 +117,7 @@ class GraphService:
         semantic_threshold: float = DEFAULT_SEMANTIC_THRESHOLD,
         min_similarity: float = DEFAULT_MIN_SIMILARITY,
         max_edges_per_digest: int = DEFAULT_MAX_EDGES_PER_DIGEST,
+        default_chunk_source: ChunkSource = 'source_content',
     ):
         """Initialize the graph service.
 
@@ -113,12 +127,15 @@ class GraphService:
             semantic_threshold: Minimum similarity for semantic relationships
             min_similarity: Minimum similarity for graph queries
             max_edges_per_digest: Maximum edges per digest for pruning
+            default_chunk_source: Default chunk source for semantic relationships
+                                  ('source_content' or 'digest')
         """
         self.db = db
         self.embedding_provider = embedding_provider
         self.semantic_threshold = semantic_threshold
         self.min_similarity = min_similarity
         self.max_edges_per_digest = max_edges_per_digest
+        self.default_chunk_source: ChunkSource = default_chunk_source
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # RELATIONSHIP COMPUTATION
@@ -130,6 +147,7 @@ class GraphService:
         include_semantic: bool = True,
         include_tags: bool = True,
         include_source: bool = True,
+        chunk_source: ChunkSource | None = None,
     ) -> int:
         """Compute all relationships for a digest.
 
@@ -141,6 +159,8 @@ class GraphService:
             include_semantic: Whether to compute semantic relationships
             include_tags: Whether to compute tag relationships
             include_source: Whether to compute source relationships
+            chunk_source: Which chunks to use for semantic similarity
+                          ('source_content' or 'digest'). If None, uses default.
 
         Returns:
             Number of relationships created
@@ -154,10 +174,13 @@ class GraphService:
 
         total_created = 0
 
+        # Determine which chunk source to use
+        effective_chunk_source = chunk_source if chunk_source is not None else self.default_chunk_source
+
         if include_semantic:
-            count = await self._compute_semantic_relationships(digest)
+            count = await self._compute_semantic_relationships(digest, effective_chunk_source)
             total_created += count
-            logger.debug(f"Created {count} semantic relationships for digest {digest_id}")
+            logger.debug(f"Created {count} semantic relationships for digest {digest_id} (chunk_source={effective_chunk_source})")
 
         if include_tags:
             count = self._compute_tag_relationships(digest)
@@ -174,42 +197,42 @@ class GraphService:
 
         return total_created
 
-    async def _compute_semantic_relationships(self, digest) -> int:
+    async def _compute_semantic_relationships(
+        self,
+        digest,
+        chunk_source: ChunkSource,
+    ) -> int:
         """Compute semantic relationships based on embedding similarity.
 
         Finds digests with similar embeddings and creates bidirectional
         relationships above the threshold.
-        """
-        from reconly_core.database.models import DigestChunk
 
+        Args:
+            digest: The digest to compute relationships for
+            chunk_source: Which chunks to use ('source_content' or 'digest')
+
+        Returns:
+            Number of relationships created
+        """
         if not self.embedding_provider:
             logger.debug("No embedding provider, skipping semantic relationships")
             return 0
 
-        # Get the digest's chunks with embeddings
-        chunks = self.db.query(DigestChunk).filter(
-            DigestChunk.digest_id == digest.id,
-            DigestChunk.embedding.isnot(None)
-        ).all()
+        # Get representative embedding based on chunk source
+        if chunk_source == 'source_content':
+            digest_embedding = self._get_source_content_embedding(digest)
+        else:
+            digest_embedding = self._get_digest_chunk_embedding(digest)
 
-        if not chunks:
-            logger.debug(f"Digest {digest.id} has no embedded chunks")
-            return 0
-
-        # Get the first chunk's embedding as representative
-        # (could also use average of all chunks)
-        # pgvector returns embeddings as lists directly
-        digest_embedding = chunks[0].embedding
         if digest_embedding is None:
+            logger.debug(f"Digest {digest.id} has no embedded chunks (chunk_source={chunk_source})")
             return 0
-        # Convert to list if needed (pgvector may return as ndarray)
-        if hasattr(digest_embedding, 'tolist'):
-            digest_embedding = digest_embedding.tolist()
 
         # Find similar digests
-        similar_digests = await self._find_similar_digests(
+        similar_digests = self._find_similar_digests(
             digest.id,
             digest_embedding,
+            chunk_source=chunk_source,
             limit=self.max_edges_per_digest * 2,  # Get more to filter
         )
 
@@ -220,7 +243,7 @@ class GraphService:
                 continue
 
             # Create bidirectional relationships
-            extra_data = {"method": "cosine_similarity"}
+            extra_data = {"method": "cosine_similarity", "chunk_source": chunk_source}
             created += self._create_relationship_if_not_exists(
                 digest.id, other_digest_id, "semantic", similarity, extra_data
             )
@@ -233,15 +256,90 @@ class GraphService:
 
         return created
 
-    async def _find_similar_digests(
+    def _get_digest_chunk_embedding(self, digest) -> list[float] | None:
+        """Get a representative embedding from DigestChunk.
+
+        Uses the first chunk's embedding as representative.
+        """
+        from reconly_core.database.models import DigestChunk
+
+        chunk = self.db.query(DigestChunk).filter(
+            DigestChunk.digest_id == digest.id,
+            DigestChunk.embedding.isnot(None)
+        ).first()
+
+        if not chunk:
+            return None
+
+        return self._embedding_to_list(chunk.embedding)
+
+    def _get_source_content_embedding(self, digest) -> list[float] | None:
+        """Get a representative embedding from SourceContentChunk.
+
+        Uses the first chunk's embedding from the digest's source content.
+        The relationship chain is:
+        Digest -> DigestSourceItem -> SourceContent -> SourceContentChunk
+        """
+        from reconly_core.database.models import (
+            DigestSourceItem, SourceContent, SourceContentChunk
+        )
+
+        # Get the first source content chunk with an embedding for this digest
+        chunk = self.db.query(SourceContentChunk).join(
+            SourceContent, SourceContentChunk.source_content_id == SourceContent.id
+        ).join(
+            DigestSourceItem, SourceContent.digest_source_item_id == DigestSourceItem.id
+        ).filter(
+            DigestSourceItem.digest_id == digest.id,
+            SourceContentChunk.embedding.isnot(None)
+        ).order_by(
+            SourceContentChunk.chunk_index
+        ).first()
+
+        if not chunk:
+            return None
+
+        return self._embedding_to_list(chunk.embedding)
+
+    def _find_similar_digests(
         self,
         exclude_digest_id: int,
         query_embedding: list[float],
+        chunk_source: ChunkSource = 'source_content',
         limit: int = 20,
     ) -> list[tuple[int, float]]:
         """Find digests with similar embeddings using pgvector.
 
         Uses cosine distance to find similar chunks, grouped by digest,
+        taking the minimum distance (maximum similarity) per digest.
+
+        Args:
+            exclude_digest_id: Digest to exclude from results
+            query_embedding: Embedding to compare against
+            chunk_source: Which chunks to search ('source_content' or 'digest')
+            limit: Maximum results to return
+
+        Returns:
+            List of (digest_id, similarity_score) tuples
+        """
+        if chunk_source == 'source_content':
+            return self._find_similar_digests_from_source_content(
+                exclude_digest_id, query_embedding, limit
+            )
+        else:
+            return self._find_similar_digests_from_digest_chunks(
+                exclude_digest_id, query_embedding, limit
+            )
+
+    def _find_similar_digests_from_digest_chunks(
+        self,
+        exclude_digest_id: int,
+        query_embedding: list[float],
+        limit: int = 20,
+    ) -> list[tuple[int, float]]:
+        """Find similar digests using DigestChunk embeddings.
+
+        Uses cosine distance to find similar digest chunks, grouped by digest,
         taking the minimum distance (maximum similarity) per digest.
 
         Args:
@@ -263,6 +361,64 @@ class GraphService:
             DigestChunk.embedding.isnot(None)
         ).group_by(
             DigestChunk.digest_id
+        ).order_by(
+            'min_distance'
+        ).limit(limit)
+
+        results = []
+        for digest_id, distance in query.all():
+            similarity = max(0.0, 1.0 - distance)
+            results.append((digest_id, similarity))
+
+        return results
+
+    def _find_similar_digests_from_source_content(
+        self,
+        exclude_digest_id: int,
+        query_embedding: list[float],
+        limit: int = 20,
+    ) -> list[tuple[int, float]]:
+        """Find similar digests using SourceContentChunk embeddings.
+
+        Uses cosine distance to find similar source content chunks from other
+        digests. Results are grouped by the parent digest, taking the minimum
+        distance (maximum similarity) per digest.
+
+        The relationship chain is:
+        SourceContentChunk -> SourceContent -> DigestSourceItem -> Digest
+
+        This provides cleaner semantic relationships by using original source
+        content instead of processed digest summaries with template noise.
+
+        Args:
+            exclude_digest_id: Digest to exclude from results
+            query_embedding: Embedding to compare against
+            limit: Maximum results to return
+
+        Returns:
+            List of (digest_id, similarity_score) tuples
+        """
+        from sqlalchemy import func
+        from reconly_core.database.models import (
+            SourceContentChunk, SourceContent, DigestSourceItem
+        )
+
+        # Query SourceContentChunk with joins to get digest_id
+        # Group by digest_id and take minimum distance
+        query = self.db.query(
+            DigestSourceItem.digest_id,
+            func.min(
+                SourceContentChunk.embedding.cosine_distance(query_embedding)
+            ).label('min_distance')
+        ).join(
+            SourceContent, SourceContentChunk.source_content_id == SourceContent.id
+        ).join(
+            DigestSourceItem, SourceContent.digest_source_item_id == DigestSourceItem.id
+        ).filter(
+            DigestSourceItem.digest_id != exclude_digest_id,
+            SourceContentChunk.embedding.isnot(None)
+        ).group_by(
+            DigestSourceItem.digest_id
         ).order_by(
             'min_distance'
         ).limit(limit)
@@ -496,7 +652,7 @@ class GraphService:
                     continue
 
                 # Get feed info for clustering
-                feed_id, feed_name = get_feed_name(digest.feed_run_id)
+                digest_feed_id, digest_feed_name = get_feed_name(digest.feed_run_id)
 
                 # Add digest node
                 node_id = f"d_{digest_id}"
@@ -509,20 +665,20 @@ class GraphService:
                         "title": digest.title,
                         "created_at": digest.created_at.isoformat() if digest.created_at else None,
                         "source_id": digest.source_id,
-                        "feed_id": feed_id,
-                        "feed_name": feed_name,
+                        "feed_id": digest_feed_id,
+                        "feed_name": digest_feed_name,
                     }
                 )
 
                 # Add feed node as cluster anchor
-                if feed_id and include_tags:
-                    feed_node_id = f"f_{feed_id}"
+                if digest_feed_id and include_tags:
+                    feed_node_id = f"f_{digest_feed_id}"
                     if feed_node_id not in nodes:
                         nodes[feed_node_id] = GraphNode(
                             id=feed_node_id,
                             type="feed",
-                            label=feed_name or f"Feed {feed_id}",
-                            data={"feed_id": feed_id, "name": feed_name}
+                            label=digest_feed_name or f"Feed {digest_feed_id}",
+                            data={"feed_id": digest_feed_id, "name": digest_feed_name}
                         )
                     # Add edge from digest to feed
                     edges.append(GraphEdge(
@@ -598,7 +754,7 @@ class GraphService:
 
             for digest in digests:
                 # Get feed info for clustering
-                feed_id, feed_name = get_feed_name(digest.feed_run_id)
+                digest_feed_id, digest_feed_name = get_feed_name(digest.feed_run_id)
 
                 node_id = f"d_{digest.id}"
                 nodes[node_id] = GraphNode(
@@ -610,20 +766,20 @@ class GraphService:
                         "title": digest.title,
                         "created_at": digest.created_at.isoformat() if digest.created_at else None,
                         "source_id": digest.source_id,
-                        "feed_id": feed_id,
-                        "feed_name": feed_name,
+                        "feed_id": digest_feed_id,
+                        "feed_name": digest_feed_name,
                     }
                 )
 
                 # Add feed node as cluster anchor
-                if feed_id and include_tags:
-                    feed_node_id = f"f_{feed_id}"
+                if digest_feed_id and include_tags:
+                    feed_node_id = f"f_{digest_feed_id}"
                     if feed_node_id not in nodes:
                         nodes[feed_node_id] = GraphNode(
                             id=feed_node_id,
                             type="feed",
-                            label=feed_name or f"Feed {feed_id}",
-                            data={"feed_id": feed_id, "name": feed_name}
+                            label=digest_feed_name or f"Feed {digest_feed_id}",
+                            data={"feed_id": digest_feed_id, "name": digest_feed_name}
                         )
                     # Add edge from digest to feed
                     edges.append(GraphEdge(
@@ -787,6 +943,24 @@ class GraphService:
     # ═══════════════════════════════════════════════════════════════════════════════
     # HELPERS
     # ═══════════════════════════════════════════════════════════════════════════════
+
+    def _embedding_to_list(self, embedding) -> list[float] | None:
+        """Convert a pgvector embedding to a Python list.
+
+        pgvector may return embeddings as numpy arrays or other array types.
+        This normalizes to a Python list for consistent handling.
+
+        Args:
+            embedding: Embedding value from database (may be None, list, or ndarray)
+
+        Returns:
+            List of floats, or None if embedding is None
+        """
+        if embedding is None:
+            return None
+        if hasattr(embedding, 'tolist'):
+            return embedding.tolist()
+        return embedding
 
     def _create_relationship_if_not_exists(
         self,

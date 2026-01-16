@@ -49,6 +49,7 @@ from reconly_core.rag.chunking import ChunkingService, TextChunk
 from reconly_core.rag.embedding_service import (
     EmbeddingService,
     chunk_and_embed_sync,
+    chunk_and_embed_source_content_sync,
     EMBEDDING_STATUS_PENDING,
     EMBEDDING_STATUS_COMPLETED,
     EMBEDDING_STATUS_FAILED,
@@ -56,6 +57,7 @@ from reconly_core.rag.embedding_service import (
 from reconly_core.rag.search import (
     VectorSearchService,
     VectorSearchResult,
+    ChunkSource,
     FTSService,
     FTSSearchResult,
     HybridSearchService,
@@ -96,12 +98,14 @@ __all__ = [
     # High-level service
     'EmbeddingService',
     'chunk_and_embed_sync',
+    'chunk_and_embed_source_content_sync',
     'EMBEDDING_STATUS_PENDING',
     'EMBEDDING_STATUS_COMPLETED',
     'EMBEDDING_STATUS_FAILED',
     # Search services
     'VectorSearchService',
     'VectorSearchResult',
+    'ChunkSource',
     'FTSService',
     'FTSSearchResult',
     'HybridSearchService',

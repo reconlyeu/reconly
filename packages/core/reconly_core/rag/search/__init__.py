@@ -19,6 +19,7 @@ Usage:
 from reconly_core.rag.search.vector import (
     VectorSearchService,
     VectorSearchResult,
+    ChunkSource,
 )
 from reconly_core.rag.search.fts import (
     FTSService,
@@ -36,6 +37,7 @@ __all__ = [
     # Vector search
     'VectorSearchService',
     'VectorSearchResult',
+    'ChunkSource',
     # Full-text search
     'FTSService',
     'FTSSearchResult',

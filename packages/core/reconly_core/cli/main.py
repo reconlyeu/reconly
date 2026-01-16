@@ -58,6 +58,13 @@ def main():
     # RAG embedding commands
     mode_group.add_argument('--embed-all', action='store_true', help='Backfill embeddings for all unembedded digests')
     mode_group.add_argument('--embed-stats', action='store_true', help='Show embedding statistics')
+    # RAG knowledge graph commands
+    mode_group.add_argument('--rag-rebuild-graph', action='store_true', help='Rebuild knowledge graph from source content')
+    mode_group.add_argument('--rag-backfill-source-content', action='store_true', help='Backfill source content for historical digests')
+    mode_group.add_argument('--rag-embed-source-content', action='store_true', help='Embed unembedded source content')
+    mode_group.add_argument('--rag-graph-stats', action='store_true', help='Show knowledge graph statistics')
+    mode_group.add_argument('--rag-source-content-stats', action='store_true', help='Show source content statistics')
+    mode_group.add_argument('--rag-prune', action='store_true', help='Prune low-quality graph relationships')
 
     # Summarization options
     parser.add_argument(
@@ -168,6 +175,64 @@ def main():
         help='Also retry previously failed embeddings (for --embed-all)'
     )
 
+    # RAG graph rebuild options
+    parser.add_argument(
+        '--chunk-source',
+        choices=['source_content', 'digest'],
+        default='source_content',
+        help='Chunk source for semantic similarity (default: source_content)'
+    )
+    parser.add_argument(
+        '--batch-size',
+        type=int,
+        default=50,
+        help='Batch size for processing (default: 50)'
+    )
+    parser.add_argument(
+        '--clear-existing',
+        action='store_true',
+        help='Clear existing relationships before rebuilding (for --rag-rebuild-graph)'
+    )
+    parser.add_argument(
+        '--no-tag-relationships',
+        action='store_true',
+        help='Skip tag-based relationships (for --rag-rebuild-graph)'
+    )
+    parser.add_argument(
+        '--no-source-relationships',
+        action='store_true',
+        help='Skip source-based relationships (for --rag-rebuild-graph)'
+    )
+
+    # RAG backfill options
+    parser.add_argument(
+        '--refetch',
+        action='store_true',
+        help='Attempt to re-fetch content from original URLs (for --rag-backfill-source-content)'
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Show what would be done without making changes'
+    )
+
+    # RAG prune options
+    parser.add_argument(
+        '--prune-min-score',
+        type=float,
+        help='Remove relationships below this score (for --rag-prune)'
+    )
+    parser.add_argument(
+        '--prune-max-age',
+        type=int,
+        help='Remove relationships older than this many days (for --rag-prune)'
+    )
+    parser.add_argument(
+        '--prune-max-edges',
+        type=int,
+        help='Keep only top N edges per digest (for --rag-prune)'
+    )
+
     args = parser.parse_args()
 
     # Load environment variables from .env file if it exists
@@ -264,6 +329,56 @@ def main():
 
         elif args.embed_stats:
             return handler.handle_embed_stats()
+
+        # RAG knowledge graph commands
+        elif args.rag_rebuild_graph:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_rebuild_graph(
+                chunk_source=args.chunk_source,
+                limit=args.limit if args.limit != 10 else None,  # 10 is the default
+                batch_size=args.batch_size,
+                clear_existing=args.clear_existing,
+                include_tag_relationships=not args.no_tag_relationships,
+                include_source_relationships=not args.no_source_relationships,
+            )
+
+        elif args.rag_backfill_source_content:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_backfill_source_content(
+                limit=args.limit if args.limit != 10 else None,
+                dry_run=args.dry_run,
+                refetch=args.refetch,
+            )
+
+        elif args.rag_embed_source_content:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_embed_source_content(
+                limit=args.embed_limit,
+                include_failed=args.embed_retry_failed,
+            )
+
+        elif args.rag_graph_stats:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_graph_stats()
+
+        elif args.rag_source_content_stats:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_source_content_stats()
+
+        elif args.rag_prune:
+            from reconly_core.cli.rag_commands import RAGCommandHandler
+            rag_handler = RAGCommandHandler(database_url=args.db_url)
+            return rag_handler.handle_prune_relationships(
+                min_score=args.prune_min_score,
+                max_age_days=args.prune_max_age,
+                max_edges_per_digest=args.prune_max_edges,
+                dry_run=args.dry_run,
+            )
 
         # Normal URL processing mode
         elif args.url:

@@ -284,6 +284,59 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="RESILIENCE_VALIDATION_TIMEOUT",
         description="Default timeout for source validation test fetch",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # RAG Source Content Settings
+    # Configuration for source content storage and embedding behavior
+    # ─────────────────────────────────────────────────────────────────────────
+    "rag.source_content.enabled": SettingDef(
+        category="rag",
+        type=bool,
+        default=True,
+        editable=True,
+        env_var="RAG_SOURCE_CONTENT_ENABLED",
+        description="Whether to store source content for RAG embedding",
+    ),
+    "rag.source_content.max_length": SettingDef(
+        category="rag",
+        type=int,
+        default=100000,
+        editable=True,
+        env_var="RAG_SOURCE_CONTENT_MAX_LENGTH",
+        description="Maximum content length (characters) to store per source item",
+    ),
+    "rag.source_content.default_chunk_source": SettingDef(
+        category="rag",
+        type=str,
+        default="source_content",
+        editable=True,
+        env_var="RAG_DEFAULT_CHUNK_SOURCE",
+        description="Default chunk source for RAG queries: 'source_content' or 'digest'",
+    ),
+    "rag.graph.semantic_threshold": SettingDef(
+        category="rag",
+        type=float,
+        default=0.75,
+        editable=True,
+        env_var="RAG_GRAPH_SEMANTIC_THRESHOLD",
+        description="Minimum similarity score for semantic relationships (0.0-1.0)",
+    ),
+    "rag.graph.max_edges_per_digest": SettingDef(
+        category="rag",
+        type=int,
+        default=10,
+        editable=True,
+        env_var="RAG_GRAPH_MAX_EDGES",
+        description="Maximum number of relationship edges per digest",
+    ),
+    "rag.graph.auto_compute": SettingDef(
+        category="rag",
+        type=bool,
+        default=True,
+        editable=True,
+        env_var="RAG_GRAPH_AUTO_COMPUTE",
+        description="Automatically compute relationships when digests are created",
+    ),
 }
 
 

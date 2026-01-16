@@ -4,14 +4,15 @@ from sqlalchemy.orm import Session
 
 from reconly_api.dependencies import get_db
 from reconly_api.schemas.rag import (
-    RAGQueryRequest,
-    RAGQueryResponse,
-    RAGExportRequest,
-    RAGExportResponse,
+    ChunkSource as ChunkSourceSchema,
+    Citation as CitationSchema,
     ExportCitation,
     ExportFormat,
-    Citation as CitationSchema,
+    RAGExportRequest,
+    RAGExportResponse,
     RAGFilters as RAGFiltersSchema,
+    RAGQueryRequest,
+    RAGQueryResponse,
 )
 
 router = APIRouter()
@@ -46,10 +47,13 @@ def _convert_filters(filters: RAGFiltersSchema | None):
         return None
 
     from reconly_core.rag.rag_service import RAGFilters
+
     return RAGFilters(
         feed_id=filters.feed_id,
         source_id=filters.source_id,
         days=filters.days,
+        # Extract .value from enum to get the Literal string type
+        chunk_source=filters.chunk_source.value if filters.chunk_source else None,  # type: ignore[arg-type]
     )
 
 
@@ -74,6 +78,7 @@ async def rag_query(
     - `feed_id`: Only search digests from a specific feed
     - `source_id`: Only search digests from a specific source
     - `days`: Only search digests created within the last N days
+    - `chunk_source`: Which chunks to search - 'source_content' (default, cleaner) or 'digest'
 
     **Options:**
     - `max_chunks`: Control how many source chunks are retrieved (1-50)
@@ -84,6 +89,7 @@ async def rag_query(
     - `citations`: List of source citations with digest info
     - `grounded`: Whether the response is properly grounded in sources
     - `model_used`: The LLM model that generated the answer
+    - `chunk_source`: Which chunk source was used for the search
     """
     try:
         rag_service = _get_rag_service(db)
@@ -118,6 +124,7 @@ async def rag_query(
             search_took_ms=result.search_took_ms,
             generation_took_ms=result.generation_took_ms,
             total_took_ms=result.total_took_ms,
+            chunk_source=ChunkSourceSchema(result.chunk_source),
         )
 
     except ImportError as e:
@@ -246,6 +253,7 @@ async def rag_export(
             sources_count=unique_sources,
             chunks_count=result.chunks_retrieved,
             search_took_ms=result.search_took_ms,
+            chunk_source=ChunkSourceSchema(result.chunk_source),
         )
 
     except ImportError as e:

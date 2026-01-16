@@ -189,3 +189,326 @@ class TestTextChunk:
 
         assert chunk.extra_data["heading"] == "Introduction"
         assert chunk.extra_data["source"] == "summary"
+
+
+class TestChunkSourceContent:
+    """Test suite for ChunkingService.chunk_source_content()."""
+
+    @pytest.fixture
+    def chunker(self):
+        """Return configured chunking service."""
+        return ChunkingService(
+            target_tokens=100,
+            overlap_tokens=20,
+            min_tokens=10,
+            max_tokens=150,
+        )
+
+    @pytest.fixture
+    def sample_source_content(self, db_session):
+        """Create a sample SourceContent for testing."""
+        from reconly_core.database.models import Source, Digest, DigestSourceItem, SourceContent
+        from datetime import datetime
+        import hashlib
+
+        # Create source
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        # Create digest
+        digest = Digest(
+            url="https://test.example.com/digest/sample",
+            title="Test Digest",
+            content="Test digest content",
+            source_id=source.id,
+            source_type="manual",
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        # Create digest source item
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://test.example.com/article",
+            item_title="Test Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        # Create source content
+        content = """
+        Artificial intelligence is transforming many industries.
+
+        Machine learning algorithms are becoming more sophisticated every day.
+        They can now process natural language, recognize images, and make predictions
+        with impressive accuracy.
+
+        Deep learning, a subset of machine learning, uses neural networks with
+        multiple layers to learn complex patterns.
+        """.strip()
+
+        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=content,
+            content_hash=content_hash,
+            content_length=len(content),
+            fetched_at=datetime.utcnow(),
+        )
+        db_session.add(source_content)
+        db_session.commit()
+        db_session.refresh(source_content)
+
+        return source_content
+
+    def test_chunk_source_content_basic(self, chunker, sample_source_content):
+        """Test chunking source content with normal content."""
+        chunks = chunker.chunk_source_content(sample_source_content)
+
+        # Verify chunks were created
+        assert len(chunks) > 0
+
+        # Verify all chunks have correct structure
+        for i, chunk in enumerate(chunks):
+            assert isinstance(chunk, TextChunk)
+            assert chunk.chunk_index == i
+            assert len(chunk.text) > 0
+            assert chunk.token_count > 0
+            assert chunk.end_char > chunk.start_char
+
+            # Verify extra_data contains source content metadata
+            assert 'source' in chunk.extra_data
+            assert chunk.extra_data['source'] == 'source_content'
+            assert 'source_content_id' in chunk.extra_data
+            assert chunk.extra_data['source_content_id'] == sample_source_content.id
+            assert 'digest_source_item_id' in chunk.extra_data
+            assert chunk.extra_data['digest_source_item_id'] == sample_source_content.digest_source_item_id
+
+    def test_chunk_source_content_empty(self, chunker, db_session):
+        """Test chunking source content with empty content."""
+        from reconly_core.database.models import Source, Digest, DigestSourceItem, SourceContent
+        from datetime import datetime
+        import hashlib
+
+        # Create source and digest
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            url=f"https://test.example.com/digest/{id(source)}",
+            title="Test Digest",
+            content="Test digest content",
+            source_id=source.id,
+            source_type="manual",
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://test.example.com/empty",
+            item_title="Empty Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        # Create source content with empty content
+        content = ""
+        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=content,
+            content_hash=content_hash,
+            content_length=0,
+            fetched_at=datetime.utcnow(),
+        )
+        db_session.add(source_content)
+        db_session.commit()
+
+        # Test chunking
+        chunks = chunker.chunk_source_content(source_content)
+
+        # Should return empty list
+        assert chunks == []
+
+    def test_chunk_source_content_whitespace_only(self, chunker, db_session):
+        """Test chunking source content with whitespace-only content."""
+        from reconly_core.database.models import Source, Digest, DigestSourceItem, SourceContent
+        from datetime import datetime
+        import hashlib
+
+        # Create source and digest
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            url=f"https://test.example.com/digest/{id(source)}",
+            title="Test Digest",
+            content="Test digest content",
+            source_id=source.id,
+            source_type="manual",
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://test.example.com/whitespace",
+            item_title="Whitespace Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        # Create source content with whitespace only
+        content = "   \n\n   \t   "
+        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=content,
+            content_hash=content_hash,
+            content_length=len(content),
+            fetched_at=datetime.utcnow(),
+        )
+        db_session.add(source_content)
+        db_session.commit()
+
+        # Test chunking
+        chunks = chunker.chunk_source_content(source_content)
+
+        # Should return empty list
+        assert chunks == []
+
+    def test_chunk_source_content_none(self, chunker, db_session):
+        """Test chunking source content with None content."""
+        from reconly_core.database.models import Source, Digest, DigestSourceItem, SourceContent
+        from datetime import datetime
+
+        # Create source and digest
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            url=f"https://test.example.com/digest/{id(source)}",
+            title="Test Digest",
+            content="Test digest content",
+            source_id=source.id,
+            source_type="manual",
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://test.example.com/none",
+            item_title="None Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        # Create source content with empty string (None would violate NOT NULL)
+        # We test the None case by setting content to empty string then patching it
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content="",  # Use empty string for DB, will patch to None for test
+            content_hash="none",
+            content_length=0,
+            fetched_at=datetime.utcnow(),
+        )
+        db_session.add(source_content)
+        db_session.commit()
+
+        # Patch content to None to test None handling
+        source_content.content = None
+
+        # Test chunking
+        chunks = chunker.chunk_source_content(source_content)
+
+        # Should return empty list
+        assert chunks == []
+
+    def test_chunk_source_content_preserves_metadata(self, chunker, sample_source_content):
+        """Test that all chunks contain the correct metadata."""
+        chunks = chunker.chunk_source_content(sample_source_content)
+
+        # Verify every chunk has the metadata
+        for chunk in chunks:
+            assert chunk.extra_data['source_content_id'] == sample_source_content.id
+            assert chunk.extra_data['digest_source_item_id'] == sample_source_content.digest_source_item_id
+            assert chunk.extra_data['source'] == 'source_content'
+
+    def test_chunk_source_content_long_content(self, chunker, db_session):
+        """Test chunking very long source content."""
+        from reconly_core.database.models import Source, Digest, DigestSourceItem, SourceContent
+        from datetime import datetime
+        import hashlib
+
+        # Create source and digest
+        source = Source(name="Test Source", type="manual", url="https://test.example.com", config={})
+        db_session.add(source)
+        db_session.flush()
+
+        digest = Digest(
+            url=f"https://test.example.com/digest/{id(source)}",
+            title="Test Digest",
+            content="Test digest content",
+            source_id=source.id,
+            source_type="manual",
+        )
+        db_session.add(digest)
+        db_session.flush()
+
+        digest_source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url="https://test.example.com/long",
+            item_title="Long Article",
+            item_published_at=datetime.utcnow(),
+        )
+        db_session.add(digest_source_item)
+        db_session.flush()
+
+        # Create very long content
+        content = "\n\n".join([
+            f"This is paragraph number {i}. It contains important information about topic {i}."
+            for i in range(100)
+        ])
+        content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+
+        source_content = SourceContent(
+            digest_source_item_id=digest_source_item.id,
+            content=content,
+            content_hash=content_hash,
+            content_length=len(content),
+            fetched_at=datetime.utcnow(),
+        )
+        db_session.add(source_content)
+        db_session.commit()
+
+        # Test chunking
+        chunks = chunker.chunk_source_content(source_content)
+
+        # Should create multiple chunks
+        assert len(chunks) > 1
+
+        # Verify indices are sequential
+        indices = [c.chunk_index for c in chunks]
+        assert indices == list(range(len(chunks)))
+
+        # Verify all chunks have metadata
+        for chunk in chunks:
+            assert chunk.extra_data['source_content_id'] == source_content.id
