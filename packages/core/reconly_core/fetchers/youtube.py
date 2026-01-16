@@ -3,15 +3,17 @@
 Supports both individual video URLs and channel URLs. When given a channel URL,
 fetches transcripts for recent videos from the channel's RSS feed.
 """
-from youtube_transcript_api import YouTubeTranscriptApi
-from typing import Dict, List, Optional
-from datetime import datetime
-import re
 import logging
+import re
+import time
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 import feedparser
 import requests
+from youtube_transcript_api import YouTubeTranscriptApi
 
-from reconly_core.fetchers.base import BaseFetcher
+from reconly_core.fetchers.base import BaseFetcher, ValidationResult
 from reconly_core.fetchers.registry import register_fetcher
 
 logger = logging.getLogger(__name__)
@@ -371,3 +373,254 @@ class YouTubeFetcher(BaseFetcher):
     def get_description(self) -> str:
         """Get a human-readable description of this fetcher."""
         return 'YouTube video and channel transcript fetcher'
+
+    def validate(
+        self,
+        url: str,
+        config: Optional[Dict[str, Any]] = None,
+        test_fetch: bool = False,
+        timeout: int = 10,
+    ) -> ValidationResult:
+        """
+        Validate YouTube URL and optionally test video/channel accessibility.
+
+        Validates:
+        - URL is a valid YouTube URL (youtube.com or youtu.be)
+        - URL matches expected video, channel, or playlist patterns
+        - Video/channel is accessible (if test_fetch=True)
+        - Transcript is available (if test_fetch=True and URL is a video)
+
+        Args:
+            url: YouTube URL to validate
+            config: Additional configuration (e.g., language preferences)
+            test_fetch: If True, verify video/channel accessibility
+            timeout: Timeout in seconds for test fetch
+
+        Returns:
+            ValidationResult with:
+            - valid: True if URL is a valid YouTube URL
+            - errors: List of error messages
+            - warnings: List of warning messages
+            - url_type: 'video', 'channel', or 'playlist'
+            - test_item_count: Number of videos found (for channels, if test_fetch=True)
+        """
+        # Run base validation first
+        result = super().validate(url, config, test_fetch, timeout)
+        if not result.valid:
+            return result
+
+        # Check if URL is a YouTube URL
+        if not self.can_handle(url):
+            result.add_error(
+                "URL is not a valid YouTube URL. "
+                "Expected youtube.com or youtu.be domain."
+            )
+            return result
+
+        # Detect URL type
+        url_type = self._detect_url_type(url)
+        result.url_type = url_type
+
+        if url_type == 'video':
+            video_id = self.extract_video_id(url)
+            if not video_id:
+                result.add_error(
+                    "Could not extract video ID from URL. "
+                    "Please check the URL format."
+                )
+                return result
+
+            # Test fetch for video
+            if test_fetch:
+                result = self._validate_video(url, video_id, config, timeout, result)
+
+        elif url_type == 'channel':
+            # Warn that channel ID extraction may require network call
+            result.add_warning(
+                "Channel URL detected. Channel ID extraction may require "
+                "additional network requests for @username or /c/ URLs."
+            )
+
+            if test_fetch:
+                result = self._validate_channel(url, config, timeout, result)
+
+        elif url_type == 'playlist':
+            result.add_warning(
+                "Playlist URL detected. Playlist support is limited."
+            )
+
+        else:
+            result.add_error(
+                "Could not determine YouTube URL type. "
+                "Expected video, channel, or playlist URL."
+            )
+
+        return result
+
+    def _detect_url_type(self, url: str) -> Optional[str]:
+        """
+        Detect the type of YouTube URL.
+
+        Args:
+            url: YouTube URL to check
+
+        Returns:
+            'video', 'channel', 'playlist', or None if unknown
+        """
+        # Check for video URL first
+        if self.extract_video_id(url):
+            return 'video'
+
+        # Check for channel URL
+        if self.is_channel_url(url):
+            return 'channel'
+
+        # Check for playlist URL
+        if 'playlist?list=' in url or '/playlist/' in url:
+            return 'playlist'
+
+        return None
+
+    def _validate_video(
+        self,
+        url: str,
+        video_id: str,
+        config: Optional[Dict[str, Any]],
+        timeout: int,
+        result: ValidationResult,
+    ) -> ValidationResult:
+        """
+        Validate a video URL by checking if transcript is available.
+
+        Args:
+            url: Original video URL
+            video_id: Extracted video ID
+            config: Configuration with language preferences
+            timeout: Request timeout
+            result: ValidationResult to update
+
+        Returns:
+            Updated ValidationResult
+        """
+        try:
+            start_time = time.time()
+
+            # First check if video exists via oEmbed
+            oembed_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+            response = requests.get(oembed_url, timeout=timeout)
+
+            elapsed_ms = (time.time() - start_time) * 1000
+            result.response_time_ms = round(elapsed_ms, 2)
+
+            if response.status_code == 404:
+                result.add_error(
+                    f"Video not found (ID: {video_id}). "
+                    "The video may be private, deleted, or the URL is incorrect."
+                )
+                return result
+            elif response.status_code != 200:
+                result.add_warning(
+                    f"Could not verify video existence (HTTP {response.status_code})"
+                )
+
+            # Try to get transcript availability
+            try:
+                languages = config.get('languages', ['de', 'en']) if config else ['de', 'en']
+                api = YouTubeTranscriptApi()
+                transcript_list = api.list(video_id)
+
+                # Check if any requested language is available
+                available_languages = [t.language_code for t in transcript_list]
+                matching_langs = [lang for lang in languages if lang in available_languages]
+
+                if not matching_langs:
+                    result.add_warning(
+                        f"No transcript in requested languages ({', '.join(languages)}). "
+                        f"Available: {', '.join(available_languages[:5])}"
+                        + ("..." if len(available_languages) > 5 else "")
+                    )
+                else:
+                    result.test_item_count = 1  # One video validated
+
+            except Exception as e:
+                # Transcript check failed - this is a warning, not error
+                # Video may still be processable
+                error_msg = str(e)
+                if 'disabled' in error_msg.lower():
+                    result.add_warning(
+                        "Transcripts are disabled for this video."
+                    )
+                elif 'no transcript' in error_msg.lower():
+                    result.add_warning(
+                        "No transcripts available for this video."
+                    )
+                else:
+                    result.add_warning(
+                        f"Could not verify transcript availability: {error_msg}"
+                    )
+
+        except requests.Timeout:
+            result.add_error(
+                f"Request timed out after {timeout} seconds. "
+                "YouTube may be slow or unreachable."
+            )
+        except requests.RequestException as e:
+            result.add_error(f"Failed to validate video: {str(e)}")
+
+        return result
+
+    def _validate_channel(
+        self,
+        url: str,
+        config: Optional[Dict[str, Any]],
+        timeout: int,
+        result: ValidationResult,
+    ) -> ValidationResult:
+        """
+        Validate a channel URL by checking if channel exists and has videos.
+
+        Args:
+            url: Original channel URL
+            config: Configuration (not used)
+            timeout: Request timeout
+            result: ValidationResult to update
+
+        Returns:
+            Updated ValidationResult
+        """
+        try:
+            start_time = time.time()
+
+            # Try to extract channel ID
+            channel_id = self.extract_channel_id(url)
+
+            elapsed_ms = (time.time() - start_time) * 1000
+            result.response_time_ms = round(elapsed_ms, 2)
+
+            if not channel_id:
+                result.add_error(
+                    "Could not extract channel ID from URL. "
+                    "The channel may not exist or the URL format is not supported."
+                )
+                return result
+
+            # Try to fetch channel RSS feed
+            rss_url = YOUTUBE_CHANNEL_RSS_URL.format(channel_id=channel_id)
+            feed = feedparser.parse(rss_url)
+
+            if feed.bozo and not feed.entries:
+                result.add_warning(
+                    "Could not fetch channel feed. "
+                    "Channel may be empty or have restricted access."
+                )
+            elif feed.entries:
+                result.test_item_count = len(feed.entries)
+                if len(feed.entries) == 0:
+                    result.add_warning(
+                        "Channel exists but has no public videos."
+                    )
+
+        except Exception as e:
+            result.add_error(f"Failed to validate channel: {str(e)}")
+
+        return result

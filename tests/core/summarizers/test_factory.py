@@ -1,6 +1,7 @@
 """Tests for summarizer factory."""
 import pytest
 from unittest.mock import Mock, patch
+from reconly_core.resilience import ErrorCategory, RetryConfig, classify_error
 from reconly_core.summarizers.factory import (
     get_summarizer,
     SummarizerWithFallback,
@@ -11,6 +12,31 @@ from reconly_core.summarizers.anthropic import AnthropicSummarizer
 from reconly_core.summarizers.huggingface import HuggingFaceSummarizer
 from reconly_core.summarizers.ollama import OllamaSummarizer
 from reconly_core.summarizers.openai_provider import OpenAISummarizer
+
+
+def create_mock_summarizer(name: str, summarize_return=None, summarize_side_effect=None):
+    """Create a mock summarizer with all required methods for retry logic.
+
+    Args:
+        name: Provider name for the mock
+        summarize_return: Return value for summarize() method
+        summarize_side_effect: Side effect for summarize() method (for errors)
+
+    Returns:
+        Configured Mock object
+    """
+    mock = Mock()
+    mock.get_provider_name.return_value = name
+    mock.is_available.return_value = True
+    mock.get_retry_config.return_value = RetryConfig(max_attempts=1, base_delay=0.01)
+    mock.classify_error = classify_error  # Use real classify_error
+
+    if summarize_return is not None:
+        mock.summarize.return_value = summarize_return
+    if summarize_side_effect is not None:
+        mock.summarize.side_effect = summarize_side_effect
+
+    return mock
 
 
 class TestSummarizerFactory:
@@ -191,14 +217,11 @@ class TestSummarizerWithFallback:
     def test_fallback_primary_success(self, content_data):
         """WHEN primary summarizer succeeds
         THEN result is returned without fallback."""
-        mock_primary = Mock()
-        mock_primary.get_provider_name.return_value = 'primary'
-        mock_primary.summarize.return_value = {
-            **content_data,
-            'summary': 'Primary summary'
-        }
-
-        mock_fallback = Mock()
+        mock_primary = create_mock_summarizer(
+            'primary',
+            summarize_return={**content_data, 'summary': 'Primary summary'}
+        )
+        mock_fallback = create_mock_summarizer('fallback')
 
         wrapper = SummarizerWithFallback(mock_primary, [mock_fallback])
         result = wrapper.summarize(content_data)
@@ -211,16 +234,14 @@ class TestSummarizerWithFallback:
     def test_fallback_primary_fails(self, content_data):
         """WHEN primary summarizer fails
         THEN fallback is used."""
-        mock_primary = Mock()
-        mock_primary.get_provider_name.return_value = 'primary'
-        mock_primary.summarize.side_effect = Exception("Primary failed")
-
-        mock_fallback = Mock()
-        mock_fallback.get_provider_name.return_value = 'fallback'
-        mock_fallback.summarize.return_value = {
-            **content_data,
-            'summary': 'Fallback summary'
-        }
+        mock_primary = create_mock_summarizer(
+            'primary',
+            summarize_side_effect=Exception("Primary failed")
+        )
+        mock_fallback = create_mock_summarizer(
+            'fallback',
+            summarize_return={**content_data, 'summary': 'Fallback summary'}
+        )
 
         wrapper = SummarizerWithFallback(mock_primary, [mock_fallback])
         result = wrapper.summarize(content_data)
@@ -234,24 +255,25 @@ class TestSummarizerWithFallback:
     def test_fallback_all_fail(self, content_data):
         """WHEN all summarizers fail
         THEN exception is raised."""
-        mock_primary = Mock()
-        mock_primary.get_provider_name.return_value = 'primary'
-        mock_primary.summarize.side_effect = Exception("Primary failed")
-
-        mock_fallback1 = Mock()
-        mock_fallback1.get_provider_name.return_value = 'fallback1'
-        mock_fallback1.summarize.side_effect = Exception("Fallback1 failed")
-
-        mock_fallback2 = Mock()
-        mock_fallback2.get_provider_name.return_value = 'fallback2'
-        mock_fallback2.summarize.side_effect = Exception("Fallback2 failed")
+        mock_primary = create_mock_summarizer(
+            'primary',
+            summarize_side_effect=Exception("Primary failed")
+        )
+        mock_fallback1 = create_mock_summarizer(
+            'fallback1',
+            summarize_side_effect=Exception("Fallback1 failed")
+        )
+        mock_fallback2 = create_mock_summarizer(
+            'fallback2',
+            summarize_side_effect=Exception("Fallback2 failed")
+        )
 
         wrapper = SummarizerWithFallback(mock_primary, [mock_fallback1, mock_fallback2])
 
         with pytest.raises(Exception) as exc_info:
             wrapper.summarize(content_data)
 
-        assert "All summarization providers failed" in str(exc_info.value)
+        assert "All" in str(exc_info.value) and "providers failed" in str(exc_info.value)
         mock_primary.summarize.assert_called_once()
         mock_fallback1.summarize.assert_called_once()
         mock_fallback2.summarize.assert_called_once()
@@ -261,28 +283,29 @@ class TestSummarizerWithFallback:
         THEN they are tried in order."""
         call_order = []
 
-        mock_primary = Mock()
-        mock_primary.get_provider_name.return_value = 'primary'
-        mock_primary.summarize.side_effect = lambda *args, **kwargs: (
-            call_order.append('primary'),
-            Exception("Primary failed")
-        )[1]
+        def make_failing_side_effect(name):
+            def side_effect(*args, **kwargs):
+                call_order.append(name)
+                raise Exception(f"{name} failed")
+            return side_effect
 
-        mock_fallback1 = Mock()
-        mock_fallback1.get_provider_name.return_value = 'fallback1'
-        mock_fallback1.summarize.side_effect = lambda *args, **kwargs: (
-            call_order.append('fallback1'),
-            Exception("Fallback1 failed")
-        )[1]
+        def make_success_side_effect(name, result):
+            def side_effect(*args, **kwargs):
+                call_order.append(name)
+                return result
+            return side_effect
 
-        mock_fallback2 = Mock()
-        mock_fallback2.get_provider_name.return_value = 'fallback2'
+        mock_primary = create_mock_summarizer('primary')
+        mock_primary.summarize.side_effect = make_failing_side_effect('primary')
 
-        def fallback2_summarize(*args, **kwargs):
-            call_order.append('fallback2')
-            return {**content_data, 'summary': 'Success'}
+        mock_fallback1 = create_mock_summarizer('fallback1')
+        mock_fallback1.summarize.side_effect = make_failing_side_effect('fallback1')
 
-        mock_fallback2.summarize.side_effect = fallback2_summarize
+        mock_fallback2 = create_mock_summarizer('fallback2')
+        mock_fallback2.summarize.side_effect = make_success_side_effect(
+            'fallback2',
+            {**content_data, 'summary': 'Success'}
+        )
 
         wrapper = SummarizerWithFallback(mock_primary, [mock_fallback1, mock_fallback2])
         result = wrapper.summarize(content_data)

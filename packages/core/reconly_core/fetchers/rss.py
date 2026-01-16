@@ -1,11 +1,12 @@
 """RSS feed fetcher module."""
 import os
+import time
 import feedparser
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from typing import Any, Dict, List, Optional
 from dateutil import parser as date_parser
 
-from reconly_core.fetchers.base import BaseFetcher
+from reconly_core.fetchers.base import BaseFetcher, ValidationResult
 from reconly_core.fetchers.registry import register_fetcher
 
 
@@ -209,3 +210,110 @@ class RSSFetcher(BaseFetcher):
 
         url_lower = url.lower()
         return any(indicator in url_lower for indicator in rss_indicators)
+
+    def validate(
+        self,
+        url: str,
+        config: Optional[Dict[str, Any]] = None,
+        test_fetch: bool = False,
+        timeout: int = 10,
+    ) -> ValidationResult:
+        """
+        Validate RSS feed URL and optionally test feed accessibility.
+
+        Validates:
+        - Basic URL format (via base class)
+        - URL appears to be an RSS/Atom feed
+        - Feed is parseable (if test_fetch=True)
+        - Feed contains valid entries (if test_fetch=True)
+
+        Args:
+            url: RSS feed URL to validate
+            config: Additional configuration (not used for RSS)
+            test_fetch: If True, attempt to parse the feed
+            timeout: Timeout in seconds for test fetch
+
+        Returns:
+            ValidationResult with:
+            - valid: True if feed URL is valid
+            - errors: List of error messages
+            - warnings: List of warning messages (e.g., feed format issues)
+            - test_item_count: Number of entries found (if test_fetch=True)
+            - response_time_ms: Parse time in milliseconds (if test_fetch=True)
+            - url_type: 'rss' or 'atom' (if test_fetch=True and detected)
+        """
+        # Run base validation first
+        result = super().validate(url, config, test_fetch, timeout)
+        if not result.valid:
+            return result
+
+        # Check if URL looks like an RSS feed
+        if not self.is_rss_url(url):
+            result.add_warning(
+                "URL doesn't appear to be an RSS/Atom feed "
+                "(missing /feed, /rss, .xml, etc.). "
+                "Feed may still work if it returns valid RSS/Atom content."
+            )
+
+        # If test_fetch is enabled, try to parse the feed
+        if test_fetch:
+            try:
+                start_time = time.time()
+
+                # feedparser doesn't have native timeout, but we can set request_headers
+                # Use a simple timeout by setting agent timeout
+                feed = feedparser.parse(
+                    url,
+                    request_headers={'User-Agent': 'Reconly/1.0'},
+                )
+
+                elapsed_ms = (time.time() - start_time) * 1000
+                result.response_time_ms = round(elapsed_ms, 2)
+
+                # Check for parse errors
+                if feed.bozo:
+                    # bozo_exception indicates parsing issues
+                    exception_msg = str(feed.bozo_exception) if feed.bozo_exception else "Unknown error"
+
+                    # Some bozo exceptions are warnings (still parseable)
+                    if feed.entries:
+                        result.add_warning(
+                            f"Feed parsed with warnings: {exception_msg}"
+                        )
+                    else:
+                        result.add_error(
+                            f"Failed to parse RSS feed: {exception_msg}"
+                        )
+                        return result
+
+                # Check for entries
+                if not feed.entries:
+                    result.add_warning(
+                        "Feed contains no entries. "
+                        "This may be normal for a new feed."
+                    )
+                else:
+                    result.test_item_count = len(feed.entries)
+
+                # Detect feed type
+                feed_type = feed.version if hasattr(feed, 'version') else None
+                if feed_type:
+                    if 'atom' in feed_type.lower():
+                        result.url_type = 'atom'
+                    elif 'rss' in feed_type.lower():
+                        result.url_type = 'rss'
+                    else:
+                        result.url_type = feed_type
+
+                    # Warn about deprecated versions
+                    deprecated_versions = ['rss090', 'rss091', 'rss10']
+                    if any(v in feed_type.lower() for v in deprecated_versions):
+                        result.add_warning(
+                            f"Feed uses deprecated format ({feed_type}). "
+                            "Consider using RSS 2.0 or Atom 1.0."
+                        )
+
+            except Exception as e:
+                result.add_error(f"Failed to fetch RSS feed: {str(e)}")
+
+        return result

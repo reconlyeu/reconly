@@ -27,6 +27,15 @@ class SettingsResponseV2(BaseModel):
     export: dict[str, SettingValue] = Field(
         default_factory=dict, description="Export settings"
     )
+    embedding: dict[str, SettingValue] = Field(
+        default_factory=dict, description="RAG embedding settings"
+    )
+    agent: dict[str, SettingValue] = Field(
+        default_factory=dict, description="Agent research settings"
+    )
+    resilience: dict[str, SettingValue] = Field(
+        default_factory=dict, description="Circuit breaker, retry, and validation settings"
+    )
 
 
 class SettingUpdateRequest(BaseModel):

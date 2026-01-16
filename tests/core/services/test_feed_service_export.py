@@ -135,7 +135,9 @@ class TestExportIfConfigured:
 
         with patch('reconly_core.exporters.registry.is_exporter_registered', return_value=True):
             with patch('reconly_core.exporters.registry.get_exporter_class', return_value=mock_exporter_class):
-                service._export_if_configured(feed, feed_run, db_session)
+                with patch('os.path.exists', return_value=True):
+                    with patch('os.access', return_value=True):
+                        service._export_if_configured(feed, feed_run, db_session)
 
         # Verify exporter was called
         mock_exporter.export_to_path.assert_called_once()
@@ -181,7 +183,9 @@ class TestExportIfConfigured:
 
         with patch('reconly_core.exporters.registry.is_exporter_registered', return_value=True):
             with patch('reconly_core.exporters.registry.get_exporter_class', return_value=mock_exporter_class):
-                service._export_if_configured(feed, feed_run, db_session)
+                with patch('os.path.exists', return_value=True):
+                    with patch('os.access', return_value=True):
+                        service._export_if_configured(feed, feed_run, db_session)
 
         # Verify custom path was used
         call_args = mock_exporter.export_to_path.call_args
@@ -345,7 +349,9 @@ class TestExportIfConfigured:
 
         with patch('reconly_core.exporters.registry.is_exporter_registered', return_value=True):
             with patch('reconly_core.exporters.registry.get_exporter_class', side_effect=get_mock_class):
-                service._export_if_configured(feed, feed_run, db_session)
+                with patch('os.path.exists', return_value=True):
+                    with patch('os.access', return_value=True):
+                        service._export_if_configured(feed, feed_run, db_session)
 
         # Both exporters should have been called
         assert len(call_order) == 2

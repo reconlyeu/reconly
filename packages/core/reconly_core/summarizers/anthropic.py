@@ -13,12 +13,21 @@ from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInf
 class AnthropicSummarizer(BaseSummarizer):
     """Summarizes content using Claude AI via Anthropic API."""
 
-    def __init__(self, api_key: str = None):
+    # Default timeout for cloud API calls
+    DEFAULT_TIMEOUT = 120  # 2 minutes
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        timeout: Optional[int] = None,
+    ):
         """
         Initialize the Anthropic summarizer.
 
         Args:
             api_key: Anthropic API key (if not provided, reads from ANTHROPIC_API_KEY env var)
+            timeout: Request timeout in seconds (default: 120s)
+                     Can be configured via PROVIDER_TIMEOUT_ANTHROPIC env var.
         """
         super().__init__(api_key)
         self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
@@ -27,7 +36,15 @@ class AnthropicSummarizer(BaseSummarizer):
                 "Anthropic API key required. Set ANTHROPIC_API_KEY environment variable "
                 "or pass api_key parameter."
             )
-        self.client = Anthropic(api_key=self.api_key)
+
+        # Timeout priority: param > env var > default
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            env_timeout = os.getenv('PROVIDER_TIMEOUT_ANTHROPIC')
+            self.timeout = int(env_timeout) if env_timeout else self.DEFAULT_TIMEOUT
+
+        self.client = Anthropic(api_key=self.api_key, timeout=float(self.timeout))
         self.model = "claude-opus-4-5-20251101"
 
     def get_provider_name(self) -> str:

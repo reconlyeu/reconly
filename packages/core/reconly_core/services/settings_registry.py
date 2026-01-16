@@ -231,6 +231,59 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="AGENT_DEFAULT_MAX_ITERATIONS",
         description="Default maximum iterations for agent research loops",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Resilience Settings
+    # Configuration for circuit breakers, retry logic, and validation
+    # ─────────────────────────────────────────────────────────────────────────
+    "resilience.circuit_breaker.failure_threshold": SettingDef(
+        category="resilience",
+        type=int,
+        default=5,
+        editable=True,
+        env_var="RESILIENCE_CB_FAILURE_THRESHOLD",
+        description="Number of consecutive failures before circuit opens",
+    ),
+    "resilience.circuit_breaker.recovery_timeout": SettingDef(
+        category="resilience",
+        type=int,
+        default=300,
+        editable=True,
+        env_var="RESILIENCE_CB_RECOVERY_TIMEOUT",
+        description="Seconds to wait before attempting recovery (circuit half-open)",
+    ),
+    "resilience.retry.max_attempts": SettingDef(
+        category="resilience",
+        type=int,
+        default=3,
+        editable=True,
+        env_var="RESILIENCE_RETRY_MAX_ATTEMPTS",
+        description="Maximum number of retry attempts for transient errors",
+    ),
+    "resilience.retry.base_delay": SettingDef(
+        category="resilience",
+        type=float,
+        default=1.0,
+        editable=True,
+        env_var="RESILIENCE_RETRY_BASE_DELAY",
+        description="Initial delay between retries in seconds",
+    ),
+    "resilience.retry.max_delay": SettingDef(
+        category="resilience",
+        type=float,
+        default=60.0,
+        editable=True,
+        env_var="RESILIENCE_RETRY_MAX_DELAY",
+        description="Maximum delay between retries in seconds",
+    ),
+    "resilience.validation.default_timeout": SettingDef(
+        category="resilience",
+        type=int,
+        default=10,
+        editable=True,
+        env_var="RESILIENCE_VALIDATION_TIMEOUT",
+        description="Default timeout for source validation test fetch",
+    ),
 }
 
 

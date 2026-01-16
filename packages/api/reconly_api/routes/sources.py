@@ -1,5 +1,6 @@
 """Source management API routes."""
 import os
+import time
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Request
@@ -11,6 +12,7 @@ from reconly_core.email.oauth import create_oauth_state, get_redirect_uri
 from reconly_core.email.gmail import generate_gmail_auth_url
 from reconly_core.email.outlook import generate_outlook_auth_url
 from reconly_core.logging import get_logger
+from reconly_core.fetchers import get_fetcher, detect_fetcher, is_fetcher_registered
 
 from reconly_api.dependencies import get_db, limiter
 from reconly_api.schemas.sources import (
@@ -19,8 +21,12 @@ from reconly_api.schemas.sources import (
     SourceCreate,
     SourceUpdate,
     SourceResponse,
+    SourceHealthResponse,
+    SourcesHealthSummary,
+    ValidationResponse,
 )
 from reconly_api.schemas.batch import BatchDeleteRequest, BatchDeleteResponse
+from reconly_core.resilience import ValidationConfig
 
 logger = get_logger(__name__)
 
@@ -131,6 +137,123 @@ def _build_imap_source(
     )
 
 
+def _validate_source_url(
+    url: str,
+    source_type: str,
+    config: Optional[dict] = None,
+    test_fetch: bool = False,
+    timeout: int = 10,
+) -> ValidationResponse:
+    """Validate a source URL using the appropriate fetcher.
+
+    Args:
+        url: Source URL to validate
+        source_type: Source type (e.g., 'rss', 'youtube', 'website')
+        config: Additional configuration for the fetcher
+        test_fetch: If True, attempt to fetch content to verify accessibility
+        timeout: Timeout in seconds for test fetch operations
+
+    Returns:
+        ValidationResponse with validation results
+    """
+    errors = []
+    warnings = []
+    test_item_count = None
+    response_time_ms = None
+    url_type = None
+
+    # Check if we can get a fetcher for this source type
+    if not is_fetcher_registered(source_type):
+        # Try to auto-detect fetcher from URL
+        fetcher = detect_fetcher(url)
+        if fetcher:
+            url_type = fetcher.get_source_type()
+        else:
+            errors.append(f"Unknown source type: {source_type}")
+            return ValidationResponse(
+                valid=False,
+                errors=errors,
+                warnings=warnings,
+            )
+    else:
+        fetcher = get_fetcher(source_type)
+        url_type = source_type
+
+    # Run fetcher's validation
+    start_time = time.time()
+    try:
+        result = fetcher.validate(url, config=config, test_fetch=test_fetch, timeout=timeout)
+        elapsed = time.time() - start_time
+        response_time_ms = elapsed * 1000
+
+        errors.extend(result.errors)
+        warnings.extend(result.warnings)
+
+        if result.test_item_count is not None:
+            test_item_count = result.test_item_count
+        if result.url_type:
+            url_type = result.url_type
+
+    except Exception as e:
+        elapsed = time.time() - start_time
+        response_time_ms = elapsed * 1000
+        errors.append(f"Validation failed: {str(e)}")
+        logger.exception(
+            "Source validation error",
+            url=url,
+            source_type=source_type,
+        )
+
+    return ValidationResponse(
+        valid=len(errors) == 0,
+        errors=errors,
+        warnings=warnings,
+        test_item_count=test_item_count,
+        response_time_ms=response_time_ms,
+        url_type=url_type,
+    )
+
+
+@router.post("/validate", response_model=ValidationResponse)
+@limiter.limit("30/minute")
+async def validate_source(
+    request: Request,
+    source: SourceCreate,
+    test_fetch: bool = False,
+    timeout: int = 10,
+):
+    """Validate a source URL without creating it.
+
+    This endpoint performs validation checks on the source configuration
+    without persisting it to the database.
+
+    Args:
+        source: Source creation request (only url and type are required)
+        test_fetch: If true, attempt to fetch content to verify accessibility
+        timeout: Timeout in seconds for test fetch (default: 10, max: 30)
+
+    Returns:
+        ValidationResponse with validation results including:
+        - valid: Whether the source configuration is valid
+        - errors: List of validation errors
+        - warnings: List of validation warnings
+        - test_item_count: Number of items found (if test_fetch=true)
+        - response_time_ms: Response time in milliseconds
+        - url_type: Detected URL type
+    """
+    # Enforce max timeout from config
+    config = ValidationConfig.from_env()
+    timeout = min(timeout, config.default_timeout, 30)  # Respect config and hard cap
+
+    return _validate_source_url(
+        url=source.url,
+        source_type=source.type,
+        config=source.config,
+        test_fetch=test_fetch,
+        timeout=timeout,
+    )
+
+
 @router.get("", response_model=List[SourceResponse])
 async def list_sources(
     type: Optional[str] = None,
@@ -154,15 +277,44 @@ async def list_sources(
 async def create_source(
     request: Request,
     source: SourceCreate,
+    validate: bool = False,
+    test_fetch: bool = False,
+    timeout: int = 10,
     db: Session = Depends(get_db)
 ):
     """Create a new source.
 
     Rate limited to 10 requests per minute per IP.
 
+    Args:
+        source: Source creation request
+        validate: If true, validate the source URL before saving
+        test_fetch: If true (and validate=true), attempt to fetch content
+        timeout: Timeout in seconds for test fetch (default: 10, max: 30)
+
     Note: For IMAP sources with OAuth providers (gmail, outlook), use the
     POST /api/v1/sources/imap endpoint instead, which handles the OAuth flow.
     """
+    # Validate if requested
+    if validate:
+        timeout = min(timeout, 30)  # Hard cap at 30 seconds
+        validation_result = _validate_source_url(
+            url=source.url,
+            source_type=source.type,
+            config=source.config,
+            test_fetch=test_fetch,
+            timeout=timeout,
+        )
+        if not validation_result.valid:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "Source validation failed",
+                    "errors": validation_result.errors,
+                    "warnings": validation_result.warnings,
+                }
+            )
+
     db_source = Source(
         name=source.name,
         type=source.type,
@@ -328,13 +480,52 @@ async def get_source(
     return _source_to_response(source)
 
 
-@router.put("/{source_id}", response_model=SourceResponse)
-async def update_source(
+def _source_to_health_response(source: Source) -> SourceHealthResponse:
+    """Convert a Source model to a SourceHealthResponse."""
+    return SourceHealthResponse(
+        source_id=source.id,
+        source_name=source.name,
+        health_status=source.health_status,
+        consecutive_failures=source.consecutive_failures,
+        last_failure_at=source.last_failure_at,
+        last_success_at=source.last_success_at,
+        circuit_open_until=source.circuit_open_until,
+        is_circuit_open=source.is_circuit_open,
+    )
+
+
+@router.get("/{source_id}/health", response_model=SourceHealthResponse)
+async def get_source_health(
     source_id: int,
-    source_update: SourceUpdate,
     db: Session = Depends(get_db)
 ):
-    """Update a source."""
+    """Get health status for a specific source.
+
+    Returns detailed health information including:
+    - Current health status (healthy, degraded, unhealthy)
+    - Consecutive failure count
+    - Last success/failure timestamps
+    - Circuit breaker state
+
+    This endpoint is useful for monitoring and debugging source issues.
+    """
+    source = db.query(Source).filter(Source.id == source_id).first()
+
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    return _source_to_health_response(source)
+
+
+def _apply_source_update(
+    source_id: int,
+    source_update: SourceUpdate,
+    db: Session
+) -> SourceResponse:
+    """Apply updates to a source and return the response.
+
+    Shared logic for PUT and PATCH endpoints.
+    """
     db_source = db.query(Source).options(
         joinedload(Source.oauth_credentials)
     ).filter(Source.id == source_id).first()
@@ -349,6 +540,16 @@ async def update_source(
     db.commit()
     db.refresh(db_source)
     return _source_to_response(db_source)
+
+
+@router.put("/{source_id}", response_model=SourceResponse)
+async def update_source(
+    source_id: int,
+    source_update: SourceUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a source."""
+    return _apply_source_update(source_id, source_update, db)
 
 
 @router.delete("/{source_id}", status_code=204)
@@ -389,20 +590,7 @@ async def patch_source(
     db: Session = Depends(get_db)
 ):
     """Partial update a source (e.g., toggle enabled status)."""
-    db_source = db.query(Source).options(
-        joinedload(Source.oauth_credentials)
-    ).filter(Source.id == source_id).first()
-
-    if not db_source:
-        raise HTTPException(status_code=404, detail="Source not found")
-
-    update_data = source_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_source, key, value)
-
-    db.commit()
-    db.refresh(db_source)
-    return _source_to_response(db_source)
+    return _apply_source_update(source_id, source_update, db)
 
 
 @router.post("/batch-delete", response_model=BatchDeleteResponse)

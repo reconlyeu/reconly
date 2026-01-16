@@ -160,6 +160,18 @@ class Source(Base):
     filter_mode = Column(String(20), nullable=True, default="both")  # title_only, content, both
     use_regex = Column(Boolean, default=False, nullable=False)  # Interpret keywords as regex patterns
 
+    # Health tracking for circuit breaker pattern
+    # - consecutive_failures: Number of consecutive fetch failures
+    # - last_failure_at: When the most recent failure occurred
+    # - last_success_at: When the most recent success occurred
+    # - health_status: Current health state (healthy, degraded, unhealthy)
+    # - circuit_open_until: When circuit will attempt recovery (if open)
+    consecutive_failures = Column(Integer, default=0, nullable=False)
+    last_failure_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    health_status = Column(String(20), default='healthy', nullable=False, index=True)
+    circuit_open_until = Column(DateTime, nullable=True)
+
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -194,6 +206,12 @@ class Source(Base):
             'exclude_keywords': self.exclude_keywords,
             'filter_mode': self.filter_mode,
             'use_regex': self.use_regex,
+            # Health tracking fields
+            'consecutive_failures': self.consecutive_failures,
+            'last_failure_at': self.last_failure_at.isoformat() if self.last_failure_at else None,
+            'last_success_at': self.last_success_at.isoformat() if self.last_success_at else None,
+            'health_status': self.health_status,
+            'circuit_open_until': self.circuit_open_until.isoformat() if self.circuit_open_until else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -203,6 +221,57 @@ class Source(Base):
         else:
             result['oauth_credential_id'] = None
         return result
+
+    @property
+    def is_circuit_open(self) -> bool:
+        """Check if the circuit breaker is currently open for this source.
+
+        Returns:
+            True if circuit is open and recovery time hasn't passed yet.
+        """
+        if self.circuit_open_until is None:
+            return False
+        return datetime.utcnow() < self.circuit_open_until
+
+    def update_health_success(self) -> None:
+        """Update health status after a successful fetch.
+
+        Resets consecutive failures, updates last_success_at, sets health to 'healthy',
+        and clears circuit_open_until. This method is safe to call on newly created
+        Source objects that haven't been persisted yet.
+        """
+        self.consecutive_failures = 0
+        self.last_success_at = datetime.utcnow()
+        self.health_status = 'healthy'
+        self.circuit_open_until = None
+
+    def update_health_failure(self, recovery_timeout: int = 300) -> None:
+        """Update health status after a failed fetch.
+
+        Increments consecutive failures, updates last_failure_at, and transitions
+        health status based on failure count:
+        - 0-2 failures: healthy
+        - 3-4 failures: degraded
+        - 5+ failures: unhealthy (circuit opens)
+
+        Args:
+            recovery_timeout: Seconds until circuit breaker attempts recovery (default 300)
+        """
+        from datetime import timedelta
+
+        self.consecutive_failures = (self.consecutive_failures or 0) + 1
+        self.last_failure_at = datetime.utcnow()
+
+        # Determine health status based on consecutive failures
+        if self.consecutive_failures >= 5:
+            self.health_status = 'unhealthy'
+            self.circuit_open_until = datetime.utcnow() + timedelta(seconds=recovery_timeout)
+        elif self.consecutive_failures >= 3:
+            self.health_status = 'degraded'
+            self.circuit_open_until = None
+        else:
+            self.health_status = 'healthy'
+            self.circuit_open_until = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -834,6 +903,7 @@ class DigestSourceItem(Base):
     # Relationships
     digest = relationship('Digest', back_populates='source_items')
     source = relationship('Source')
+    source_content = relationship('SourceContent', back_populates='digest_source_item', uselist=False, cascade='all, delete-orphan')
 
     # Indexes
     __table_args__ = (
@@ -857,11 +927,147 @@ class DigestSourceItem(Base):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DIGEST CHUNK (RAG Knowledge System)
+# SOURCE CONTENT (RAG Knowledge System - Original Source Content)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class SourceContent(Base):
+    """
+    Stores the original fetched content from source items for RAG embedding.
+
+    Instead of embedding processed digest summaries (which contain template-based
+    formatting noise), we embed the raw source content for cleaner semantic search.
+    This provides better retrieval quality by avoiding template-induced similarity.
+
+    One-to-one relationship with DigestSourceItem - each source item that gets
+    processed can have its original content stored here for embedding.
+    """
+    __tablename__ = 'source_contents'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    digest_source_item_id = Column(
+        Integer,
+        ForeignKey('digest_source_items.id', ondelete='CASCADE'),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    # Original content from the source
+    content = Column(Text, nullable=False)
+    content_hash = Column(String(64), nullable=False, index=True)  # SHA-256 for deduplication
+    content_length = Column(Integer, nullable=False)  # Character count
+
+    # Fetch metadata
+    fetched_at = Column(DateTime, nullable=False)
+
+    # Embedding status tracking (same pattern as Digest.embedding_status)
+    # - NULL: Never attempted
+    # - 'pending': Embedding in progress
+    # - 'completed': Successfully embedded
+    # - 'failed': Embedding failed (error stored in embedding_error)
+    embedding_status = Column(String(20), nullable=True, index=True)
+    embedding_error = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    digest_source_item = relationship('DigestSourceItem', back_populates='source_content')
+    chunks = relationship(
+        'SourceContentChunk',
+        back_populates='source_content',
+        cascade='all, delete-orphan',
+        order_by='SourceContentChunk.chunk_index'
+    )
+
+    def __repr__(self):
+        return f"<SourceContent(id={self.id}, digest_source_item_id={self.digest_source_item_id}, status='{self.embedding_status}')>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'digest_source_item_id': self.digest_source_item_id,
+            'content_hash': self.content_hash,
+            'content_length': self.content_length,
+            'fetched_at': self.fetched_at.isoformat() if self.fetched_at else None,
+            'embedding_status': self.embedding_status,
+            'embedding_error': self.embedding_error,
+            'chunk_count': len(self.chunks) if self.chunks else 0,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SOURCE CONTENT CHUNK (RAG Knowledge System - Chunked Source Content)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Vector dimension matching BGE-M3 default
 VECTOR_DIMENSION = 1024
+
+
+class SourceContentChunk(Base):
+    """
+    Stores embedded text chunks from original source content for RAG retrieval.
+
+    Similar to DigestChunk but stores embeddings of the original source content
+    rather than the processed digest summary. This provides cleaner semantic
+    search results without template-based formatting noise.
+
+    Uses pgvector's Vector type for efficient vector storage and
+    similarity search in PostgreSQL.
+    """
+    __tablename__ = 'source_content_chunks'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_content_id = Column(
+        Integer,
+        ForeignKey('source_contents.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True
+    )
+    chunk_index = Column(Integer, nullable=False)  # Order within source content (0-indexed)
+    text = Column(Text, nullable=False)
+
+    # Vector embedding using pgvector for efficient similarity search
+    embedding = Column(Vector(VECTOR_DIMENSION), nullable=True)
+
+    token_count = Column(Integer, nullable=False)
+    start_char = Column(Integer, nullable=False)  # Character offset in original content
+    end_char = Column(Integer, nullable=False)
+    extra_data = Column(JSON, nullable=True)  # {"heading": "...", "section": "..."}
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    source_content = relationship('SourceContent', back_populates='chunks')
+
+    # Indexes - composite index for efficient chunk lookup, HNSW index for vector search
+    __table_args__ = (
+        Index('ix_source_content_chunks_content_chunk', 'source_content_id', 'chunk_index'),
+    )
+
+    def __repr__(self):
+        return f"<SourceContentChunk(id={self.id}, source_content_id={self.source_content_id}, chunk_index={self.chunk_index})>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'source_content_id': self.source_content_id,
+            'chunk_index': self.chunk_index,
+            'text': self.text,
+            'token_count': self.token_count,
+            'start_char': self.start_char,
+            'end_char': self.end_char,
+            'extra_data': self.extra_data,
+            'has_embedding': self.embedding is not None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# DIGEST CHUNK (RAG Knowledge System)
+# ═══════════════════════════════════════════════════════════════════════════════
 
 
 class DigestChunk(Base):

@@ -35,7 +35,11 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
 
         assert summarizer.api_key == 'test-api-key'
         assert summarizer.model.startswith('claude-')  # Valid Anthropic model
-        mock_anthropic_class.assert_called_once_with(api_key='test-api-key')
+        # Verify client was created with api_key and timeout
+        mock_anthropic_class.assert_called_once_with(
+            api_key='test-api-key',
+            timeout=120.0  # Default timeout
+        )
 
     @patch('reconly_core.summarizers.anthropic.Anthropic')
     def test_initialization_with_explicit_key(self, mock_anthropic_class):
@@ -44,7 +48,10 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         summarizer = AnthropicSummarizer(api_key='explicit-key')
 
         assert summarizer.api_key == 'explicit-key'
-        mock_anthropic_class.assert_called_once_with(api_key='explicit-key')
+        mock_anthropic_class.assert_called_once_with(
+            api_key='explicit-key',
+            timeout=120.0  # Default timeout
+        )
 
     @patch.dict('os.environ', {}, clear=True)
     def test_initialization_missing_key(self):

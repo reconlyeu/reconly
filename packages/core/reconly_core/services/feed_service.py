@@ -32,6 +32,7 @@ from reconly_core.tracking import FeedTracker
 from reconly_core.logging import get_logger, generate_trace_id, clear_trace_id
 from reconly_core.services.email_service import EmailService
 from reconly_core.services.content_filter import ContentFilter
+from reconly_core.resilience import SourceCircuitBreaker, CircuitBreakerConfig
 
 logger = get_logger(__name__)
 
@@ -42,6 +43,8 @@ ERROR_TYPE_PARSE = "ParseError"
 ERROR_TYPE_SUMMARIZE = "SummarizeError"
 ERROR_TYPE_SAVE = "SaveError"
 ERROR_TYPE_TIMEOUT = "TimeoutError"
+ERROR_TYPE_CIRCUIT_OPEN = "CircuitOpenError"
+ERROR_TYPE_EXPORT = "ExportError"
 
 
 def _detect_error_type(error_msg: str, default_type: str = ERROR_TYPE_FETCH) -> str:
@@ -257,6 +260,7 @@ class FeedService:
         self._session: Optional[Session] = None
         self._engine = None
         self.tracker = FeedTracker()
+        self.circuit_breaker = SourceCircuitBreaker(CircuitBreakerConfig.from_env())
 
     def _get_session(self) -> Session:
         """Get or create database session."""
@@ -400,6 +404,7 @@ class FeedService:
         # Track metrics
         sources_processed = 0
         sources_failed = 0
+        sources_skipped = 0  # Skipped due to circuit breaker
         items_processed = 0
         total_tokens_in = 0
         total_tokens_out = 0
@@ -419,6 +424,7 @@ class FeedService:
             )
             sources_processed = all_items_result.get("sources_processed", 0)
             sources_failed = all_items_result.get("sources_failed", 0)
+            sources_skipped = all_items_result.get("sources_skipped", 0)
             items_processed = all_items_result.get("items_count", 0)
             total_tokens_in = all_items_result.get("tokens_in", 0)
             total_tokens_out = all_items_result.get("tokens_out", 0)
@@ -431,6 +437,29 @@ class FeedService:
                 try:
                     if options.show_progress:
                         print(f"📌 [{idx}/{len(sources)}] {source.name}")
+
+                    # Check circuit breaker before processing
+                    should_skip, skip_reason = self.circuit_breaker.should_skip(source)
+                    if should_skip:
+                        sources_skipped += 1
+                        logger.info(
+                            "Source skipped due to circuit breaker",
+                            source_id=source.id,
+                            source_name=source.name,
+                            reason=skip_reason,
+                            health_status=source.health_status,
+                        )
+                        structured_errors.append({
+                            "source_id": source.id,
+                            "source_name": source.name,
+                            "error_type": ERROR_TYPE_CIRCUIT_OPEN,
+                            "message": skip_reason,
+                            "timestamp": datetime.utcnow().isoformat(),
+                        })
+
+                        if options.show_progress:
+                            print(f"   ⏸️ Skipped (circuit open): {source.health_status}")
+                        continue
 
                     result = self._process_source(
                         source=source,
@@ -447,6 +476,9 @@ class FeedService:
                         total_tokens_in += result.get("tokens_in", 0)
                         total_tokens_out += result.get("tokens_out", 0)
                         total_cost += result.get("cost", 0.0)
+
+                        # Record success with circuit breaker
+                        self.circuit_breaker.record_success(source, session)
 
                         logger.info(
                             "Source processed successfully",
@@ -469,6 +501,9 @@ class FeedService:
                             "message": error_msg,
                             "timestamp": datetime.utcnow().isoformat(),
                         })
+
+                        # Record failure with circuit breaker
+                        self.circuit_breaker.record_failure(source, session, Exception(error_msg))
 
                         logger.error(
                             "Source processing failed",
@@ -497,6 +532,9 @@ class FeedService:
                         "message": error_msg,
                         "timestamp": datetime.utcnow().isoformat(),
                     })
+
+                    # Record failure with circuit breaker
+                    self.circuit_breaker.record_failure(source, session, e)
 
                     logger.exception(
                         "Unexpected error processing source",
@@ -545,6 +583,7 @@ class FeedService:
             status=feed_run.status,
             sources_processed=sources_processed,
             sources_failed=sources_failed,
+            sources_skipped=sources_skipped,
             items_processed=items_processed,
             total_cost=total_cost,
             duration_seconds=feed_run.duration_seconds,
@@ -565,8 +604,37 @@ class FeedService:
         self._send_webhook_if_configured(feed, feed_run, session)
 
         # Export to configured destinations if items were processed
+        export_errors = []
         if items_processed > 0:
-            self._export_if_configured(feed, feed_run, session)
+            export_errors = self._export_if_configured(feed, feed_run, session)
+
+            # If export errors occurred, update error_details and status
+            if export_errors:
+                # Add export errors to error_details
+                current_details = feed_run.error_details or {}
+                current_errors = current_details.get("errors", [])
+                current_errors.extend(export_errors)
+                current_details["errors"] = current_errors
+
+                # Update summary to include export errors
+                source_error_count = len([e for e in current_errors if e.get("error_type") != ERROR_TYPE_EXPORT])
+                export_error_count = len(export_errors)
+                current_details["summary"] = (
+                    f"{source_error_count} source error(s), {export_error_count} export error(s)"
+                    if source_error_count > 0
+                    else f"{export_error_count} export error(s)"
+                )
+
+                feed_run.error_details = current_details
+
+                # Update status to completed_with_warnings if was completed
+                if feed_run.status == "completed":
+                    feed_run.status = "completed_with_warnings"
+
+                session.commit()
+
+                if options.show_progress:
+                    print(f"   Export errors: {len(export_errors)}")
 
         # Process RAG embeddings and relationships for new digests
         if items_processed > 0 and not options.dry_run:
@@ -576,6 +644,12 @@ class FeedService:
             print(f"\n{'='*80}")
             print("✅ Feed run complete")
             print(f"   Sources: {sources_processed}/{len(sources)} successful")
+            if sources_skipped > 0:
+                print(f"   Skipped: {sources_skipped} (circuit breaker)")
+            if sources_failed > 0:
+                print(f"   Failed: {sources_failed}")
+            if export_errors:
+                print(f"   Export errors: {len(export_errors)}")
             print(f"   Items: {items_processed} processed")
             print(f"   Cost: ${total_cost:.4f}")
             print(f"{'='*80}")
@@ -1414,6 +1488,7 @@ class FeedService:
         all_source_items = []  # Track source info for each item
         sources_processed = 0
         sources_failed = 0
+        sources_skipped = 0  # Skipped due to circuit breaker
         errors = []
         structured_errors = []
         language = self._get_language(feed, sources[0]) if sources else "de"
@@ -1426,6 +1501,28 @@ class FeedService:
             try:
                 if options.show_progress:
                     print(f"   📌 [{idx}/{len(sources)}] Fetching from {source.name}...")
+
+                # Check circuit breaker before processing
+                should_skip, skip_reason = self.circuit_breaker.should_skip(source)
+                if should_skip:
+                    sources_skipped += 1
+                    logger.info(
+                        "Source skipped due to circuit breaker",
+                        source_id=source.id,
+                        source_name=source.name,
+                        reason=skip_reason,
+                        health_status=source.health_status,
+                    )
+                    structured_errors.append({
+                        "source_id": source.id,
+                        "source_name": source.name,
+                        "error_type": ERROR_TYPE_CIRCUIT_OPEN,
+                        "message": skip_reason,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                    if options.show_progress:
+                        print(f"      ⏸️ Skipped (circuit open): {source.health_status}")
+                    continue
 
                 if source.type == "rss":
                     last_read = self.tracker.get_last_read(source.url)
@@ -1483,6 +1580,8 @@ class FeedService:
                         if options.show_progress:
                             print("      ⏭️ No new items")
 
+                    # Record success with circuit breaker
+                    self.circuit_breaker.record_success(source, session)
                     sources_processed += 1
                 else:
                     # Non-RSS sources not supported in all_sources mode yet
@@ -1502,6 +1601,8 @@ class FeedService:
                     "message": error_msg,
                     "timestamp": datetime.utcnow().isoformat(),
                 })
+                # Record failure with circuit breaker
+                self.circuit_breaker.record_failure(source, session, e)
                 if options.show_progress:
                     print(f"      ❌ Error: {e}")
 
@@ -1512,6 +1613,7 @@ class FeedService:
                 "success": True,
                 "sources_processed": sources_processed,
                 "sources_failed": sources_failed,
+                "sources_skipped": sources_skipped,
                 "items_count": 0,
                 "tokens_in": 0,
                 "tokens_out": 0,
@@ -1595,6 +1697,7 @@ class FeedService:
             "success": result.get("success", False),
             "sources_processed": sources_processed,
             "sources_failed": sources_failed,
+            "sources_skipped": sources_skipped,
             "items_count": result.get("items_count", 0),
             "tokens_in": result.get("tokens_in", 0),
             "tokens_out": result.get("tokens_out", 0),
@@ -1900,7 +2003,7 @@ class FeedService:
         feed: Feed,
         feed_run: FeedRun,
         session: Session,
-    ) -> None:
+    ) -> List[Dict[str, Any]]:
         """Export digests to configured exporters after feed run completes.
 
         Reads per-feed export configuration from output_config.exports and
@@ -1912,15 +2015,24 @@ class FeedService:
             feed_run: The completed feed run
             session: Database session
 
+        Returns:
+            List of export error dicts for error_details (empty if all exports succeeded)
+
         Note:
-            Export failures are logged but do not fail the feed run.
+            Export failures are logged and recorded in error_details but do not
+            fail the feed run. The feed run status is set to 'completed_with_warnings'
+            if any export errors occur.
         """
+        import os
+
+        export_errors = []
+
         if not feed.output_config:
-            return
+            return export_errors
 
         exports_config = feed.output_config.get("exports")
         if not exports_config:
-            return
+            return export_errors
 
         # Get digests created in this run
         digests = session.query(Digest).filter(
@@ -1933,7 +2045,7 @@ class FeedService:
                 feed_id=feed.id,
                 feed_run_id=feed_run.id,
             )
-            return
+            return export_errors
 
         # Import exporter registry and settings service
         from reconly_core.exporters.registry import get_exporter_class, is_exporter_registered
@@ -1951,11 +2063,18 @@ class FeedService:
 
             # Check if exporter exists
             if not is_exporter_registered(exporter_name):
+                error_msg = f"Unknown exporter configured for auto-export: {exporter_name}"
                 logger.warning(
                     "Unknown exporter configured for auto-export",
                     feed_id=feed.id,
                     exporter_name=exporter_name,
                 )
+                export_errors.append({
+                    "exporter": exporter_name,
+                    "error_type": ERROR_TYPE_EXPORT,
+                    "message": error_msg,
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
                 continue
 
             try:
@@ -1985,11 +2104,55 @@ class FeedService:
                         export_path = settings_service.get("export.csv.export_path")
 
                 if not export_path:
+                    error_msg = f"No export path configured for {exporter_name}"
                     logger.warning(
                         "No export path configured for auto-export",
                         feed_id=feed.id,
                         exporter_name=exporter_name,
                     )
+                    export_errors.append({
+                        "exporter": exporter_name,
+                        "error_type": ERROR_TYPE_EXPORT,
+                        "message": error_msg,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                    continue
+
+                # Pre-validate export path exists and is writable
+                if not os.path.exists(export_path):
+                    error_msg = f"Export path does not exist: {export_path}"
+                    logger.error(
+                        "Export path does not exist",
+                        feed_id=feed.id,
+                        feed_run_id=feed_run.id,
+                        exporter_name=exporter_name,
+                        export_path=export_path,
+                    )
+                    export_errors.append({
+                        "exporter": exporter_name,
+                        "error_type": ERROR_TYPE_EXPORT,
+                        "message": error_msg,
+                        "path": export_path,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
+                    continue
+
+                if not os.access(export_path, os.W_OK):
+                    error_msg = f"Export path is not writable: {export_path}"
+                    logger.error(
+                        "Export path is not writable",
+                        feed_id=feed.id,
+                        feed_run_id=feed_run.id,
+                        exporter_name=exporter_name,
+                        export_path=export_path,
+                    )
+                    export_errors.append({
+                        "exporter": exporter_name,
+                        "error_type": ERROR_TYPE_EXPORT,
+                        "message": error_msg,
+                        "path": export_path,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
                     continue
 
                 # Build exporter config from global settings (filter out None values)
@@ -2034,6 +2197,7 @@ class FeedService:
                         target_path=result.target_path,
                     )
                 else:
+                    error_msg = "; ".join(result.errors) if result.errors else "Export completed with errors"
                     logger.warning(
                         "Auto-export completed with errors",
                         feed_id=feed.id,
@@ -2042,16 +2206,33 @@ class FeedService:
                         files_written=result.files_written,
                         errors=result.errors,
                     )
+                    export_errors.append({
+                        "exporter": exporter_name,
+                        "error_type": ERROR_TYPE_EXPORT,
+                        "message": error_msg,
+                        "path": export_path,
+                        "files_written": result.files_written,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    })
 
             except Exception as e:
-                # Don't fail the feed run if export fails
+                # Don't fail the feed run if export fails, but record the error
+                error_msg = str(e)
                 logger.error(
                     "Error during auto-export",
                     feed_id=feed.id,
                     feed_run_id=feed_run.id,
                     exporter_name=exporter_name,
-                    error=str(e),
+                    error=error_msg,
                 )
+                export_errors.append({
+                    "exporter": exporter_name,
+                    "error_type": ERROR_TYPE_EXPORT,
+                    "message": error_msg,
+                    "timestamp": datetime.utcnow().isoformat(),
+                })
+
+        return export_errors
 
     def _process_rag_for_feed_run(
         self,

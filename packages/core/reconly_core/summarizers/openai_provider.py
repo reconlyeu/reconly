@@ -21,11 +21,15 @@ class OpenAISummarizer(BaseSummarizer):
         'gpt-3.5-turbo': (0.0, 0.0),
     }
 
+    # Default timeout for cloud API calls
+    DEFAULT_TIMEOUT = 120  # 2 minutes
+
     def __init__(
         self,
         api_key: Optional[str] = None,
         model: str = 'gpt-4-turbo',
-        base_url: Optional[str] = None
+        base_url: Optional[str] = None,
+        timeout: Optional[int] = None,
     ):
         """
         Initialize the OpenAI summarizer.
@@ -34,6 +38,8 @@ class OpenAISummarizer(BaseSummarizer):
             api_key: OpenAI API key (if not provided, reads from OPENAI_API_KEY env var)
             model: Model to use (default: 'gpt-4-turbo')
             base_url: Base URL for OpenAI-compatible endpoints (optional)
+            timeout: Request timeout in seconds (default: 120s)
+                     Can be configured via PROVIDER_TIMEOUT_OPENAI env var.
         """
         super().__init__(api_key)
         self.api_key = api_key or os.getenv('OPENAI_API_KEY')
@@ -47,11 +53,18 @@ class OpenAISummarizer(BaseSummarizer):
         self.model = model
         self.base_url = base_url or os.getenv('OPENAI_BASE_URL')
 
-        # Initialize OpenAI client
-        if self.base_url:
-            self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        # Timeout priority: param > env var > default
+        if timeout is not None:
+            self.timeout = timeout
         else:
-            self.client = OpenAI(api_key=self.api_key)
+            env_timeout = os.getenv('PROVIDER_TIMEOUT_OPENAI')
+            self.timeout = int(env_timeout) if env_timeout else self.DEFAULT_TIMEOUT
+
+        # Initialize OpenAI client with timeout
+        client_kwargs = {"api_key": self.api_key, "timeout": float(self.timeout)}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self.client = OpenAI(**client_kwargs)
 
     def get_provider_name(self) -> str:
         """Get provider name."""

@@ -140,3 +140,64 @@ class IMAPSourceCreateResponse(BaseModel):
         description="OAuth authorization URL (for gmail/outlook providers)"
     )
     message: str = Field(..., description="Status message")
+
+
+# Health status types
+HealthStatus = Literal["healthy", "degraded", "unhealthy"]
+
+
+class SourceHealthResponse(BaseModel):
+    """Health status for a single source.
+
+    Provides detailed health information including circuit breaker state
+    and failure tracking for resilience monitoring.
+    """
+    source_id: int = Field(..., description="Source ID")
+    source_name: str = Field(..., description="Source name")
+    health_status: HealthStatus = Field(..., description="Current health status")
+    consecutive_failures: int = Field(..., description="Number of consecutive failures")
+    last_failure_at: Optional[datetime] = Field(None, description="When the most recent failure occurred")
+    last_success_at: Optional[datetime] = Field(None, description="When the most recent success occurred")
+    circuit_open_until: Optional[datetime] = Field(None, description="When circuit breaker will attempt recovery")
+    is_circuit_open: bool = Field(..., description="Whether the circuit breaker is currently open")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SourcesHealthSummary(BaseModel):
+    """Aggregate health status across all sources.
+
+    Provides a summary of source health for monitoring dashboards
+    and alerting systems.
+    """
+    healthy: int = Field(..., description="Number of healthy sources")
+    degraded: int = Field(..., description="Number of degraded sources")
+    unhealthy: int = Field(..., description="Number of unhealthy sources")
+    total: int = Field(..., description="Total number of sources")
+    sources: Optional[List[SourceHealthResponse]] = Field(
+        None,
+        description="Detailed health info per source (only if include_details=true)"
+    )
+
+
+class ValidationResponse(BaseModel):
+    """Response from source URL validation.
+
+    Provides validation results including any test fetch metrics
+    when test_fetch is enabled.
+    """
+    valid: bool = Field(..., description="Whether the source URL is valid")
+    errors: List[str] = Field(default_factory=list, description="Validation errors")
+    warnings: List[str] = Field(default_factory=list, description="Validation warnings")
+    test_item_count: Optional[int] = Field(
+        None,
+        description="Number of items found during test fetch (if test_fetch=true)"
+    )
+    response_time_ms: Optional[float] = Field(
+        None,
+        description="Response time in milliseconds (if test_fetch=true)"
+    )
+    url_type: Optional[str] = Field(
+        None,
+        description="Detected URL type (e.g., 'rss', 'youtube_channel', 'youtube_video')"
+    )

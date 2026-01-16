@@ -1,12 +1,19 @@
 """Summarizer factory with intelligent fallback logic."""
 import os
-from typing import Optional, Dict, List, TYPE_CHECKING
+from typing import Optional, Dict, List, TYPE_CHECKING, Any
 
+import structlog
+
+from reconly_core.resilience.config import RetryConfig
+from reconly_core.resilience.errors import ErrorCategory
+from reconly_core.resilience.retry import retry_with_result
 from reconly_core.summarizers.base import BaseSummarizer
 from reconly_core.summarizers.registry import get_provider, list_providers, is_provider_registered
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
+
+logger = structlog.get_logger(__name__)
 
 # Import providers to ensure they're registered
 from reconly_core.summarizers.anthropic import AnthropicSummarizer
@@ -16,19 +23,52 @@ from reconly_core.summarizers.openai_provider import OpenAISummarizer
 
 
 class SummarizerWithFallback:
-    """Wrapper that implements fallback logic across multiple providers."""
+    """Wrapper that implements fallback logic across multiple providers with retry support.
 
-    def __init__(self, primary_summarizer: BaseSummarizer, fallback_chain: List[BaseSummarizer]):
+    This class wraps multiple summarizers and provides:
+    - Automatic retry with exponential backoff for transient errors
+    - Fallback to next provider when a provider fails permanently
+    - Re-checking provider availability before each fallback attempt
+    - Detailed retry/fallback metadata in results
+    """
+
+    def __init__(
+        self,
+        primary_summarizer: BaseSummarizer,
+        fallback_chain: List[BaseSummarizer],
+        retry_config: Optional[RetryConfig] = None,
+    ):
         """
         Initialize summarizer with fallback chain.
 
         Args:
             primary_summarizer: Primary summarizer to use
             fallback_chain: List of fallback summarizers (in order)
+            retry_config: Retry configuration (uses defaults from env if None)
         """
         self.primary = primary_summarizer
         self.fallbacks = fallback_chain
         self.all_summarizers = [primary_summarizer] + fallback_chain
+        self.retry_config = retry_config or RetryConfig.from_env()
+
+    def _attempt_summarize(
+        self,
+        summarizer: BaseSummarizer,
+        content_data: Dict[str, str],
+        language: str,
+        system_prompt: Optional[str],
+        user_prompt: Optional[str],
+    ) -> Dict[str, str]:
+        """Attempt to summarize with a single provider (for retry wrapper).
+
+        This method is designed to be called by retry_with_result.
+        """
+        return summarizer.summarize(
+            content_data,
+            language,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
 
     def summarize(
         self,
@@ -38,7 +78,11 @@ class SummarizerWithFallback:
         user_prompt: Optional[str] = None,
     ) -> Dict[str, str]:
         """
-        Summarize content with automatic fallback.
+        Summarize content with automatic retry and fallback.
+
+        Each provider is first retried according to RetryConfig for transient errors.
+        If all retries fail or error is non-transient, moves to next fallback provider.
+        Provider availability is re-checked before each fallback attempt.
 
         Args:
             content_data: Content to summarize
@@ -47,47 +91,117 @@ class SummarizerWithFallback:
             user_prompt: Optional user prompt with content filled in
 
         Returns:
-            Summarized content with metadata about which provider was used
+            Summarized content with metadata including:
+                - fallback_used: bool
+                - fallback_level: int (0 = primary, 1+ = fallback)
+                - retry_metadata: dict with retry details
+                - provider_name: str of the successful provider
         """
-        last_error = None
+        last_error: Optional[Exception] = None
+        last_error_category: Optional[ErrorCategory] = None
+        fallback_reasons: List[Dict[str, Any]] = []
 
         for idx, summarizer in enumerate(self.all_summarizers):
-            try:
-                print(f"🔄 Trying {summarizer.get_provider_name()}...")
-                result = summarizer.summarize(
-                    content_data,
-                    language,
-                    system_prompt=system_prompt,
-                    user_prompt=user_prompt,
-                )
+            provider_name = summarizer.get_provider_name()
 
-                # Add fallback metadata
-                if idx > 0:
-                    result['fallback_used'] = True
-                    result['fallback_level'] = idx
-                    print(f"✅ Success with fallback provider: {summarizer.get_provider_name()}")
-                else:
-                    result['fallback_used'] = False
+            # Re-check availability before attempting (except for primary)
+            if idx > 0:
+                if not summarizer.is_available():
+                    reason = f"Provider {provider_name} is not available"
+                    fallback_reasons.append({
+                        "provider": provider_name,
+                        "reason": "not_available",
+                        "detail": reason,
+                    })
+                    logger.info(
+                        "fallback_skip_unavailable",
+                        provider=provider_name,
+                        fallback_level=idx,
+                    )
+                    continue
+
+            logger.info(
+                "summarize_attempt",
+                provider=provider_name,
+                fallback_level=idx,
+                is_fallback=idx > 0,
+            )
+
+            # Get provider-specific retry config
+            provider_retry_config = summarizer.get_retry_config()
+
+            # Use retry_with_result for detailed metadata
+            retry_result = retry_with_result(
+                func=self._attempt_summarize,
+                args=(summarizer, content_data, language, system_prompt, user_prompt),
+                config=provider_retry_config,
+                classifier=summarizer.classify_error,
+            )
+
+            if retry_result["success"]:
+                result = retry_result["result"]
+
+                # Add fallback and retry metadata
+                result['fallback_used'] = idx > 0
+                result['fallback_level'] = idx
+                result['provider_name'] = provider_name
+                result['retry_metadata'] = {
+                    "attempts": retry_result["attempts"],
+                    "retry_delays": retry_result["retry_delays"],
+                    "fallback_reasons": fallback_reasons if idx > 0 else [],
+                }
+
+                logger.info(
+                    "summarize_success",
+                    provider=provider_name,
+                    fallback_level=idx,
+                    retry_attempts=retry_result["attempts"],
+                )
 
                 return result
 
-            except Exception as e:
-                last_error = e
-                provider_name = summarizer.get_provider_name()
-                print(f"⚠️  {provider_name} failed: {str(e)}")
+            # Provider failed - record reason and try next
+            last_error = retry_result["error"]
+            last_error_category = retry_result["error_category"]
 
-                # If this is not the last option, continue to next
-                if idx < len(self.all_summarizers) - 1:
-                    print("🔄 Falling back to next provider...")
-                    continue
-                else:
-                    # All options exhausted
-                    raise Exception(
-                        f"All summarization providers failed. Last error: {str(last_error)}"
-                    )
+            fallback_reasons.append({
+                "provider": provider_name,
+                "reason": last_error_category.value if last_error_category else "unknown",
+                "error": str(last_error),
+                "attempts": retry_result["attempts"],
+            })
 
-        # Should never reach here
-        raise Exception("No summarizers available")
+            logger.warning(
+                "summarize_failed",
+                provider=provider_name,
+                fallback_level=idx,
+                error=str(last_error),
+                error_category=last_error_category.value if last_error_category else None,
+                retry_attempts=retry_result["attempts"],
+            )
+
+            # If this is not the last option, continue to next
+            if idx < len(self.all_summarizers) - 1:
+                logger.info(
+                    "fallback_to_next",
+                    from_provider=provider_name,
+                    next_provider=self.all_summarizers[idx + 1].get_provider_name(),
+                )
+                continue
+
+        # All providers exhausted
+        logger.error(
+            "all_providers_failed",
+            total_providers=len(self.all_summarizers),
+            fallback_reasons=fallback_reasons,
+        )
+
+        error_detail = (
+            f"All {len(self.all_summarizers)} summarization providers failed. "
+            f"Last error ({last_error_category.value if last_error_category else 'unknown'}): "
+            f"{str(last_error)}"
+        )
+        raise Exception(error_detail)
 
     def get_provider_name(self) -> str:
         """Get primary provider name."""
@@ -100,6 +214,14 @@ class SummarizerWithFallback:
     def get_model_info(self) -> Dict[str, str]:
         """Get primary model info."""
         return self.primary.get_model_info()
+
+    def classify_error(self, error: Exception) -> ErrorCategory:
+        """Classify error using primary provider's classification."""
+        return self.primary.classify_error(error)
+
+    def get_retry_config(self) -> RetryConfig:
+        """Get retry configuration."""
+        return self.retry_config
 
 
 def _build_intelligent_fallback_chain(

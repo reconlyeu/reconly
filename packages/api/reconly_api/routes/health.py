@@ -10,6 +10,7 @@ The separation ensures that:
 1. Load balancers can check /health without authentication
 2. Detailed system information is not exposed publicly in production
 """
+from collections import Counter
 from datetime import datetime
 from typing import Optional
 
@@ -22,6 +23,9 @@ from sqlalchemy.orm import Session
 from reconly_api.config import settings
 from reconly_api.dependencies import get_db
 from reconly_api.auth.password import check_auth_cookie, check_basic_auth
+from reconly_api.schemas.sources import SourcesHealthSummary
+from reconly_core.database.models import Source
+from reconly_api.routes.sources import _source_to_health_response
 
 
 router = APIRouter()
@@ -172,4 +176,42 @@ async def health_check_detailed(
         uptime_seconds=uptime,
         timestamp=datetime.now().isoformat(),
         components=components,
+    )
+
+
+@router.get("/health/sources", response_model=SourcesHealthSummary)
+async def get_sources_health_summary(
+    include_details: bool = False,
+    enabled_only: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Get aggregate health status across all sources.
+
+    Returns a summary of source health for monitoring dashboards
+    and alerting systems.
+
+    Args:
+        include_details: If true, include per-source health details
+        enabled_only: If true (default), only include enabled sources
+
+    Returns:
+        Summary with counts of healthy, degraded, and unhealthy sources,
+        optionally with detailed per-source information.
+    """
+    query = db.query(Source)
+    if enabled_only:
+        query = query.filter(Source.enabled == True)
+
+    sources = query.all()
+
+    # Count by health status
+    counts = Counter(source.health_status for source in sources)
+    source_details = [_source_to_health_response(s) for s in sources] if include_details else None
+
+    return SourcesHealthSummary(
+        healthy=counts.get("healthy", 0),
+        degraded=counts.get("degraded", 0),
+        unhealthy=counts.get("unhealthy", 0),
+        total=len(sources),
+        sources=source_details,
     )

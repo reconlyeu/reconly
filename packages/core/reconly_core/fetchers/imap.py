@@ -11,6 +11,7 @@ Incremental Fetching:
 """
 import logging
 import os
+import time
 from collections import deque
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Set
@@ -23,7 +24,7 @@ from reconly_core.email import (
     IMAPConfig,
     IMAPError,
 )
-from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema
+from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.registry import register_fetcher
 
 logger = logging.getLogger(__name__)
@@ -494,3 +495,254 @@ class IMAPFetcher(BaseFetcher):
                 ),
             ]
         )
+
+    def validate(
+        self,
+        url: str,
+        config: Optional[Dict[str, Any]] = None,
+        test_fetch: bool = False,
+        timeout: int = 10,
+    ) -> ValidationResult:
+        """
+        Validate IMAP configuration and optionally test connection.
+
+        Validates:
+        - Required fields are present (host, username, password)
+        - IMAP URL format is correct
+        - Connection to IMAP server succeeds (if test_fetch=True)
+        - Authentication succeeds (if test_fetch=True)
+        - Configured folders exist (if test_fetch=True)
+
+        Args:
+            url: IMAP URL (e.g., "imap://imap.gmail.com") or identifier
+            config: IMAP configuration dictionary with:
+                - imap_host: IMAP server hostname
+                - imap_port: IMAP server port (default: 993)
+                - imap_username: Email account username
+                - imap_password: Email account password
+                - imap_use_ssl: Use SSL/TLS (default: True)
+                - imap_folders: List of folders to fetch
+                - imap_provider: Provider type (gmail, outlook, generic)
+            test_fetch: If True, attempt IMAP connection
+            timeout: Connection timeout in seconds
+
+        Returns:
+            ValidationResult with:
+            - valid: True if configuration is valid
+            - errors: List of error messages
+            - warnings: List of warning messages
+            - test_item_count: Number of folders accessible (if test_fetch=True)
+            - response_time_ms: Connection time in milliseconds (if test_fetch=True)
+        """
+        result = ValidationResult()
+        result.url_type = 'imap'
+        config = config or {}
+
+        # Validate URL format for IMAP
+        if url and not url.startswith(("imap://", "imaps://")):
+            # If URL is provided, validate it
+            if url.startswith(("http://", "https://")):
+                result.add_error(
+                    "IMAP sources should use imap:// or imaps:// URL scheme, "
+                    "not http:// or https://. You can also leave URL empty "
+                    "and configure via imap_host setting."
+                )
+                return result
+
+        # Check for required configuration fields
+        host = config.get("imap_host")
+        username = config.get("imap_username")
+        password = config.get("imap_password")
+        password_encrypted = config.get("imap_password_encrypted")
+
+        # Extract host from URL if not in config
+        if not host and url:
+            if url.startswith("imap://"):
+                host = url.replace("imap://", "").split("/")[0].split(":")[0]
+            elif url.startswith("imaps://"):
+                host = url.replace("imaps://", "").split("/")[0].split(":")[0]
+
+        # Map provider to host if not specified
+        provider = config.get("imap_provider", "generic")
+        if not host:
+            if provider == "gmail":
+                host = "imap.gmail.com"
+            elif provider == "outlook":
+                host = "outlook.office365.com"
+
+        # Validate required fields
+        if not host:
+            result.add_error(
+                "IMAP host is required. Specify via imap_host config "
+                "or use imap://hostname URL format."
+            )
+
+        if not username:
+            result.add_error(
+                "IMAP username is required. "
+                "Configure via imap_username setting or IMAP_USERNAME environment variable."
+            )
+
+        if not password and not password_encrypted:
+            result.add_error(
+                "IMAP password is required. "
+                "Configure via imap_password setting or IMAP_PASSWORD environment variable."
+            )
+
+        # Warn about OAuth for Gmail/Outlook
+        if provider in ("gmail", "outlook"):
+            result.add_warning(
+                f"{provider.title()} requires an app-specific password. "
+                "Regular password authentication may not work."
+            )
+
+        # If basic validation failed, return early
+        if not result.valid:
+            return result
+
+        # Validate folders config
+        folders = config.get("imap_folders", ["INBOX"])
+        if isinstance(folders, str):
+            folders = [f.strip() for f in folders.split(",")]
+
+        if not folders:
+            result.add_warning(
+                "No folders specified, defaulting to INBOX."
+            )
+
+        # If test_fetch is enabled, try to connect
+        if test_fetch and result.valid:
+            result = self._validate_connection(
+                host=host,
+                port=int(config.get("imap_port", 993)),
+                username=username,
+                password=password or self._decrypt_password(password_encrypted),
+                use_ssl=config.get("imap_use_ssl", True),
+                folders=folders,
+                timeout=timeout,
+                result=result,
+            )
+
+        return result
+
+    def _decrypt_password(self, encrypted_password: Optional[str]) -> str:
+        """Decrypt an encrypted password if provided.
+
+        Args:
+            encrypted_password: Encrypted password string
+
+        Returns:
+            Decrypted password or empty string
+        """
+        if not encrypted_password:
+            return ""
+        try:
+            from reconly_core.email.crypto import decrypt_token
+            return decrypt_token(encrypted_password)
+        except Exception as e:
+            logger.warning(f"Failed to decrypt password: {e}")
+            return ""
+
+    def _validate_connection(
+        self,
+        host: str,
+        port: int,
+        username: str,
+        password: str,
+        use_ssl: bool,
+        folders: List[str],
+        timeout: int,
+        result: ValidationResult,
+    ) -> ValidationResult:
+        """
+        Test IMAP connection and authentication.
+
+        Args:
+            host: IMAP server hostname
+            port: IMAP server port
+            username: Email account username
+            password: Email account password
+            use_ssl: Use SSL/TLS
+            folders: List of folders to check
+            timeout: Connection timeout
+            result: ValidationResult to update
+
+        Returns:
+            Updated ValidationResult
+        """
+        try:
+            start_time = time.time()
+
+            # Build config for provider
+            imap_config = IMAPConfig(
+                provider="generic",
+                host=host,
+                port=port,
+                username=username,
+                password=password,
+                use_ssl=use_ssl,
+                folders=folders,
+                timeout=timeout,
+            )
+
+            # Attempt connection
+            with GenericIMAPProvider(imap_config) as provider:
+                elapsed_ms = (time.time() - start_time) * 1000
+                result.response_time_ms = round(elapsed_ms, 2)
+
+                # Check each folder
+                accessible_folders = 0
+                for folder in folders:
+                    try:
+                        # Try to select the folder
+                        provider._connection.select(folder, readonly=True)
+                        accessible_folders += 1
+                    except Exception as e:
+                        result.add_warning(
+                            f"Folder '{folder}' is not accessible: {str(e)}"
+                        )
+
+                result.test_item_count = accessible_folders
+
+                if accessible_folders == 0:
+                    result.add_error(
+                        "No folders are accessible. "
+                        "Check folder names and permissions."
+                    )
+
+        except IMAPError as e:
+            error_msg = str(e).lower()
+            if "authentication" in error_msg or "login" in error_msg:
+                result.add_error(
+                    "Authentication failed. Please check username and password. "
+                    "For Gmail/Outlook, use an app-specific password."
+                )
+            elif "timeout" in error_msg:
+                result.add_error(
+                    f"Connection timed out after {timeout} seconds. "
+                    "IMAP server may be unreachable."
+                )
+            elif "ssl" in error_msg or "certificate" in error_msg:
+                result.add_error(
+                    "SSL/TLS connection failed. "
+                    "Try disabling SSL or check certificate settings."
+                )
+            else:
+                result.add_error(f"IMAP connection failed: {str(e)}")
+
+        except Exception as e:
+            result.add_error(f"Failed to validate IMAP connection: {str(e)}")
+
+        return result
+
+    def _is_valid_scheme(self, url: str) -> bool:
+        """
+        Check if URL has a valid scheme for IMAP fetcher.
+
+        Args:
+            url: URL to check
+
+        Returns:
+            True if URL scheme is valid for IMAP
+        """
+        return url.startswith(("imap://", "imaps://", "http://", "https://"))

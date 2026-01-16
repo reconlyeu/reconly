@@ -19,10 +19,27 @@ class FetcherRegistryEntry:
     is_extension: bool = False
     metadata: Optional[ExtensionMetadata] = None
     config_schema: Optional[FetcherConfigSchema] = None
+    has_custom_validation: bool = False
 
 
 # Global registry of source type -> fetcher entry
 _FETCHER_REGISTRY: Dict[str, FetcherRegistryEntry] = {}
+
+
+def _has_custom_validation(cls: Type["BaseFetcher"]) -> bool:
+    """Check if a fetcher class overrides the validate() method.
+
+    This is used to determine if a fetcher has custom validation logic
+    beyond the base class implementation.
+
+    Args:
+        cls: The fetcher class to check
+
+    Returns:
+        True if the class overrides validate(), False otherwise
+    """
+    # Check if the class defines its own validate method (not inherited)
+    return "validate" in cls.__dict__
 
 
 def register_fetcher(name: str, is_extension: bool = False, metadata: Optional[ExtensionMetadata] = None):
@@ -65,10 +82,21 @@ def register_fetcher(name: str, is_extension: bool = False, metadata: Optional[E
 
         # Get config schema from instance and register in one pass
         config_schema = None
+        has_custom_validation = False
         try:
             instance = cls()
             config_schema = instance.get_config_schema()
             _register_fetcher_settings(name, config_schema)
+
+            # Check if the fetcher overrides the validate() method
+            # by comparing it to the base class method
+            has_custom_validation = _has_custom_validation(cls)
+
+            if not has_custom_validation:
+                logger.warning(
+                    f"Fetcher '{name}' ({cls.__name__}) does not override validate(). "
+                    "Consider implementing custom validation for better source verification."
+                )
         except Exception as e:
             logger.warning(f"Failed to get config schema for fetcher '{name}': {e}")
 
@@ -77,8 +105,12 @@ def register_fetcher(name: str, is_extension: bool = False, metadata: Optional[E
             is_extension=is_extension,
             metadata=metadata,
             config_schema=config_schema,
+            has_custom_validation=has_custom_validation,
         )
-        logger.debug(f"Registered fetcher '{name}' -> {cls.__name__} (extension={is_extension})")
+        logger.debug(
+            f"Registered fetcher '{name}' -> {cls.__name__} "
+            f"(extension={is_extension}, custom_validation={has_custom_validation})"
+        )
 
         return cls
 
@@ -254,6 +286,21 @@ def get_extension_info(name: str) -> Optional[Dict]:
         "is_extension": True,
         "metadata": entry.metadata.to_dict() if entry.metadata else None,
     }
+
+
+def has_custom_validation(name: str) -> bool:
+    """
+    Check if a fetcher has custom validation logic.
+
+    Args:
+        name: Source type to check
+
+    Returns:
+        True if fetcher overrides validate(), False if not found or uses default
+    """
+    if name not in _FETCHER_REGISTRY:
+        return False
+    return _FETCHER_REGISTRY[name].has_custom_validation
 
 
 def detect_fetcher(url: str) -> Optional[BaseFetcher]:

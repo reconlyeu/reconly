@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 from reconly_core.config_types import ConfigField
-from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema
+from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.registry import register_fetcher
 
 if TYPE_CHECKING:
@@ -378,3 +378,159 @@ class AgentFetcher(BaseFetcher):
                 ),
             ]
         )
+
+    def validate(
+        self,
+        url: str,
+        config: Optional[dict[str, Any]] = None,
+        test_fetch: bool = False,
+        timeout: int = 10,
+    ) -> ValidationResult:
+        """
+        Validate agent configuration and prompt.
+
+        For agent sources, the `url` field is repurposed as the research
+        prompt/topic. This validation checks:
+        - Prompt is not empty
+        - Prompt length is reasonable
+        - Agent settings are valid (if test_fetch=True)
+        - Search provider is configured (if test_fetch=True)
+
+        Args:
+            url: The research prompt/topic (not a URL for agent sources)
+            config: Configuration dictionary with optional max_iterations
+            test_fetch: If True, validate agent settings can be loaded
+            timeout: Not used for agent validation
+
+        Returns:
+            ValidationResult with:
+            - valid: True if configuration is valid
+            - errors: List of error messages
+            - warnings: List of warning messages
+            - url_type: 'agent'
+        """
+        result = ValidationResult()
+        result.url_type = 'agent'
+        config = config or {}
+
+        # For agent sources, 'url' is actually the research prompt
+        prompt = url
+
+        # Validate prompt is not empty
+        if not prompt or not prompt.strip():
+            result.add_error(
+                "Research prompt is required. "
+                "Enter a topic or question for the agent to investigate."
+            )
+            return result
+
+        # Validate prompt length
+        min_length = 10
+        max_length = 5000
+
+        if len(prompt) < min_length:
+            result.add_error(
+                f"Research prompt is too short (minimum {min_length} characters). "
+                "Provide a more detailed topic for better research results."
+            )
+            return result
+
+        if len(prompt) > max_length:
+            result.add_error(
+                f"Research prompt exceeds maximum length of {max_length} characters."
+            )
+            return result
+
+        # Validate max_iterations if provided
+        max_iterations = config.get('max_iterations')
+        if max_iterations is not None:
+            try:
+                max_iter = int(max_iterations)
+                if max_iter < 1:
+                    result.add_error(
+                        "max_iterations must be at least 1."
+                    )
+                elif max_iter > 20:
+                    result.add_warning(
+                        f"max_iterations={max_iter} is very high. "
+                        "This may result in long execution times and high costs."
+                    )
+            except (ValueError, TypeError):
+                result.add_error(
+                    f"Invalid max_iterations value: {max_iterations}. "
+                    "Must be an integer."
+                )
+
+        # If test_fetch is enabled, validate agent settings
+        if test_fetch and result.valid:
+            result = self._validate_agent_settings(result)
+
+        return result
+
+    def _validate_agent_settings(self, result: ValidationResult) -> ValidationResult:
+        """
+        Validate agent settings can be loaded and are configured.
+
+        Args:
+            result: ValidationResult to update
+
+        Returns:
+            Updated ValidationResult
+        """
+        try:
+            agent_settings = self._get_agent_settings()
+
+            # Check search provider configuration
+            if agent_settings.search_provider == 'brave':
+                if not agent_settings.brave_api_key:
+                    result.add_error(
+                        "Brave Search API key is not configured. "
+                        "Set BRAVE_API_KEY environment variable or use SearXNG."
+                    )
+            elif agent_settings.search_provider == 'searxng':
+                if not agent_settings.searxng_url:
+                    result.add_warning(
+                        "SearXNG URL is not configured. "
+                        "Using default: http://localhost:8080"
+                    )
+
+            # Try to validate settings
+            try:
+                agent_settings.validate()
+            except Exception as e:
+                result.add_error(f"Agent settings validation failed: {str(e)}")
+
+            # Check if summarizer is available
+            try:
+                from reconly_core.summarizers.factory import get_summarizer
+                summarizer = get_summarizer(enable_fallback=True)
+                if not summarizer.is_available():
+                    result.add_warning(
+                        "No LLM provider is currently available. "
+                        "Agent research requires a working LLM provider."
+                    )
+            except Exception as e:
+                result.add_warning(
+                    f"Could not verify LLM availability: {str(e)}"
+                )
+
+        except Exception as e:
+            result.add_error(f"Failed to load agent settings: {str(e)}")
+
+        return result
+
+    def _is_valid_scheme(self, url: str) -> bool:
+        """
+        Check if URL has a valid scheme for agent fetcher.
+
+        Agent fetcher accepts any string as the 'URL' field since
+        it's repurposed as the research prompt.
+
+        Args:
+            url: URL/prompt to check
+
+        Returns:
+            True (always valid for agent fetcher)
+        """
+        # Agent sources use 'url' field as research prompt, so any string is valid
+        return True

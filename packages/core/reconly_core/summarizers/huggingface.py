@@ -72,14 +72,23 @@ class HuggingFaceSummarizer(BaseSummarizer):
         # Unknown model - fall back to default
         return 'llama-3.3-70b', cls.AVAILABLE_MODELS['llama-3.3-70b']
 
-    def __init__(self, api_key: str = None, model: str = 'llama-3.3-70b', timeout: int = 30):
+    # Default timeout for cloud API calls
+    DEFAULT_TIMEOUT = 120  # 2 minutes
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = 'llama-3.3-70b',
+        timeout: Optional[int] = None,
+    ):
         """
         Initialize the HuggingFace summarizer.
 
         Args:
             api_key: HuggingFace API token (if not provided, reads from HUGGINGFACE_API_KEY env var)
             model: Model identifier (default: 'llama-3.3-70b')
-            timeout: Request timeout in seconds
+            timeout: Request timeout in seconds (default: 120s)
+                     Can be configured via PROVIDER_TIMEOUT_HUGGINGFACE env var.
         """
         super().__init__(api_key)
         self.api_key = api_key or os.getenv('HUGGINGFACE_API_KEY')
@@ -90,7 +99,13 @@ class HuggingFaceSummarizer(BaseSummarizer):
             )
 
         self.model_key, self.model = self.resolve_model(model)
-        self.timeout = timeout
+
+        # Timeout priority: param > env var > default
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            env_timeout = os.getenv('PROVIDER_TIMEOUT_HUGGINGFACE')
+            self.timeout = int(env_timeout) if env_timeout else self.DEFAULT_TIMEOUT
         # Use new router API with OpenAI-compatible chat completions format
         self.api_url = "https://router.huggingface.co/v1/chat/completions"
         self.headers = {

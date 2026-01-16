@@ -8,9 +8,11 @@ Edition Notes:
     - Token tracking (tokens_in, tokens_out) is available in both editions
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 
 from reconly_core.config_types import ProviderConfigSchema
+from reconly_core.resilience.config import RetryConfig
+from reconly_core.resilience.errors import ErrorCategory, classify_error
 from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
 
 
@@ -244,6 +246,45 @@ class BaseSummarizer(ABC):
             >>>     )
         """
         return ProviderConfigSchema(fields=[], requires_api_key=False)
+
+    def classify_error(self, error: Union[Exception, int, str]) -> ErrorCategory:
+        """
+        Classify an error to determine retry behavior.
+
+        This method classifies errors as TRANSIENT (retryable), PERMANENT (not retryable),
+        or CONFIGURATION (fix config before retry). Providers can override this method
+        to add provider-specific error classification logic.
+
+        Args:
+            error: The error to classify. Can be an Exception, HTTP status code, or message string.
+
+        Returns:
+            ErrorCategory indicating how to handle the error
+
+        Example:
+            >>> error = Exception("Rate limit exceeded")
+            >>> category = summarizer.classify_error(error)
+            >>> if category == ErrorCategory.TRANSIENT:
+            ...     # Retry with backoff
+            ...     pass
+        """
+        return classify_error(error)
+
+    def get_retry_config(self) -> RetryConfig:
+        """
+        Get the retry configuration for this provider.
+
+        Returns default retry settings. Providers can override this method
+        to customize retry behavior (e.g., longer timeouts for local providers).
+
+        Returns:
+            RetryConfig with retry settings for this provider
+
+        Example:
+            >>> config = summarizer.get_retry_config()
+            >>> print(f"Max attempts: {config.max_attempts}")
+        """
+        return RetryConfig.from_env()
 
     @classmethod
     def list_models(cls, api_key: Optional[str] = None) -> List[ModelInfo]:

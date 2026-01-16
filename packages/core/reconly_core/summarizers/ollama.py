@@ -13,12 +13,15 @@ from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInf
 class OllamaSummarizer(BaseSummarizer):
     """Summarizes content using local Ollama LLMs."""
 
+    # Default timeout for local Ollama models (longer since they run locally)
+    DEFAULT_TIMEOUT = 900  # 15 minutes
+
     def __init__(
         self,
         api_key: Optional[str] = None,  # Not used, but kept for interface consistency
         model: Optional[str] = None,
         base_url: Optional[str] = None,
-        timeout: int = 900
+        timeout: Optional[int] = None,
     ):
         """
         Initialize the Ollama summarizer.
@@ -28,10 +31,18 @@ class OllamaSummarizer(BaseSummarizer):
             model: Model name to use (e.g., 'llama3.2', 'mistral'). Auto-detected if None.
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 900s / 15 min for local models)
+                     Can be configured via PROVIDER_TIMEOUT_OLLAMA env var.
         """
         super().__init__(api_key=None)
         self.base_url = base_url or os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-        self.timeout = timeout
+
+        # Timeout priority: param > env var > default
+        if timeout is not None:
+            self.timeout = timeout
+        else:
+            env_timeout = os.getenv('PROVIDER_TIMEOUT_OLLAMA')
+            self.timeout = int(env_timeout) if env_timeout else self.DEFAULT_TIMEOUT
+
         self.model = model or os.getenv('OLLAMA_MODEL')
 
         # Auto-detect available models if model not specified
