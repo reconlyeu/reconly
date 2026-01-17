@@ -1059,7 +1059,7 @@ class ChatService:
             raise ProviderError(f"Ollama API error (HTTP {e.response.status_code}): {e}")
         except httpx.TimeoutException:
             raise ProviderError(
-                f"Ollama request timed out. The model may be loading or the request is too large. "
+                "Ollama request timed out. The model may be loading or the request is too large. "
                 "Try again or use a smaller model."
             )
         except Exception as e:

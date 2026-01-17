@@ -2,9 +2,19 @@
 
 Tests verify cost field visibility differs by edition while CRUD works identically.
 """
+import pytest
 from datetime import datetime, timedelta
 
 from reconly_core.database.models import Digest, FeedRun
+from reconly_core.edition import clear_edition_cache
+
+
+@pytest.fixture(autouse=True)
+def reset_edition_cache():
+    """Reset edition cache before and after each test."""
+    clear_edition_cache()
+    yield
+    clear_edition_cache()
 
 
 class TestDigestCostFieldsByEdition:
@@ -25,8 +35,8 @@ class TestDigestCostFieldsByEdition:
         response = client.get("/api/v1/digests")
         assert response.status_code == 200
 
-        items = response.json()["items"]
-        digest_data = next(d for d in items if d["url"] == digest.url)
+        digests = response.json()["digests"]
+        digest_data = next(d for d in digests if d["url"] == digest.url)
 
         if edition == "oss":
             assert "estimated_cost" not in digest_data
@@ -86,8 +96,8 @@ class TestFeedRunCostFieldsByEdition:
         response = client.get(f"/api/v1/feeds/{sample_feed.id}/runs")
         assert response.status_code == 200
 
-        items = response.json()["items"]
-        run_data = next(r for r in items if r["id"] == feed_run.id)
+        runs = response.json()  # Direct list, not wrapped in {"items": ...}
+        run_data = next(r for r in runs if r["id"] == feed_run.id)
 
         if edition == "oss":
             assert "total_cost" not in run_data
@@ -95,10 +105,10 @@ class TestFeedRunCostFieldsByEdition:
             assert run_data["total_cost"] == 0.05
 
     def test_feed_run_detail_cost_fields(self, edition, client, test_db, sample_feed):
-        """GET /feeds/{feed_id}/runs/{run_id} returns cost fields only in Enterprise."""
+        """GET /feed-runs/{run_id} returns cost fields only in Enterprise."""
         feed_run = self._create_feed_run(test_db, sample_feed.id, total_cost=0.0789)
 
-        response = client.get(f"/api/v1/feeds/{sample_feed.id}/runs/{feed_run.id}")
+        response = client.get(f"/api/v1/feed-runs/{feed_run.id}")
         assert response.status_code == 200
 
         data = response.json()
@@ -129,7 +139,7 @@ class TestCoreCRUDByEdition:
 
         # Delete
         response = client.delete(f"/api/v1/digests/{digest.id}")
-        assert response.status_code == 200
+        assert response.status_code == 204
 
         # Verify deleted
         response = client.get(f"/api/v1/digests/{digest.id}")
@@ -143,7 +153,7 @@ class TestCoreCRUDByEdition:
             "type": "rss",
             "url": f"https://example.com/{edition}.xml",
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
         source_id = response.json()["id"]
 
         # Update
@@ -152,7 +162,7 @@ class TestCoreCRUDByEdition:
 
         # Delete
         response = client.delete(f"/api/v1/sources/{source_id}")
-        assert response.status_code == 200
+        assert response.status_code == 204
 
     def test_feed_crud_works(self, edition, client, test_db, sample_source, sample_prompt_template):
         """Verify feed CRUD works regardless of edition."""
@@ -164,7 +174,7 @@ class TestCoreCRUDByEdition:
             "prompt_template_id": sample_prompt_template.id,
             "source_ids": [sample_source.id],
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
         feed_id = response.json()["id"]
 
         # Update
@@ -173,7 +183,7 @@ class TestCoreCRUDByEdition:
 
         # Delete
         response = client.delete(f"/api/v1/feeds/{feed_id}")
-        assert response.status_code == 200
+        assert response.status_code == 204
 
     def test_template_crud_works(self, edition, client, test_db):
         """Verify prompt template CRUD works regardless of edition."""
@@ -185,7 +195,7 @@ class TestCoreCRUDByEdition:
             "language": "en",
             "target_length": 100,
         })
-        assert response.status_code == 200
+        assert response.status_code == 201
         template_id = response.json()["id"]
 
         # Update
@@ -194,7 +204,7 @@ class TestCoreCRUDByEdition:
 
         # Delete
         response = client.delete(f"/api/v1/templates/prompts/{template_id}")
-        assert response.status_code == 200
+        assert response.status_code == 204
 
 
 class TestStatsEndpointsByEdition:

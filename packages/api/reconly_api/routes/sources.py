@@ -22,7 +22,6 @@ from reconly_api.schemas.sources import (
     SourceUpdate,
     SourceResponse,
     SourceHealthResponse,
-    SourcesHealthSummary,
     ValidationResponse,
 )
 from reconly_api.schemas.batch import BatchDeleteRequest, BatchDeleteResponse

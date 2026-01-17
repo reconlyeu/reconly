@@ -7,7 +7,7 @@ Provides management commands for:
 """
 import asyncio
 import logging
-from typing import Literal, Optional
+from typing import Optional
 
 from reconly_core.database.crud import DigestDB
 from reconly_core.rag.search.vector import ChunkSource
@@ -160,7 +160,7 @@ class RAGCommandHandler:
 
             # Show updated statistics
             stats = graph_service.get_statistics()
-            print(f"\n   Graph Statistics:")
+            print("\n   Graph Statistics:")
             print(f"      Total relationships: {stats['total_relationships']}")
             print(f"      By type: {stats['by_type']}")
             print(f"      Average score: {stats['average_score']}")

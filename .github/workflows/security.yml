@@ -33,7 +33,7 @@ jobs:
           pip install ./packages/api
 
       - name: Run security audit
-        run: pip-audit --strict
+        run: pip-audit --strict --ignore-package reconly-core --ignore-package reconly-api
 
       - name: Upload audit results (on failure)
         if: failure()

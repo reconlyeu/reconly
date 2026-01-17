@@ -20,7 +20,6 @@ Example usage:
 """
 
 import json
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
@@ -41,7 +40,6 @@ from reconly_core.chat.service import (
     ChatService,
     ConversationNotFoundError,
     ProviderError,
-    StreamChunk,
 )
 
 import logging
