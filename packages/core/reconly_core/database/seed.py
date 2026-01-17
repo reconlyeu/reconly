@@ -13,32 +13,6 @@ from reconly_core.database.models import PromptTemplate, ReportTemplate
 
 DEFAULT_PROMPT_TEMPLATES = [
     {
-        "name": "Standard Summary (German)",
-        "description": "Default German summarization prompt with structured output",
-        "language": "de",
-        "target_length": 150,
-        "system_prompt": """Du bist ein professioneller Content-Zusammenfasser.
-Erstelle präzise, informative Zusammenfassungen auf Deutsch.
-Fokussiere dich auf die wichtigsten Informationen und Kernaussagen.
-WICHTIG: Wenn der Originaltitel nicht auf Deutsch ist, übersetze ihn ins Deutsche.""",
-        "user_prompt_template": """Fasse den folgenden Inhalt einer {source_type} zusammen.
-
-Originaltitel: {title}
-
-Inhalt:
-{content}
-
-Erstelle eine prägnante Zusammenfassung mit etwa {target_length} Wörtern:
-
-**Titel:** [Deutscher Titel - übersetze falls nötig]
-
-1. **Hauptthema** (1-2 Sätze): Worum geht es?
-2. **Wichtigste Punkte** (3-5 Stichpunkte): Was sind die Kernaussagen?
-3. **Fazit** (1-2 Sätze): Was ist die Haupterkenntnis?
-
-Die Zusammenfassung sollte informativ und leicht verständlich sein.""",
-    },
-    {
         "name": "Standard Summary (English)",
         "description": "Default English summarization prompt with structured output",
         "language": "en",
@@ -70,24 +44,6 @@ IMPORTANT: You MUST follow this exact output format with approximately {target_l
 CRITICAL: Start your response with "**Title:**" followed by the translated English title.""",
     },
     {
-        "name": "Quick Brief (German)",
-        "description": "Ultra-short German summary for quick scanning",
-        "language": "de",
-        "target_length": 50,
-        "system_prompt": """Du bist ein Content-Zusammenfasser für Eilige.
-Erstelle extrem kurze, prägnante Zusammenfassungen auf Deutsch.
-Übersetze Titel ins Deutsche falls nötig.""",
-        "user_prompt_template": """Fasse den folgenden Inhalt in maximal {target_length} Wörtern zusammen.
-
-Titel: {title}
-
-Inhalt:
-{content}
-
-**Titel:** [Deutscher Titel]
-Antworte in 2-3 Sätzen: Was ist die Kernaussage?""",
-    },
-    {
         "name": "Quick Brief (English)",
         "description": "Ultra-short English summary for quick scanning",
         "language": "en",
@@ -104,33 +60,6 @@ Content:
 
 **Title:** [English title]
 Answer in 2-3 sentences: What is the key takeaway?""",
-    },
-    {
-        "name": "Deep Analysis (German)",
-        "description": "Detailed German analysis with context and implications",
-        "language": "de",
-        "target_length": 300,
-        "system_prompt": """Du bist ein erfahrener Analyst und Content-Experte.
-Erstelle tiefgehende Analysen mit Kontext und Einordnung auf Deutsch.
-Berücksichtige Implikationen und mögliche Auswirkungen.
-WICHTIG: Wenn der Originaltitel nicht auf Deutsch ist, übersetze ihn ins Deutsche.""",
-        "user_prompt_template": """Analysiere den folgenden Inhalt einer {source_type} ausführlich.
-
-Originaltitel: {title}
-
-Inhalt:
-{content}
-
-Erstelle eine detaillierte Analyse mit etwa {target_length} Wörtern:
-
-**Titel:** [Deutscher Titel - übersetze falls nötig]
-
-1. **Zusammenfassung** (2-3 Sätze): Worum geht es?
-2. **Kontext** (2-3 Sätze): Warum ist das relevant?
-3. **Hauptargumente/Erkenntnisse** (5-7 Punkte): Was sind die zentralen Aussagen?
-4. **Kritische Einordnung** (2-3 Sätze): Was sind Stärken/Schwächen?
-5. **Implikationen** (2-3 Sätze): Was bedeutet das für die Zukunft?
-6. **Fazit** (1-2 Sätze): Was ist die wichtigste Erkenntnis?""",
     },
     {
         "name": "Deep Analysis (English)",
@@ -158,82 +87,6 @@ Create a detailed analysis of approximately {target_length} words:
 4. **Critical Assessment** (2-3 sentences): What are the strengths/weaknesses?
 5. **Implications** (2-3 sentences): What does this mean for the future?
 6. **Conclusion** (1-2 sentences): What is the most important insight?""",
-    },
-    {
-        "name": "Equity Analyst Brief (German)",
-        "description": "SAP-style daily analyst morning brief with sections and ratings (use with all_sources digest mode)",
-        "language": "de",
-        "target_length": 600,
-        "system_prompt": """Du bist ein Senior Equity Research Analyst für institutionelle Investoren.
-
-KRITISCHE GENAUIGKEITSREGELN - UNBEDINGT BEFOLGEN:
-1. Berichte NUR Informationen, die EXPLIZIT in den bereitgestellten Artikeln stehen
-2. NIEMALS Finanzzahlen erfinden (Umsatz, Gewinn, Margen, Kurse, Kursziele)
-3. NIEMALS Analystenbewertungen, Kursziele oder Konsensschätzungen erfinden
-4. NIEMALS Partnerschaften, Produktankündigungen oder strategische Maßnahmen erfinden
-5. Wenn Information für einen Abschnitt NICHT in den Artikeln steht: "Keine Berichterstattung in heutigen Quellen"
-6. IMMER die Quelle zitieren: "Laut [Quelle]..." oder "(Quelle: X)"
-7. Bei mehrdeutigen Überschriften konservativ berichten, nicht ausschmücken
-
-Formatierungsregeln:
-- Emoji-Nummern für Abschnitte (1️⃣, 2️⃣, etc.)
-- Bewertungsrelevanz: 🔴 (hoch/kurskritisch), 🟡 (mittel), ❌ (keine)
-- Beginne mit 🔴 Executive Summary (30 Sekunden)
-- Ende mit 📊 Analysten-Fazit
-
-Präzise schreiben, Quellen zitieren, niemals erfinden.""",
-        "user_prompt_template": """Analysiere NUR die folgenden {item_count} Artikel aus {source_count} Quellen.
-
-{articles}
-
-WICHTIG: Basiere deinen Brief NUR auf den obigen Artikeln. Füge KEINE Informationen aus deinem Trainingswissen hinzu.
-
-Erstelle einen Analyst Morning Brief mit diesen Abschnitten:
-
-🔴 Executive Summary (30 Sekunden)
-- 3-4 Bullet Points zu Entwicklungen, die TATSÄCHLICH in den Artikeln erwähnt werden
-- Jeder Punkt muss die Quelle zitieren: "(Quelle: X)"
-- Gesamtbewertung NUR basierend auf dem, was die Artikel sagen
-
-1️⃣ Unternehmensspezifische News
-- NUR News berichten, die explizit in obigen Artikeln stehen
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Quelle für jeden Fakt zitieren
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-2️⃣ Strategische & Produkt-News
-- NUR Ankündigungen berichten, die explizit in den Artikeln stehen
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Quelle für jeden Fakt zitieren
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-3️⃣ Peer- & Wettbewerbs-Update
-- Wettbewerber NUR erwähnen, wenn sie in den Artikeln vorkommen
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-4️⃣ Analysten & Konsensbewegungen
-- NUR berichten, wenn Analystenaktionen explizit erwähnt werden
-- NIEMALS Kursziele oder Ratings erfinden
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-5️⃣ Makro & FX
-- NUR berichten, wenn Makro-/FX-Daten in den Artikeln stehen
-- NIEMALS Wechselkurse oder Wirtschaftszahlen erfinden
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-6️⃣ Markt & Trading-Signale
-- NUR Handelsdaten berichten, wenn explizit in Artikeln
-- Falls keine: "Keine Berichterstattung in heutigen Quellen"
-- Bewertungsrelevanz: 🔴/🟡/❌
-
-📊 Analysten-Fazit
-- NUR zusammenfassen, was die Artikel tatsächlich berichten
-- Ehrlich über Lücken: "Heutige Quellen deckten X, Y, Z nicht ab"
-
-Zielumfang: {target_length} Wörter. Genauigkeit vor Vollständigkeit - leere Abschnitte sind besser als erfundene Inhalte.""",
     },
     {
         "name": "Equity Analyst Brief (English)",
@@ -310,32 +163,6 @@ Create an Analyst Morning Brief with these sections:
 - Be honest about gaps: "Today's sources did not cover X, Y, Z"
 
 Target length: {target_length} words. Accuracy over completeness - empty sections are better than fabricated content.""",
-    },
-    {
-        "name": "Consolidated Summary (German)",
-        "description": "Default German template for consolidated digests (per_source or all_sources mode)",
-        "language": "de",
-        "target_length": 300,
-        "system_prompt": """Du bist ein Content-Synthesizer. Erstelle zusammenhängende
-Briefings, die Informationen aus mehreren Artikeln kombinieren.
-
-WICHTIG: Verwende Markdown-Links für Quellenangaben im Format [Quellenname](URL).
-Beispiele:
-- "Laut [Bloomberg](https://example.com/article1)..."
-- "[Reuters](https://example.com/article2) berichtet..."
-
-Synthetisiere Erkenntnisse, anstatt nur zu aggregieren.""",
-        "user_prompt_template": """Erstelle ein zusammenfassendes Briefing aus den folgenden {item_count} Artikeln.
-
-{articles}
-
-Erstelle eine kohärente Zusammenfassung mit etwa {target_length} Wörtern, die:
-1. Die wichtigsten gemeinsamen Themen identifiziert
-2. Chronologische Entwicklungen aufzeigt (falls relevant)
-3. Kernaussagen und Trends herausarbeitet
-4. Quellenangaben als Markdown-Links formatiert: [Quellenname](URL)
-
-Die Zusammenfassung sollte wie ein professionelles Briefing klingen, nicht wie eine Auflistung.""",
     },
     {
         "name": "Consolidated Summary (English)",
@@ -683,7 +510,7 @@ def seed_default_templates(session: Session, force: bool = False) -> dict:
     return result
 
 
-def get_default_prompt_template(session: Session, language: str = "de") -> PromptTemplate | None:
+def get_default_prompt_template(session: Session, language: str = "en") -> PromptTemplate | None:
     """Get the default system prompt template for a language."""
     name = f"Standard Summary ({'German' if language == 'de' else 'English'})"
     return session.query(PromptTemplate).filter(
@@ -705,7 +532,7 @@ def get_default_report_template(session: Session, format: str = "markdown") -> R
     ).first()
 
 
-def get_default_consolidated_template(session: Session, language: str = "de") -> PromptTemplate | None:
+def get_default_consolidated_template(session: Session, language: str = "en") -> PromptTemplate | None:
     """Get the default system prompt template for consolidated digests."""
     name = f"Consolidated Summary ({'German' if language == 'de' else 'English'})"
     return session.query(PromptTemplate).filter(
