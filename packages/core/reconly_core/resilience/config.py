@@ -4,8 +4,7 @@ This module defines configuration objects for retry logic, circuit breakers,
 and other resilience mechanisms.
 """
 import os
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass

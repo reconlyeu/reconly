@@ -21,6 +21,7 @@ export const strings = {
     feeds: 'Feeds',
     feedRuns: 'Feed Runs',
     templates: 'Templates',
+    chat: 'Chat',
     analytics: 'Analytics',
     knowledgeGraph: 'Knowledge Graph',
     settings: 'Settings',
@@ -511,6 +512,26 @@ export const strings = {
     hoursAgo: '{count} hours ago',
     daysAgo: '{count} days ago',
     never: 'Never',
+  },
+
+  // Chat
+  chat: {
+    title: 'Chat',
+    askAI: 'Ask AI',
+    newConversation: 'New Chat',
+    quickChat: 'Quick Chat',
+    openFullChat: 'Open full chat',
+    noConversations: 'No conversations yet',
+    startConversation: 'Start a Conversation',
+    welcomeTitle: 'Welcome to Chat',
+    welcomeDescription: 'Start a new conversation or select an existing one from the sidebar. I can help you manage your feeds, search digests, and answer questions about your content.',
+    emptyTitle: 'Start a Conversation',
+    emptyDescription: 'Ask me anything about your feeds, digests, or sources. I can help you search, create, and manage your content.',
+    inputPlaceholder: 'Ask a question...',
+    poweredBy: 'Powered by your configured LLM',
+    deleteConfirm: 'Delete this conversation? This cannot be undone.',
+    thinking: 'Thinking...',
+    calling: 'Calling {tool}...',
   },
 } as const;
 

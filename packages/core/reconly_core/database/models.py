@@ -2,15 +2,17 @@
 
 Entity Model Overview:
 ─────────────────────
-User            → Optional for single-user OSS, required for multi-user
-Source          → Content sources (RSS, YouTube, websites, etc.)
-Feed            → Groups sources with schedule and output configuration
-FeedSource      → Many-to-many junction: Feed ↔ Source
-PromptTemplate  → LLM prompt configuration for summarization
-ReportTemplate  → Output rendering templates
-FeedRun         → Execution history for feeds
-Digest          → Processed content output (existing)
-LLMUsageLog     → Per-request LLM usage tracking for billing
+User              → Optional for single-user OSS, required for multi-user
+Source            → Content sources (RSS, YouTube, websites, etc.)
+Feed              → Groups sources with schedule and output configuration
+FeedSource        → Many-to-many junction: Feed ↔ Source
+PromptTemplate    → LLM prompt configuration for summarization
+ReportTemplate    → Output rendering templates
+FeedRun           → Execution history for feeds
+Digest            → Processed content output (existing)
+LLMUsageLog       → Per-request LLM usage tracking for billing
+ChatConversation  → LLM chat conversation metadata
+ChatMessage       → Individual messages in chat conversations
 
 All entities have nullable user_id for single-user mode.
 Enterprise extends with scope/org via migrations.
@@ -102,6 +104,7 @@ class User(Base):
     digests = relationship('Digest', back_populates='user')
     llm_usage_logs = relationship('LLMUsageLog', back_populates='user')
     agent_runs = relationship('AgentRun', back_populates='user')
+    chat_conversations = relationship('ChatConversation', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
@@ -1321,3 +1324,126 @@ class AgentRun(Base):
         if self.started_at and self.completed_at:
             return (self.completed_at - self.started_at).total_seconds()
         return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHAT CONVERSATION (LLM Chat Interface)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class ChatConversation(Base):
+    """
+    Stores chat conversation metadata for the LLM chat interface.
+
+    Each conversation tracks:
+    - Optional user association (nullable for single-user OSS mode)
+    - Conversation title (auto-generated or user-defined)
+    - Model configuration used for the conversation
+    - Timestamps for ordering and display
+    """
+    __tablename__ = 'chat_conversations'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+
+    # Conversation metadata
+    title = Column(String(255), nullable=False)
+    model_provider = Column(String(50), nullable=True)  # ollama, anthropic, openai, etc.
+    model_name = Column(String(100), nullable=True)  # llama3.2, claude-3-5-sonnet, etc.
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Relationships
+    user = relationship('User', back_populates='chat_conversations')
+    messages = relationship('ChatMessage', back_populates='conversation', cascade='all, delete-orphan',
+                            order_by='ChatMessage.created_at')
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_chat_conversations_user_created', 'user_id', 'created_at'),
+    )
+
+    def __repr__(self):
+        return f"<ChatConversation(id={self.id}, title='{self.title[:30] if self.title else ''}...')>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'model_provider': self.model_provider,
+            'model_name': self.model_name,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'message_count': len(self.messages) if self.messages else 0,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHAT MESSAGE (LLM Chat Interface)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class ChatMessage(Base):
+    """
+    Stores individual chat messages within a conversation.
+
+    Supports multiple message types:
+    - 'user': User input messages
+    - 'assistant': LLM response messages (may include tool_calls)
+    - 'tool_call': When assistant requests tool execution
+    - 'tool_result': Results from tool execution (references tool_call_id)
+
+    For tool calling:
+    - tool_calls: JSONB array of tool call requests from assistant
+    - tool_call_id: References which tool call this result is for
+    """
+    __tablename__ = 'chat_messages'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    conversation_id = Column(Integer, ForeignKey('chat_conversations.id', ondelete='CASCADE'),
+                             nullable=False, index=True)
+
+    # Message content
+    role = Column(String(20), nullable=False, index=True)  # user, assistant, tool_call, tool_result
+    content = Column(Text, nullable=True)  # Nullable for tool_call messages that only have tool_calls
+
+    # Tool calling support
+    # tool_calls: Array of tool call objects when assistant wants to call tools
+    # Format: [{"id": "call_123", "type": "function", "function": {"name": "...", "arguments": "..."}}]
+    tool_calls = Column(JSON, nullable=True)
+    # tool_call_id: For tool_result messages, references the tool call this is responding to
+    tool_call_id = Column(String(100), nullable=True)
+
+    # Token usage tracking (populated for assistant messages)
+    tokens_in = Column(Integer, nullable=True)
+    tokens_out = Column(Integer, nullable=True)
+
+    # Timestamp
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    conversation = relationship('ChatConversation', back_populates='messages')
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_chat_messages_conversation_created', 'conversation_id', 'created_at'),
+    )
+
+    def __repr__(self):
+        content_preview = self.content[:30] if self.content else '(no content)'
+        return f"<ChatMessage(id={self.id}, role='{self.role}', content='{content_preview}...')>"
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'conversation_id': self.conversation_id,
+            'role': self.role,
+            'content': self.content,
+            'tool_calls': self.tool_calls,
+            'tool_call_id': self.tool_call_id,
+            'tokens_in': self.tokens_in,
+            'tokens_out': self.tokens_out,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

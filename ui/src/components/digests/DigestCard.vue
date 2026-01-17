@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { FileText, Calendar, Tag, Coins, Trash2, ExternalLink } from 'lucide-vue-next';
 import { useConfirm } from '@/composables/useConfirm';
 import { marked } from 'marked';
@@ -56,17 +56,41 @@ const renderedSummary = computed(() => {
   return marked(props.digest.summary) as string;
 });
 
-// Get preview image: prefer explicit image_url, fall back to extracting from content
-const previewImageUrl = computed(() => {
-  if (props.digest.image_url) return props.digest.image_url;
-  if (!props.digest.content) return null;
-  const html = marked(props.digest.content) as string;
-  return extractPreviewImage(html);
-});
-
 // Check if this is a YouTube source
 const isYouTube = computed(() => {
   return props.digest.source_type?.toLowerCase() === 'youtube';
+});
+
+// Extract YouTube video ID from URL
+const extractYouTubeVideoId = (url: string): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+// Get preview image: prefer explicit image_url, then YouTube thumbnail, fall back to extracting from content
+const previewImageUrl = computed(() => {
+  if (props.digest.image_url) return props.digest.image_url;
+
+  // For YouTube, construct thumbnail URL from video ID
+  if (isYouTube.value && props.digest.url) {
+    const videoId = extractYouTubeVideoId(props.digest.url);
+    if (videoId) {
+      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
+  }
+
+  // Fall back to extracting from content
+  if (!props.digest.content) return null;
+  const html = marked(props.digest.content) as string;
+  return extractPreviewImage(html);
 });
 
 const handleExport = (exporter: Exporter) => {
@@ -83,6 +107,12 @@ const handleDelete = (e: Event) => {
 
 const handleClick = () => {
   emit('view', props.digest);
+};
+
+// Handle image load error - show placeholder instead
+const imageLoadError = ref(false);
+const handleImageError = () => {
+  imageLoadError.value = true;
 };
 </script>
 
@@ -104,10 +134,11 @@ const handleClick = () => {
     <!-- Preview image or placeholder (absolute positioned top-right) -->
     <div class="absolute right-0 top-0 w-[115px] aspect-video rounded border border-border-subtle bg-bg-surface overflow-hidden">
       <img
-        v-if="previewImageUrl"
+        v-if="previewImageUrl && !imageLoadError"
         :src="previewImageUrl"
         alt=""
         class="w-full h-full object-cover"
+        @error="handleImageError"
       />
       <YoutubePlaceholder v-else-if="isYouTube" />
       <ArticlePlaceholder v-else />

@@ -10,6 +10,7 @@ import Sidebar from '@components/common/Sidebar.vue';
 import ThemeToggle from '@components/common/ThemeToggle.vue';
 import ToastProvider from '@components/common/ToastProvider.vue';
 import AuthGuard from '@components/auth/AuthGuard.vue';
+import GlobalChat from '@components/chat/GlobalChat.vue';
 
 interface Props {
   title?: string;
@@ -60,6 +61,9 @@ const { title = 'Reconly' } = Astro.props;
           </main>
         </div>
       </div>
+
+      <!-- Global Chat (Floating Tab + Quick Panel) -->
+      <GlobalChat client:load />
     </AuthGuard>
 
     <!-- Theme initialization script -->
