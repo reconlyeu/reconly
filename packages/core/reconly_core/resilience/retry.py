@@ -326,7 +326,6 @@ def retry_with_result(
             return metadata
 
         except Exception as e:
-            last_error = e
             category = classifier_fn(e)
             metadata["error"] = e
             metadata["error_category"] = category

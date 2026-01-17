@@ -29,11 +29,11 @@ jobs:
       - name: Install project dependencies
         run: |
           pip install --upgrade pip
-          pip install ./packages/core
-          pip install ./packages/api
+          pip install -e ./packages/core
+          pip install -e ./packages/api
 
       - name: Run security audit
-        run: pip-audit --strict --ignore-package reconly-core --ignore-package reconly-api
+        run: pip-audit --strict --skip-editable
 
       - name: Upload audit results (on failure)
         if: failure()
