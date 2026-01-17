@@ -314,8 +314,6 @@ def retry_with_result(
         "retry_delays": [],
     }
 
-    last_error: Optional[Exception] = None
-
     for attempt in range(config.max_attempts):
         metadata["attempts"] = attempt + 1
 

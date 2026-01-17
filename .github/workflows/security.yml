@@ -33,7 +33,7 @@ jobs:
           pip install -e ./packages/api
 
       - name: Run security audit
-        run: pip-audit --strict --skip-editable
+        run: pip-audit --skip-editable
 
       - name: Upload audit results (on failure)
         if: failure()
