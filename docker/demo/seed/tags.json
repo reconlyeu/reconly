@@ -1,0 +1,18 @@
+{
+  "$schema": "./schema.json",
+  "$comment": "Demo tags for Reconly demo mode. These tags are pre-created for categorizing digests.",
+  "tags": [
+    {"name": "ai"},
+    {"name": "llm"},
+    {"name": "open-source"},
+    {"name": "self-hosted"},
+    {"name": "programming"},
+    {"name": "python"},
+    {"name": "rust"},
+    {"name": "devops"},
+    {"name": "productivity"},
+    {"name": "finance"},
+    {"name": "research"},
+    {"name": "tools"}
+  ]
+}

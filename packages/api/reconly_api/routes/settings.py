@@ -15,6 +15,7 @@ from reconly_api.schemas.settings import (
     SettingsResetRequest, SettingsResetResponse
 )
 from reconly_core.services.settings_service import SettingsService
+from reconly_core.edition import is_demo_mode
 
 router = APIRouter()
 
@@ -45,7 +46,8 @@ async def get_settings():
         exports=ExportSettings(
             obsidian_vault_path=None,  # Not yet configured
             default_export_format="json",
-        )
+        ),
+        demo_mode=is_demo_mode(),
     )
 
 

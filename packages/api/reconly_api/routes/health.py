@@ -25,6 +25,7 @@ from reconly_api.dependencies import get_db
 from reconly_api.auth.password import check_auth_cookie, check_basic_auth
 from reconly_api.schemas.sources import SourcesHealthSummary
 from reconly_core.database.models import Source
+from reconly_core.edition import is_demo_mode
 from reconly_api.routes.sources import _source_to_health_response
 
 
@@ -46,6 +47,7 @@ class HealthStatus(BaseModel):
     """Simple health status response."""
 
     status: str
+    demo_mode: bool
 
 
 class DetailedHealthStatus(BaseModel):
@@ -58,6 +60,7 @@ class DetailedHealthStatus(BaseModel):
     uptime_seconds: float
     timestamp: str
     components: dict
+    demo_mode: bool
 
 
 def _check_database(db: Session) -> tuple[bool, Optional[str]]:
@@ -111,9 +114,9 @@ async def health_check():
     This endpoint is always public and suitable for load balancer health checks.
 
     Returns:
-        {"status": "healthy"} if the service is running
+        {"status": "healthy", "demo_mode": true/false} if the service is running
     """
-    return HealthStatus(status="healthy")
+    return HealthStatus(status="healthy", demo_mode=is_demo_mode())
 
 
 @router.get("/health/detailed", response_model=DetailedHealthStatus)
@@ -176,6 +179,7 @@ async def health_check_detailed(
         uptime_seconds=uptime,
         timestamp=datetime.now().isoformat(),
         components=components,
+        demo_mode=is_demo_mode(),
     )
 
 

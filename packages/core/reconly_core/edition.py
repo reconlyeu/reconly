@@ -4,6 +4,17 @@ This module provides a centralized way to detect the current edition
 (OSS or Enterprise) and check for edition-specific features.
 """
 import os
+
+__all__ = [
+    "Edition",
+    "get_edition",
+    "is_enterprise",
+    "is_oss",
+    "is_demo_mode",
+    "clear_edition_cache",
+    "Features",
+    "features",
+]
 import warnings
 from enum import Enum
 from functools import lru_cache
@@ -45,6 +56,19 @@ def is_enterprise() -> bool:
 def is_oss() -> bool:
     """Check if running in OSS mode."""
     return get_edition() == "oss"
+
+
+def is_demo_mode() -> bool:
+    """Check if running in demo mode.
+
+    Demo mode is enabled when RECONLY_DEMO_MODE is set to "true", "1", or "yes"
+    (case-insensitive).
+
+    Returns:
+        True if demo mode is enabled, False otherwise.
+    """
+    demo_value = os.getenv("RECONLY_DEMO_MODE", "").lower()
+    return demo_value in ("true", "1", "yes")
 
 
 def clear_edition_cache() -> None:

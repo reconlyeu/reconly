@@ -125,10 +125,15 @@ export const apiClient = createApiClient();
 // HEALTH
 // ═══════════════════════════════════════════════════════════════════════════════
 
+export interface HealthResponse {
+  status: string;
+  demo_mode: boolean;
+}
+
 export const healthApi = {
-  check: async (): Promise<{ status: string; timestamp: string }> => {
+  check: async (): Promise<HealthResponse> => {
     // Health endpoint is at root level, not under /api/v1
-    const { data } = await axios.get('/health', { timeout: 5000 });
+    const { data } = await axios.get<HealthResponse>('/health', { timeout: 5000 });
     return data;
   },
 };

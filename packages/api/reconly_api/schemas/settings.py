@@ -86,6 +86,7 @@ class SettingsResponse(BaseModel):
     """Complete settings response."""
     smtp: SMTPSettings
     exports: ExportSettings
+    demo_mode: bool = Field(False, description="Whether the application is running in demo mode")
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -100,7 +101,8 @@ class SettingsResponse(BaseModel):
             "exports": {
                 "obsidian_vault_path": "/path/to/vault",
                 "default_export_format": "json"
-            }
+            },
+            "demo_mode": False
         }
     })
 

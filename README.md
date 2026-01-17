@@ -43,8 +43,30 @@
 
 ---
 
+## Try the Demo
+
+Experience Reconly instantly with pre-loaded data — **ready in 30 seconds**:
+
+```bash
+git clone https://github.com/reconlyeu/reconly.git
+cd reconly/docker/demo
+docker compose up
+```
+
+Open **http://localhost:8002** and explore:
+- 7 curated feeds (tech news, AI research, GitHub trends, finance)
+- 41 pre-generated AI summaries
+- Working knowledge graph with semantic search
+
+> **Requirements:** Docker with 2GB+ RAM, ~500MB disk
+> **No LLM needed** — all content is pre-generated
+> **Details:** [Demo Mode Guide](docs/demo-mode.md)
+
+---
+
 ## Table of Contents
 
+- [Try the Demo](#try-the-demo)
 - [Quick Start](#quick-start)
 - [Features](#features)
 - [AI Providers](#ai-providers)
@@ -244,6 +266,7 @@ export EMBEDDING_MODEL=bge-m3
 
 | Guide | Description |
 |-------|-------------|
+| [Demo Mode Guide](docs/demo-mode.md) | Try Reconly with pre-loaded data and local AI |
 | [Setup Guide](docs/setup.md) | Installation, database, AI providers |
 | [RAG Setup Guide](docs/rag-setup.md) | PostgreSQL + pgvector, embedding providers, semantic search |
 | [Configuration Reference](docs/configuration.md) | All environment variables |

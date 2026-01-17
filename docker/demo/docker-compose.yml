@@ -1,0 +1,94 @@
+# Reconly Demo Mode - Docker Compose Configuration
+#
+# INSTANT DEMO: Pre-loaded with sample data, no LLM required
+#
+# This composition provides a complete demo experience with:
+# - PostgreSQL database pre-loaded with 41 digests, feeds, sources
+# - Pre-computed embeddings for RAG/knowledge graph features
+# - No LLM needed - all summaries are pre-generated
+#
+# Usage:
+#   docker compose up              # Start demo (ready in ~30 seconds)
+#   docker compose logs -f api     # View API logs
+#   docker compose down            # Stop services
+#   docker compose down -v         # Full reset (reload demo data on next start)
+#
+# System Requirements:
+# - Docker with 2GB+ RAM allocated
+# - ~500MB disk space
+
+services:
+  # ==========================================================================
+  # PostgreSQL with pgvector - Pre-loaded with demo data
+  # ==========================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: reconly-demo-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=reconly
+      - POSTGRES_PASSWORD=reconly_demo
+      - POSTGRES_DB=reconly
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Init script loads demo data on first startup
+      - ./init/demo-data.sql:/docker-entrypoint-initdb.d/01-demo-data.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reconly -d reconly"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - reconly-demo
+
+  # ==========================================================================
+  # Reconly API - Serves UI and API
+  # ==========================================================================
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/demo/Dockerfile.demo
+    container_name: reconly-demo-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8002}:8000"
+    environment:
+      # Demo Mode Flag
+      - RECONLY_DEMO_MODE=true
+      # Database
+      - DATABASE_URL=postgresql://reconly:reconly_demo@postgres:5432/reconly
+      # Edition (OSS demo)
+      - RECONLY_EDITION=oss
+      # No LLM needed - summaries are pre-generated
+      - DEFAULT_PROVIDER=ollama
+      - OLLAMA_HOST=http://localhost:11434
+    volumes:
+      - reconly_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
+    networks:
+      - reconly-demo
+
+# ==========================================================================
+# Named Volumes
+# ==========================================================================
+volumes:
+  postgres_data:
+    name: reconly-demo-postgres-data
+  reconly_data:
+    name: reconly-demo-app-data
+
+# ==========================================================================
+# Network
+# ==========================================================================
+networks:
+  reconly-demo:
+    name: reconly-demo-network

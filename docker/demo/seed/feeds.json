@@ -1,0 +1,82 @@
+{
+  "$schema": "./schema.json",
+  "$comment": "Demo feeds for Reconly demo mode. References sources by name.",
+  "feeds": [
+    {
+      "name": "Tech Daily",
+      "description": "Daily tech news from Hacker News, TechCrunch, and Fireship. Stay updated on the latest in tech, startups, and developer content.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 8 * * *",
+      "schedule_enabled": false,
+      "prompt_template": "Standard Summary (English)",
+      "sources": ["Hacker News", "TechCrunch", "Fireship"],
+      "digest_count": 8
+    },
+    {
+      "name": "GitHub Trending",
+      "description": "Track trending repositories and official GitHub announcements. Discover popular open source projects and platform updates.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 9 * * *",
+      "schedule_enabled": false,
+      "prompt_template": "Standard Summary (English)",
+      "sources": ["GitHub Trending", "GitHub Blog"],
+      "digest_count": 6
+    },
+    {
+      "name": "NVDA Analyst Watch",
+      "description": "Comprehensive NVIDIA coverage from financial analysts and news sources. Track earnings, analyst ratings, and market sentiment.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 7 * * 1-5",
+      "schedule_enabled": false,
+      "prompt_template": "Equity Analyst Brief (English)",
+      "sources": [
+        "Seeking Alpha - NVDA",
+        "Yahoo Finance - NVDA News",
+        "Motley Fool - NVDA",
+        "MarketWatch - NVDA",
+        "Benzinga - Semiconductors"
+      ],
+      "digest_count": 4
+    },
+    {
+      "name": "AI Research Digest",
+      "description": "Latest AI/ML research and updates from ArXiv, Ollama, and Hugging Face. Deep dive into cutting-edge AI developments.",
+      "digest_mode": "per_source",
+      "schedule_cron": "0 10 * * *",
+      "schedule_enabled": false,
+      "prompt_template": "Standard Summary (English)",
+      "sources": ["ArXiv - AI/ML", "Ollama Blog", "Hugging Face Blog"],
+      "digest_count": 9
+    },
+    {
+      "name": "Self-Hosted Weekly",
+      "description": "Community picks from r/selfhosted. Discover self-hosted alternatives, homelab setups, and privacy-focused tools.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 9 * * 0",
+      "schedule_enabled": false,
+      "prompt_template": "Standard Summary (English)",
+      "sources": ["r/selfhosted"],
+      "digest_count": 5
+    },
+    {
+      "name": "Productivity Inbox",
+      "description": "Curated tech news from the TLDR newsletter. Quick summaries of the most important tech stories.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 8 * * 1-5",
+      "schedule_enabled": false,
+      "prompt_template": "Quick Brief (English)",
+      "sources": ["TLDR Newsletter"],
+      "digest_count": 4
+    },
+    {
+      "name": "Paul Graham Essays",
+      "description": "Timeless essays from Paul Graham on startups, technology, and life. Deep thinking from the Y Combinator founder.",
+      "digest_mode": "individual",
+      "schedule_cron": "0 10 * * 0",
+      "schedule_enabled": false,
+      "prompt_template": "Deep Analysis (English)",
+      "sources": ["Paul Graham Essays"],
+      "digest_count": 4
+    }
+  ]
+}
