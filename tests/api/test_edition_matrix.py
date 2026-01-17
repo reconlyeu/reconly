@@ -209,8 +209,8 @@ class TestCoreCRUDByEdition:
         assert response.status_code == 201
         template_id = response.json()["id"]
 
-        # Update
-        response = client.patch(f"/api/v1/templates/prompt/{template_id}", json={"target_length": 200})
+        # Update (templates use PUT, not PATCH)
+        response = client.put(f"/api/v1/templates/prompt/{template_id}", json={"target_length": 200})
         assert response.status_code == 200
 
         # Delete
