@@ -36,7 +36,7 @@ const canGoPrev = () => props.hasPrev ?? props.page > 1;
 </script>
 
 <template>
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-center gap-4">
     <button
       @click="$emit('prev')"
       :disabled="!canGoPrev()"

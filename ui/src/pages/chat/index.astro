@@ -1,0 +1,13 @@
+---
+/**
+ * Chat page - Full LLM chat interface with conversation history
+ */
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { strings } from '@/i18n/en';
+import ChatPage from '@/components/chat/ChatPage.vue';
+---
+
+<BaseLayout title={strings.chat?.title || 'Chat'}>
+  <!-- client:only to avoid SSR hydration mismatches with dynamic height calculations -->
+  <ChatPage client:only="vue" />
+</BaseLayout>

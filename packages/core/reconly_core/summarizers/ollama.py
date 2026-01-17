@@ -235,6 +235,12 @@ class OllamaSummarizer(BaseSummarizer):
         if not content:
             raise ValueError("No content to summarize")
 
+        # Truncate content if too long to prevent context window overflow
+        # Most models have 32k context, but we limit to ~20k tokens (~80k chars) to be safe
+        MAX_CONTENT_CHARS = 80000
+        if len(content) > MAX_CONTENT_CHARS:
+            content = content[:MAX_CONTENT_CHARS] + "\n\n[Content truncated due to length...]"
+
         # Use provided prompts or build fallback
         if system_prompt and user_prompt:
             prompt = f"{system_prompt}\n\n{user_prompt}"
@@ -278,6 +284,7 @@ Create a concise summary of approximately 150 words."""
                     "options": {
                         "temperature": 0.7,
                         "top_p": 0.9,
+                        "num_ctx": 32768,  # Ensure large context window for long content
                         "num_predict": 4096  # Allow longer outputs for consolidated digests
                     }
                 },

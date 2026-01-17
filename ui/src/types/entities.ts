@@ -1086,3 +1086,109 @@ export interface OAuthRevokeResponse {
   provider: OAuthProvider;
   message: string;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CHAT CONVERSATIONS AND MESSAGES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type ChatMessageRole = 'user' | 'assistant' | 'tool_call' | 'tool_result';
+
+export interface ToolCall {
+  id: string | null;
+  name: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ChatMessage {
+  id: number;
+  conversation_id: number;
+  role: ChatMessageRole;
+  content: string | null;
+  tool_calls: ToolCall[] | null;
+  tool_call_id: string | null;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  id: number;
+  user_id: number | null;
+  title: string;
+  model_provider: string | null;
+  model_name: string | null;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface ChatConversationDetail extends ChatConversation {
+  messages: ChatMessage[];
+}
+
+export interface ChatConversationCreate {
+  title?: string;
+  model_provider?: string | null;
+  model_name?: string | null;
+}
+
+export interface ChatConversationUpdate {
+  title?: string | null;
+  model_provider?: string | null;
+  model_name?: string | null;
+}
+
+export interface ChatConversationList {
+  total: number;
+  items: ChatConversation[];
+}
+
+export interface ChatCompletionRequest {
+  message: string;
+  model_provider?: string | null;
+  model_name?: string | null;
+}
+
+export interface ToolCallExecuted {
+  id: string;
+  name: string;
+  parameters: Record<string, unknown>;
+  success: boolean | null;
+  result: unknown;
+  error: string | null;
+}
+
+export interface ChatCompletionResponse {
+  message: ChatMessage;
+  conversation_id: number;
+  tool_calls_executed: ToolCallExecuted[] | null;
+}
+
+// SSE Stream event types
+export type ChatStreamEventType = 'content' | 'tool_call' | 'tool_result' | 'done' | 'error';
+
+export interface ChatStreamContentEvent {
+  content: string;
+}
+
+export interface ChatStreamToolCallEvent {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
+export interface ChatStreamToolResultEvent {
+  call_id: string;
+  result: unknown;
+  success: boolean;
+  error?: string;
+}
+
+export interface ChatStreamDoneEvent {
+  tokens_in: number;
+  tokens_out: number;
+}
+
+export interface ChatStreamErrorEvent {
+  error: string;
+}

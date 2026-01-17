@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { X, Calendar, Tag, Coins, FileText, ChevronDown, ChevronUp, ExternalLink, Edit3, Check } from 'lucide-vue-next';
 import { marked } from 'marked';
@@ -54,6 +54,7 @@ const emit = defineEmits<Emits>();
 const isContentExpanded = ref(false);
 const isEditingTags = ref(false);
 const editedTags = ref<string[]>([]);
+const imageLoadError = ref(false);
 const queryClient = useQueryClient();
 
 // Update tags mutation
@@ -74,14 +75,21 @@ watch(() => props.isOpen, (isOpen) => {
   if (!isOpen) {
     isEditingTags.value = false;
     editedTags.value = [];
+    imageLoadError.value = false;
   }
 });
 
 watch(() => props.digest, (digest) => {
   if (digest) {
     editedTags.value = [...(digest.tags || [])];
+    imageLoadError.value = false;
   }
 }, { immediate: true });
+
+// Handle image load error
+const handleImageError = () => {
+  imageLoadError.value = true;
+};
 
 // Start editing tags
 const startEditingTags = () => {
@@ -171,16 +179,40 @@ const renderedContent = computed(() => {
   return marked(props.digest.content);
 });
 
-// Extract first non-badge image URL from content for preview
-const previewImageUrl = computed(() => {
-  if (!props.digest?.content) return null;
-  const html = marked(props.digest.content) as string;
-  return extractPreviewImage(html);
-});
-
 // Check if this is a YouTube source
 const isYouTube = computed(() => {
   return props.digest?.source_type?.toLowerCase() === 'youtube';
+});
+
+// Extract YouTube video ID from URL
+const extractYouTubeVideoId = (url: string): string | null => {
+  if (!url) return null;
+  // Match various YouTube URL formats
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+};
+
+// Extract first non-badge image URL from content for preview
+const previewImageUrl = computed(() => {
+  // For YouTube, construct thumbnail URL from video ID
+  if (isYouTube.value && props.digest?.url) {
+    const videoId = extractYouTubeVideoId(props.digest.url);
+    if (videoId) {
+      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
+  }
+
+  // Fall back to extracting from content
+  if (!props.digest?.content) return null;
+  const html = marked(props.digest.content) as string;
+  return extractPreviewImage(html);
 });
 
 const handleExport = (exporter: Exporter) => {
@@ -263,10 +295,11 @@ const toggleContent = () => {
             <!-- Preview image or placeholder thumbnail (absolute positioned) -->
             <div class="absolute right-8 top-8 w-[134px] aspect-video rounded-lg border border-border-subtle bg-bg-surface overflow-hidden shadow-lg md:right-12 md:top-12">
               <img
-                v-if="previewImageUrl"
+                v-if="previewImageUrl && !imageLoadError"
                 :src="previewImageUrl"
                 alt="Preview"
                 class="w-full h-full object-cover"
+                @error="handleImageError"
               />
               <YoutubePlaceholder v-else-if="isYouTube" />
               <ArticlePlaceholder v-else />
