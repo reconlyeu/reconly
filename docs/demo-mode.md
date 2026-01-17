@@ -18,8 +18,8 @@ Open **http://localhost:8002** — ready in ~30 seconds.
 |---------|-------|
 | **Feeds** | 7 |
 | **Sources** | 16 |
-| **Digests** | 48 |
-| **Embeddings** | 143 chunks |
+| **Digests** | 41 |
+| **Embeddings** | 87 chunks |
 | **Tags** | 12 |
 
 ### Demo Feeds

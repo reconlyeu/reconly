@@ -3,7 +3,7 @@
 # INSTANT DEMO: Pre-loaded with sample data, no LLM required
 #
 # This composition provides a complete demo experience with:
-# - PostgreSQL database pre-loaded with 48 digests, feeds, sources
+# - PostgreSQL database pre-loaded with 41 digests, feeds, sources
 # - Pre-computed embeddings for RAG/knowledge graph features
 # - No LLM needed - all summaries are pre-generated
 #

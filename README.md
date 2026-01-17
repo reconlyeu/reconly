@@ -54,7 +54,7 @@ docker compose up
 
 Open **http://localhost:8002** and explore:
 - 7 curated feeds (tech news, AI research, GitHub trends, finance)
-- 48 pre-generated AI summaries
+- 41 pre-generated AI summaries
 - Working knowledge graph with semantic search
 
 > **Requirements:** Docker with 2GB+ RAM, ~500MB disk
