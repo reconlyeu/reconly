@@ -1,30 +1,25 @@
 # Reconly Demo Mode - Docker Compose Configuration
 #
+# INSTANT DEMO: Pre-loaded with sample data, no LLM required
+#
 # This composition provides a complete demo experience with:
-# - PostgreSQL database with pgvector for embeddings
-# - Ollama for local LLM inference (no API keys required)
-# - Pre-populated sample data showcasing all features
+# - PostgreSQL database pre-loaded with 48 digests, feeds, sources
+# - Pre-computed embeddings for RAG/knowledge graph features
+# - No LLM needed - all summaries are pre-generated
 #
 # Usage:
-#   docker compose up -d         # Start all services (first run pulls Ollama model)
-#   docker compose logs -f api   # View API logs
-#   docker compose down          # Stop all services
-#   docker compose down -v       # Stop and remove all data (full reset)
-#
-# First startup takes 2-5 minutes to:
-# 1. Pull and start PostgreSQL
-# 2. Pull and start Ollama
-# 3. Download qwen2.5:3b model (~2GB)
-# 4. Run database migrations
-# 5. Load demo seed data
+#   docker compose up              # Start demo (ready in ~30 seconds)
+#   docker compose logs -f api     # View API logs
+#   docker compose down            # Stop services
+#   docker compose down -v         # Full reset (reload demo data on next start)
 #
 # System Requirements:
-# - Docker with 8GB+ RAM allocated
-# - ~10GB disk space for images and model
+# - Docker with 2GB+ RAM allocated
+# - ~500MB disk space
 
 services:
   # ==========================================================================
-  # PostgreSQL with pgvector extension
+  # PostgreSQL with pgvector - Pre-loaded with demo data
   # ==========================================================================
   postgres:
     image: pgvector/pgvector:pg16
@@ -36,6 +31,8 @@ services:
       - POSTGRES_DB=reconly
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Init script loads demo data on first startup
+      - ./init/demo-data.sql:/docker-entrypoint-initdb.d/01-demo-data.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reconly -d reconly"]
       interval: 5s
@@ -46,56 +43,7 @@ services:
       - reconly-demo
 
   # ==========================================================================
-  # Ollama - Local LLM Server
-  # Auto-pulls qwen2.5:3b model on first startup via init container
-  # ==========================================================================
-  ollama:
-    image: ollama/ollama:latest
-    container_name: reconly-demo-ollama
-    restart: unless-stopped
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      # Check if Ollama API is responding
-      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
-    networks:
-      - reconly-demo
-
-  # ==========================================================================
-  # Ollama Model Puller - One-shot init container
-  # Waits for Ollama to be ready, then pulls the demo model
-  # ==========================================================================
-  ollama-pull:
-    image: curlimages/curl:latest
-    container_name: reconly-demo-ollama-pull
-    depends_on:
-      ollama:
-        condition: service_healthy
-    # Pull the model and exit - this container runs once and stops
-    entrypoint: >
-      sh -c '
-        echo "Checking if qwen2.5:3b model is already downloaded..."
-        MODELS=$$(curl -sf http://ollama:11434/api/tags | grep -o "qwen2.5:3b" || true)
-        if [ -z "$$MODELS" ]; then
-          echo "Pulling qwen2.5:3b model (this may take a few minutes)..."
-          curl -sf http://ollama:11434/api/pull -d "{\"name\": \"qwen2.5:3b\"}"
-          echo ""
-          echo "Model download complete!"
-        else
-          echo "Model qwen2.5:3b already available."
-        fi
-      '
-    networks:
-      - reconly-demo
-    restart: "no"
-
-  # ==========================================================================
-  # Reconly API with Demo Entrypoint
-  # Waits for Postgres and Ollama, loads seed data, then starts server
+  # Reconly API - Serves UI and API
   # ==========================================================================
   api:
     build:
@@ -106,29 +54,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
-      ollama-pull:
-        condition: service_completed_successfully
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-8002}:8000"
     environment:
       # Demo Mode Flag
       - RECONLY_DEMO_MODE=true
       # Database
       - DATABASE_URL=postgresql://reconly:reconly_demo@postgres:5432/reconly
-      # Ollama Configuration (bundled in this compose)
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_MODEL=qwen2.5:3b
-      - DEFAULT_PROVIDER=ollama
       # Edition (OSS demo)
       - RECONLY_EDITION=oss
-      # No API keys needed for demo
-      - ANTHROPIC_API_KEY=
-      - OPENAI_API_KEY=
-      - HUGGINGFACE_API_KEY=
-      # Demo seed loading
-      - DEMO_RESET=${DEMO_RESET:-false}
+      # No LLM needed - summaries are pre-generated
+      - DEFAULT_PROVIDER=ollama
+      - OLLAMA_HOST=http://localhost:11434
     volumes:
       - reconly_data:/app/data
     healthcheck:
@@ -136,7 +73,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
-      start_period: 30s
+      start_period: 15s
     networks:
       - reconly-demo
 
@@ -146,8 +83,6 @@ services:
 volumes:
   postgres_data:
     name: reconly-demo-postgres-data
-  ollama_data:
-    name: reconly-demo-ollama-data
   reconly_data:
     name: reconly-demo-app-data
 

@@ -1,14 +1,13 @@
 # =============================================================================
 # Reconly Demo Mode Dockerfile
 #
-# This extends the base OSS build with:
-# - Demo-specific entrypoint script
-# - Seed data directory
-# - curl for health checks
+# Builds a minimal image for demo mode:
+# - API server with built UI
+# - Simple entrypoint (no seeding - DB is pre-loaded via SQL init)
 # =============================================================================
 
 # =============================================================================
-# Stage 1: Build UI (same as OSS)
+# Stage 1: Build UI
 # =============================================================================
 FROM node:20-alpine AS ui-builder
 
@@ -27,13 +26,13 @@ COPY ui/ ./
 RUN npm run build
 
 # =============================================================================
-# Stage 2: Python API with Demo Extensions
+# Stage 2: Python API
 # =============================================================================
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies including curl for health checks and postgresql-client for pg_isready
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     postgresql-client \
@@ -51,23 +50,15 @@ RUN pip install --no-cache-dir \
 # Copy built UI from builder stage
 COPY --from=ui-builder /app/ui/dist /app/ui/dist
 
-# Create directories
-RUN mkdir -p /app/data /app/seed /app/scripts
-
 # Copy demo entrypoint
 COPY docker/demo/entrypoint-demo.sh /app/entrypoint-demo.sh
-
-# Copy seed data
-COPY docker/demo/seed/ /app/seed/
-
-# Copy seed loader script
-COPY scripts/load_demo_seed.py /app/scripts/load_demo_seed.py
-
-# Make entrypoint executable
 RUN chmod +x /app/entrypoint-demo.sh
+
+# Create data directory
+RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 8000
 
-# Use demo entrypoint instead of direct uvicorn
+# Use demo entrypoint
 ENTRYPOINT ["/app/entrypoint-demo.sh"]

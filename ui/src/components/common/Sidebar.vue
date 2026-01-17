@@ -11,10 +11,12 @@ import {
   Network,
   Settings,
   LogOut,
+  FlaskConical,
   type LucideIcon,
 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 import { useAuthStore } from '@/stores/auth';
+import { useDemoStore } from '@/stores/demo';
 
 interface NavItem {
   name: string;
@@ -26,15 +28,18 @@ const props = defineProps<{
   currentPath: string;
 }>();
 
-// Store reference - initialized in onMounted to ensure Pinia is available
+// Store references - initialized in onMounted to ensure Pinia is available
 const authStore = shallowRef<ReturnType<typeof useAuthStore> | null>(null);
+const demoStore = shallowRef<ReturnType<typeof useDemoStore> | null>(null);
 const showLogout = ref(false);
 
-// Check auth config on mount
+// Check auth config and demo mode on mount
 onMounted(async () => {
-  // Access store inside onMounted to ensure Pinia is initialized
+  // Access stores inside onMounted to ensure Pinia is initialized
   authStore.value = useAuthStore();
+  demoStore.value = useDemoStore();
   await authStore.value.checkAuthConfig();
+  await demoStore.value.fetchDemoMode();
   showLogout.value = authStore.value.authRequired;
 });
 
@@ -107,6 +112,15 @@ const isActive = (href: string) => {
         <LogOut class="w-5 h-5 flex-shrink-0" />
         <span>Logout</span>
       </button>
+
+      <!-- Demo Mode Indicator -->
+      <div
+        v-if="demoStore?.isDemoMode"
+        class="flex items-center justify-center gap-1.5 text-xs text-amber-500/70"
+      >
+        <FlaskConical class="w-3.5 h-3.5" />
+        <span>Demo Mode</span>
+      </div>
 
       <div class="text-xs text-text-muted text-center">
         {{ strings.app.tagline }}

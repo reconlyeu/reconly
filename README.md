@@ -44,7 +44,7 @@
 
 ## Try the Demo
 
-Experience Reconly instantly with pre-loaded sample feeds and AI summaries (no API keys required):
+Experience Reconly instantly with pre-loaded data — **ready in 30 seconds**:
 
 ```bash
 git clone https://github.com/reconlyeu/reconly.git
@@ -52,10 +52,13 @@ cd reconly/docker/demo
 docker compose up
 ```
 
-Open **http://localhost:8000** and explore 7 curated feeds covering tech news, AI research, GitHub trends, and more. Run any feed to generate AI summaries with the bundled Ollama model.
+Open **http://localhost:8002** and explore:
+- 7 curated feeds (tech news, AI research, GitHub trends, finance)
+- 48 pre-generated AI summaries
+- Working knowledge graph with semantic search
 
-> **Requirements:** Docker with 8GB+ RAM, ~10GB disk space
-> **First startup:** 2-5 minutes to download Ollama model
+> **Requirements:** Docker with 2GB+ RAM, ~500MB disk
+> **No LLM needed** — all content is pre-generated
 > **Details:** [Demo Mode Guide](docs/demo-mode.md)
 
 ---
