@@ -1,0 +1,156 @@
+{
+  "$schema": "./schema.json",
+  "$comment": "Demo sources for Reconly demo mode. Uses real RSS feed URLs where possible.",
+  "sources": [
+    {
+      "name": "Hacker News",
+      "type": "rss",
+      "url": "https://news.ycombinator.com/rss",
+      "enabled": true,
+      "config": {
+        "max_items": 30
+      }
+    },
+    {
+      "name": "TechCrunch",
+      "type": "rss",
+      "url": "https://techcrunch.com/feed/",
+      "enabled": true,
+      "config": {
+        "max_items": 20
+      }
+    },
+    {
+      "name": "Fireship",
+      "type": "youtube",
+      "url": "https://www.youtube.com/@Fireship",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      }
+    },
+    {
+      "name": "GitHub Trending",
+      "type": "rss",
+      "url": "https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml",
+      "enabled": true,
+      "config": {
+        "max_items": 25
+      }
+    },
+    {
+      "name": "GitHub Blog",
+      "type": "rss",
+      "url": "https://github.blog/feed/",
+      "enabled": true,
+      "config": {
+        "max_items": 15
+      }
+    },
+    {
+      "name": "Seeking Alpha - NVDA",
+      "type": "rss",
+      "url": "https://seekingalpha.com/api/sa/combined/NVDA.xml",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      },
+      "include_keywords": ["NVIDIA", "NVDA", "GPU", "AI chip", "data center"],
+      "filter_mode": "both"
+    },
+    {
+      "name": "Yahoo Finance - NVDA News",
+      "type": "rss",
+      "url": "https://feeds.finance.yahoo.com/rss/2.0/headline?s=NVDA",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      }
+    },
+    {
+      "name": "Motley Fool - NVDA",
+      "type": "rss",
+      "url": "https://www.fool.com/feeds/index.aspx?id=nvda",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      }
+    },
+    {
+      "name": "MarketWatch - NVDA",
+      "type": "rss",
+      "url": "https://feeds.content.dowjones.io/public/rss/mw_bulletins",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      },
+      "include_keywords": ["NVIDIA", "NVDA", "Jensen Huang"],
+      "filter_mode": "both"
+    },
+    {
+      "name": "Benzinga - Semiconductors",
+      "type": "rss",
+      "url": "https://www.benzinga.com/feed",
+      "enabled": true,
+      "config": {
+        "max_items": 15
+      },
+      "include_keywords": ["NVIDIA", "NVDA", "semiconductor", "GPU", "AI chip"],
+      "filter_mode": "both"
+    },
+    {
+      "name": "ArXiv - AI/ML",
+      "type": "rss",
+      "url": "https://rss.arxiv.org/rss/cs.AI",
+      "enabled": true,
+      "config": {
+        "max_items": 20
+      }
+    },
+    {
+      "name": "Ollama Blog",
+      "type": "rss",
+      "url": "https://ollama.com/blog/rss.xml",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      }
+    },
+    {
+      "name": "Hugging Face Blog",
+      "type": "rss",
+      "url": "https://huggingface.co/blog/feed.xml",
+      "enabled": true,
+      "config": {
+        "max_items": 15
+      }
+    },
+    {
+      "name": "r/selfhosted",
+      "type": "rss",
+      "url": "https://www.reddit.com/r/selfhosted/.rss",
+      "enabled": true,
+      "config": {
+        "max_items": 25
+      }
+    },
+    {
+      "name": "TLDR Newsletter",
+      "type": "rss",
+      "url": "https://tldr.tech/api/rss/tech",
+      "enabled": true,
+      "config": {
+        "max_items": 15
+      }
+    },
+    {
+      "name": "Paul Graham Essays",
+      "type": "rss",
+      "url": "http://www.aaronsw.com/2002/feeds/pgessays.rss",
+      "enabled": true,
+      "config": {
+        "max_items": 10
+      }
+    }
+  ]
+}

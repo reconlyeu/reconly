@@ -1,0 +1,6 @@
+{
+  "$schema": "./schema.json",
+  "$comment": "Custom demo templates for Reconly demo mode. Standard templates are already built-in.",
+  "prompt_templates": [],
+  "report_templates": []
+}

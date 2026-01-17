@@ -152,18 +152,11 @@ is_database_empty() {
 load_seed_data() {
     log_info "Loading demo seed data..."
 
-    # Check if seed loader script exists
-    if [ -f "/app/scripts/load_demo_seed.py" ]; then
-        if python /app/scripts/load_demo_seed.py; then
-            log_success "Demo seed data loaded successfully!"
-        else
-            log_error "Failed to load seed data"
-            exit 1
-        fi
+    if python /app/scripts/load_demo_seed.py; then
+        log_success "Demo seed data loaded successfully!"
     else
-        # Placeholder until Phase 5 implements the seed loader
-        log_warn "Seed loader not yet implemented (Phase 5)"
-        log_info "Database will start empty - add your own feeds to explore!"
+        log_error "Failed to load seed data"
+        exit 1
     fi
 }
 

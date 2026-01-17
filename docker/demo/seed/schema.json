@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "reconly-demo-seed-schema",
+  "title": "Reconly Demo Seed Data Schema",
+  "description": "JSON schema for demo mode seed data files",
+  "definitions": {
+    "tag": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Tag name (lowercase, hyphen-separated)"
+        }
+      },
+      "required": ["name"]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Human-readable source name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["rss", "youtube", "website", "blog", "imap", "agent"],
+          "description": "Source type"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Source URL (RSS feed, YouTube channel, etc.)"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether source is enabled for fetching"
+        },
+        "config": {
+          "type": "object",
+          "description": "Source-specific configuration",
+          "properties": {
+            "max_items": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Maximum items to fetch per run"
+            }
+          }
+        },
+        "include_keywords": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Keywords to include (filter IN)"
+        },
+        "exclude_keywords": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Keywords to exclude (filter OUT)"
+        },
+        "filter_mode": {
+          "type": "string",
+          "enum": ["title_only", "content", "both"],
+          "default": "both",
+          "description": "Where to apply keyword filters"
+        },
+        "use_regex": {
+          "type": "boolean",
+          "default": false,
+          "description": "Interpret keywords as regex patterns"
+        }
+      },
+      "required": ["name", "type", "url"]
+    },
+    "feed": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Feed name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Feed description"
+        },
+        "digest_mode": {
+          "type": "string",
+          "enum": ["individual", "per_source", "all_sources"],
+          "default": "individual",
+          "description": "How digests are generated: individual (one per item), per_source (one per source), all_sources (single briefing)"
+        },
+        "schedule_cron": {
+          "type": "string",
+          "description": "Cron expression for scheduled runs"
+        },
+        "schedule_enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether scheduled runs are enabled"
+        },
+        "prompt_template": {
+          "type": "string",
+          "description": "Name of prompt template to use (references builtin or custom template)"
+        },
+        "report_template": {
+          "type": "string",
+          "description": "Name of report template to use (optional)"
+        },
+        "sources": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "List of source names to include in this feed"
+        },
+        "digest_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of pre-generated digests for demo mode"
+        },
+        "model_provider": {
+          "type": "string",
+          "description": "LLM provider override (optional)"
+        },
+        "model_name": {
+          "type": "string",
+          "description": "LLM model name override (optional)"
+        }
+      },
+      "required": ["name", "sources"]
+    },
+    "prompt_template": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Template name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Template description"
+        },
+        "system_prompt": {
+          "type": "string",
+          "description": "System prompt for the LLM"
+        },
+        "user_prompt_template": {
+          "type": "string",
+          "description": "User prompt template with placeholders"
+        },
+        "language": {
+          "type": "string",
+          "default": "en",
+          "description": "Target language code"
+        },
+        "target_length": {
+          "type": "integer",
+          "default": 150,
+          "description": "Target summary length in words"
+        }
+      },
+      "required": ["name", "system_prompt", "user_prompt_template"]
+    },
+    "report_template": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Template name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Template description"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["markdown", "html", "text"],
+          "description": "Output format"
+        },
+        "template_content": {
+          "type": "string",
+          "description": "Jinja2 template content"
+        }
+      },
+      "required": ["name", "format", "template_content"]
+    }
+  }
+}

@@ -52,13 +52,16 @@ RUN pip install --no-cache-dir \
 COPY --from=ui-builder /app/ui/dist /app/ui/dist
 
 # Create directories
-RUN mkdir -p /app/data /app/seed
+RUN mkdir -p /app/data /app/seed /app/scripts
 
 # Copy demo entrypoint
 COPY docker/demo/entrypoint-demo.sh /app/entrypoint-demo.sh
 
-# Copy seed data (directory may be empty initially)
+# Copy seed data
 COPY docker/demo/seed/ /app/seed/
+
+# Copy seed loader script
+COPY scripts/load_demo_seed.py /app/scripts/load_demo_seed.py
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint-demo.sh

@@ -57,7 +57,7 @@ function handleDismiss() {
           <!-- Actions -->
           <div class="flex items-center gap-3">
             <a
-              href="https://github.com/reconly/reconly#installation"
+              href="https://github.com/reconlyeu/reconly#quick-start"
               target="_blank"
               rel="noopener noreferrer"
               class="text-sm font-medium underline underline-offset-2 hover:no-underline transition-all"

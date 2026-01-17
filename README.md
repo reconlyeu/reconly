@@ -42,8 +42,27 @@
 
 ---
 
+## Try the Demo
+
+Experience Reconly instantly with pre-loaded sample feeds and AI summaries (no API keys required):
+
+```bash
+git clone https://github.com/reconlyeu/reconly.git
+cd reconly/docker/demo
+docker compose up
+```
+
+Open **http://localhost:8000** and explore 7 curated feeds covering tech news, AI research, GitHub trends, and more. Run any feed to generate AI summaries with the bundled Ollama model.
+
+> **Requirements:** Docker with 8GB+ RAM, ~10GB disk space
+> **First startup:** 2-5 minutes to download Ollama model
+> **Details:** [Demo Mode Guide](docs/demo-mode.md)
+
+---
+
 ## Table of Contents
 
+- [Try the Demo](#try-the-demo)
 - [Quick Start](#quick-start)
 - [Features](#features)
 - [AI Providers](#ai-providers)
@@ -243,6 +262,7 @@ export EMBEDDING_MODEL=bge-m3
 
 | Guide | Description |
 |-------|-------------|
+| [Demo Mode Guide](docs/demo-mode.md) | Try Reconly with pre-loaded data and local AI |
 | [Setup Guide](docs/setup.md) | Installation, database, AI providers |
 | [RAG Setup Guide](docs/rag-setup.md) | PostgreSQL + pgvector, embedding providers, semantic search |
 | [Configuration Reference](docs/configuration.md) | All environment variables |
