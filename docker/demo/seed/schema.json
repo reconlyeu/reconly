@@ -190,6 +190,76 @@
         }
       },
       "required": ["name", "format", "template_content"]
+    },
+    "digest": {
+      "type": "object",
+      "description": "Pre-generated digest for demo mode",
+      "properties": {
+        "feed_name": {
+          "type": "string",
+          "description": "Name of the feed this digest belongs to (references feeds.json)"
+        },
+        "source_name": {
+          "type": "string",
+          "description": "Name of the source this digest came from (references sources.json)"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 2048,
+          "description": "Unique URL identifier for the digest"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 512,
+          "description": "Article/content title"
+        },
+        "content": {
+          "type": "string",
+          "description": "Original content (excerpt or full)"
+        },
+        "summary": {
+          "type": "string",
+          "description": "AI-generated summary (150-300 words typical)"
+        },
+        "source_type": {
+          "type": "string",
+          "enum": ["rss", "youtube", "website", "blog", "imap"],
+          "description": "Type of source content"
+        },
+        "feed_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the RSS feed or source"
+        },
+        "feed_title": {
+          "type": "string",
+          "description": "Title of the feed/source"
+        },
+        "author": {
+          "type": "string",
+          "description": "Content author name"
+        },
+        "published_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Publication timestamp (ISO 8601)"
+        },
+        "provider": {
+          "type": "string",
+          "description": "LLM provider used for summarization"
+        },
+        "language": {
+          "type": "string",
+          "description": "Content language code (en, de, etc.)"
+        },
+        "tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Tag names for categorization (references tags.json)"
+        }
+      },
+      "required": ["feed_name", "source_name", "url", "title", "summary", "source_type", "published_at", "language"]
     }
   }
 }

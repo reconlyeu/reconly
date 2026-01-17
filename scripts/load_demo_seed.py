@@ -5,8 +5,8 @@ This script loads demo seed data from JSON fixtures into the database.
 It is designed to be run from the Docker demo entrypoint or manually.
 
 Features:
-- Loads tags, sources, templates, and feeds in correct dependency order
-- Idempotent: skips existing data by name (unless DEMO_RESET=true)
+- Loads tags, sources, templates, feeds, and digests in correct dependency order
+- Idempotent: skips existing data by name/URL (unless DEMO_RESET=true)
 - Supports DEMO_RESET=true to clear and reload demo data
 - Uses existing SQLAlchemy models and services
 - Transaction-safe with rollback on critical errors
@@ -18,6 +18,7 @@ Environment Variables:
     DATABASE_URL: PostgreSQL connection string
     DEMO_RESET: If "true", clear existing demo data before loading
 """
+import hashlib
 import json
 import os
 import sys
@@ -36,9 +37,11 @@ sys.path.insert(0, str(_PROJECT_ROOT / "packages" / "api"))
 
 from reconly_core.logging import configure_logging, get_logger
 from reconly_core.database import (
-    Base, Tag, Source, Feed, FeedSource, PromptTemplate, ReportTemplate,
+    Base, Tag, Source, Feed, FeedSource, FeedRun, PromptTemplate, ReportTemplate,
+    Digest, DigestTag,
     seed_default_templates,
 )
+from reconly_core.database.models import DigestSourceItem, SourceContent
 
 
 # Configure logging
@@ -88,31 +91,45 @@ def create_session() -> Session:
 def clear_demo_data(session: Session) -> dict:
     """Clear existing demo data for reset.
 
-    Clears feeds, sources, and tags (in correct order for FK constraints).
+    Clears digests, feed_runs, feeds, sources, and tags (in correct order for FK constraints).
     Does NOT clear builtin templates - those are managed by seed_default_templates.
 
     Returns:
         Dict with counts of deleted items
     """
     result = {
+        "digests_deleted": 0,
+        "feed_runs_deleted": 0,
         "feeds_deleted": 0,
         "sources_deleted": 0,
         "tags_deleted": 0,
     }
 
     try:
-        # Delete feeds first (depends on sources via FeedSource)
+        # Delete in reverse dependency order:
+        # digests -> feed_runs -> feeds -> sources -> tags
+
+        # Delete digests first (has FKs to feed_runs, sources, and tags via DigestTag)
+        # DigestSourceItem and SourceContent cascade from Digest
+        result["digests_deleted"] = session.query(Digest).delete()
+
+        # Delete feed runs (depends on feeds)
+        result["feed_runs_deleted"] = session.query(FeedRun).delete()
+
+        # Delete feeds (depends on sources via FeedSource)
         result["feeds_deleted"] = session.query(Feed).delete()
 
         # Delete sources (may have FeedSource refs, but those cascade)
         result["sources_deleted"] = session.query(Source).delete()
 
-        # Delete tags (digests may ref them, but DigestTag cascades)
+        # Delete tags
         result["tags_deleted"] = session.query(Tag).delete()
 
         session.commit()
         logger.info(
             "Cleared existing demo data",
+            digests=result["digests_deleted"],
+            feed_runs=result["feed_runs_deleted"],
             feeds=result["feeds_deleted"],
             sources=result["sources_deleted"],
             tags=result["tags_deleted"],
@@ -366,9 +383,9 @@ def load_feeds(
         sources_map: Mapping of source names to Source objects
 
     Returns:
-        Dict with counts of created/skipped feeds
+        Dict with counts and name->Feed mapping
     """
-    result = {"created": 0, "skipped": 0, "failed": 0}
+    result = {"created": 0, "skipped": 0, "failed": 0, "feeds": {}}
 
     feeds_file = seed_path / "feeds.json"
     if not feeds_file.exists():
@@ -388,6 +405,7 @@ def load_feeds(
             existing = session.query(Feed).filter(Feed.name == name).first()
             if existing:
                 result["skipped"] += 1
+                result["feeds"][name] = existing
                 continue
 
             # Resolve prompt template by name
@@ -439,6 +457,7 @@ def load_feeds(
                 )
                 session.add(feed_source)
 
+            result["feeds"][name] = feed
             result["created"] += 1
             logger.debug("Created feed", name=name, sources=len(source_names))
 
@@ -452,6 +471,244 @@ def load_feeds(
         created=result["created"],
         skipped=result["skipped"],
         failed=result["failed"],
+    )
+    return result
+
+
+def create_feed_runs(
+    session: Session,
+    feeds_map: dict[str, Feed],
+) -> dict[str, FeedRun]:
+    """Create FeedRun records for each feed.
+
+    Each feed needs a completed FeedRun for digests to link to.
+    Returns a mapping of feed_name -> FeedRun.
+    """
+    feed_runs = {}
+
+    for feed_name, feed in feeds_map.items():
+        # Check if a feed run already exists for this feed
+        existing = session.query(FeedRun).filter(
+            FeedRun.feed_id == feed.id,
+            FeedRun.triggered_by == 'demo_seed',
+        ).first()
+
+        if existing:
+            feed_runs[feed_name] = existing
+            continue
+
+        # Count the feed sources for metrics
+        source_count = len(feed.feed_sources) if feed.feed_sources else 0
+
+        feed_run = FeedRun(
+            feed_id=feed.id,
+            triggered_by='demo_seed',
+            status='completed',
+            started_at=datetime.utcnow(),
+            completed_at=datetime.utcnow(),
+            sources_total=source_count,
+            sources_processed=source_count,
+            sources_failed=0,
+            items_processed=0,  # Will be updated after digests are loaded
+        )
+        session.add(feed_run)
+        session.flush()
+        feed_runs[feed_name] = feed_run
+
+    session.commit()
+    logger.info("Created feed runs", count=len(feed_runs))
+    return feed_runs
+
+
+def parse_datetime(dt_str: Optional[str]) -> Optional[datetime]:
+    """Parse ISO datetime string to datetime object."""
+    if not dt_str:
+        return None
+    try:
+        # Handle various ISO formats
+        dt_str = dt_str.replace('Z', '+00:00')
+        return datetime.fromisoformat(dt_str.replace('+00:00', ''))
+    except (ValueError, AttributeError):
+        return None
+
+
+def load_digests(
+    session: Session,
+    seed_path: Path,
+    feeds_map: dict[str, Feed],
+    sources_map: dict[str, Source],
+    tags_map: dict[str, Tag],
+    feed_runs_map: dict[str, FeedRun],
+) -> dict:
+    """Load digests from seed data.
+
+    Args:
+        session: Database session
+        seed_path: Path to seed data directory
+        feeds_map: Mapping of feed names to Feed objects
+        sources_map: Mapping of source names to Source objects
+        tags_map: Mapping of tag names to Tag objects
+        feed_runs_map: Mapping of feed names to FeedRun objects
+
+    Returns:
+        Dict with counts of created/skipped/failed digests
+    """
+    result = {
+        "created": 0,
+        "skipped": 0,
+        "failed": 0,
+        "source_items_created": 0,
+        "source_contents_created": 0,
+        "tags_linked": 0,
+    }
+
+    digests_file = seed_path / "digests.json"
+    if not digests_file.exists():
+        logger.warning("Digests seed file not found", path=str(digests_file))
+        return result
+
+    data = load_json_file(digests_file)
+    digests_data = data.get("digests", [])
+
+    # Track items per feed run for updating metrics
+    feed_run_item_counts: dict[int, int] = {}
+
+    for digest_data in digests_data:
+        url = digest_data.get("url")
+        if not url:
+            logger.warning("Digest missing URL, skipping")
+            continue
+
+        try:
+            # Check if digest already exists (by URL - unique constraint)
+            existing = session.query(Digest).filter(Digest.url == url).first()
+            if existing:
+                result["skipped"] += 1
+                continue
+
+            # Resolve feed reference
+            feed_name = digest_data.get("feed_name")
+            feed = feeds_map.get(feed_name) if feed_name else None
+            if not feed:
+                logger.warning(
+                    "Feed not found for digest",
+                    url=url[:50],
+                    feed_name=feed_name,
+                )
+
+            # Resolve source reference
+            source_name = digest_data.get("source_name")
+            source = sources_map.get(source_name) if source_name else None
+            if not source:
+                logger.warning(
+                    "Source not found for digest",
+                    url=url[:50],
+                    source_name=source_name,
+                )
+
+            # Get feed run for this feed
+            feed_run = feed_runs_map.get(feed_name) if feed_name else None
+
+            # Parse published_at
+            published_at = parse_datetime(digest_data.get("published_at"))
+
+            # Create digest
+            digest = Digest(
+                url=url,
+                title=digest_data.get("title"),
+                content=digest_data.get("content"),
+                summary=digest_data.get("summary"),
+                source_type=digest_data.get("source_type", "rss"),
+                feed_url=digest_data.get("feed_url"),
+                feed_title=digest_data.get("feed_title"),
+                author=digest_data.get("author"),
+                published_at=published_at,
+                provider=digest_data.get("provider"),
+                language=digest_data.get("language", "en"),
+                estimated_cost=0.0,  # Demo data has no cost
+                consolidated_count=1,  # Individual digest
+                embedding_status=None,  # Will be embedded on first startup
+                feed_run_id=feed_run.id if feed_run else None,
+                source_id=source.id if source else None,
+                created_at=datetime.utcnow(),
+            )
+            session.add(digest)
+            session.flush()  # Get ID
+
+            # Track item count for feed run
+            if feed_run:
+                feed_run_item_counts[feed_run.id] = feed_run_item_counts.get(feed_run.id, 0) + 1
+
+            # Link tags
+            tag_names = digest_data.get("tags", [])
+            for tag_name in tag_names:
+                tag = tags_map.get(tag_name)
+                if tag:
+                    digest_tag = DigestTag(
+                        digest_id=digest.id,
+                        tag_id=tag.id,
+                    )
+                    session.add(digest_tag)
+                    result["tags_linked"] += 1
+                else:
+                    logger.debug("Tag not found", tag_name=tag_name)
+
+            # Create DigestSourceItem for provenance
+            if source:
+                source_item = DigestSourceItem(
+                    digest_id=digest.id,
+                    source_id=source.id,
+                    item_url=url,
+                    item_title=digest_data.get("title"),
+                    item_published_at=published_at,
+                    created_at=datetime.utcnow(),
+                )
+                session.add(source_item)
+                session.flush()  # Get ID for SourceContent
+                result["source_items_created"] += 1
+
+                # Create SourceContent for RAG embedding
+                content = digest_data.get("content", "")
+                if content:
+                    content_hash = hashlib.sha256(content.encode('utf-8')).hexdigest()
+                    source_content = SourceContent(
+                        digest_source_item_id=source_item.id,
+                        content=content,
+                        content_hash=content_hash,
+                        content_length=len(content),
+                        fetched_at=datetime.utcnow(),
+                        embedding_status=None,  # Will be embedded on first startup
+                        created_at=datetime.utcnow(),
+                    )
+                    session.add(source_content)
+                    result["source_contents_created"] += 1
+
+            result["created"] += 1
+            logger.debug("Created digest", title=digest_data.get("title", "")[:50])
+
+        except Exception as e:
+            result["failed"] += 1
+            logger.error(
+                "Failed to create digest",
+                url=url[:50] if url else "unknown",
+                error=str(e),
+            )
+
+    # Update feed run item counts
+    for feed_run_id, item_count in feed_run_item_counts.items():
+        feed_run = session.query(FeedRun).filter(FeedRun.id == feed_run_id).first()
+        if feed_run:
+            feed_run.items_processed = item_count
+
+    session.commit()
+    logger.info(
+        "Loaded digests",
+        created=result["created"],
+        skipped=result["skipped"],
+        failed=result["failed"],
+        source_items=result["source_items_created"],
+        source_contents=result["source_contents_created"],
+        tags_linked=result["tags_linked"],
     )
     return result
 
@@ -494,7 +751,8 @@ def load_demo_seed() -> dict:
             report_created=builtin_result["report_templates_created"],
         )
 
-        # Load data in dependency order
+        # Load data in dependency order:
+        # tags -> templates -> sources -> feeds -> feed_runs -> digests
         tags_result = load_tags(session, seed_path)
         sources_result = load_sources(session, seed_path)
         templates_result = load_templates(session, seed_path)
@@ -502,6 +760,19 @@ def load_demo_seed() -> dict:
             session,
             seed_path,
             sources_result["sources"],
+        )
+
+        # Create feed runs (required for digests to link to)
+        feed_runs_map = create_feed_runs(session, feeds_result["feeds"])
+
+        # Load digests with all references resolved
+        digests_result = load_digests(
+            session,
+            seed_path,
+            feeds_result["feeds"],
+            sources_result["sources"],
+            tags_result["tags"],
+            feed_runs_map,
         )
 
         # Summary
@@ -526,6 +797,17 @@ def load_demo_seed() -> dict:
                 "created": feeds_result["created"],
                 "skipped": feeds_result["skipped"],
                 "failed": feeds_result["failed"],
+            },
+            "feed_runs": {
+                "created": len(feed_runs_map),
+            },
+            "digests": {
+                "created": digests_result["created"],
+                "skipped": digests_result["skipped"],
+                "failed": digests_result["failed"],
+                "source_items": digests_result["source_items_created"],
+                "source_contents": digests_result["source_contents_created"],
+                "tags_linked": digests_result["tags_linked"],
             },
         }
 

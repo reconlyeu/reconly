@@ -7,7 +7,12 @@
 # 2. Waits for Ollama to be ready
 # 3. Runs database migrations
 # 4. Loads seed data if database is empty (or DEMO_RESET=true)
-# 5. Starts the API server
+# 5. Generates embeddings for RAG knowledge graph
+# 6. Starts the API server
+#
+# Environment variables:
+# - DEMO_RESET=true: Force re-seed demo data
+# - DEMO_SKIP_EMBEDDINGS=true: Skip embedding generation (faster startup)
 # =============================================================================
 
 set -e
@@ -161,6 +166,43 @@ load_seed_data() {
 }
 
 # =============================================================================
+# Generate Embeddings for RAG
+# =============================================================================
+generate_embeddings() {
+    # Skip if DEMO_SKIP_EMBEDDINGS is set
+    if [ "${DEMO_SKIP_EMBEDDINGS:-false}" = "true" ]; then
+        log_info "Skipping embedding generation (DEMO_SKIP_EMBEDDINGS=true)"
+        log_info "Run 'reconly --embed-all' later to enable RAG features"
+        return 0
+    fi
+
+    log_info "Generating embeddings for RAG knowledge graph..."
+    log_info "This may take a few minutes on first startup..."
+
+    if python -c "
+import asyncio
+from reconly_core.database import DigestDB
+from reconly_core.rag import EmbeddingService
+
+db = DigestDB()
+service = EmbeddingService(db.session)
+
+async def embed():
+    results = await service.embed_unembedded_digests(limit=100)
+    return len(results)
+
+count = asyncio.run(embed())
+db.session.commit()
+print(f'Embedded {count} digests')
+"; then
+        log_success "Embeddings generated successfully!"
+    else
+        log_warn "Embedding generation failed - RAG features may not work"
+        log_info "You can retry later with 'reconly --embed-all'"
+    fi
+}
+
+# =============================================================================
 # Main
 # =============================================================================
 main() {
@@ -186,15 +228,25 @@ main() {
     echo ""
 
     # Step 3: Load seed data if needed
+    local seed_loaded=false
     if [ "${DEMO_RESET:-false}" = "true" ]; then
         log_info "DEMO_RESET=true - forcing seed data reload"
         load_seed_data
+        seed_loaded=true
     elif is_database_empty; then
         log_info "Database is empty - loading seed data"
         load_seed_data
+        seed_loaded=true
     else
         log_info "Database already has data - skipping seed load"
         log_info "Set DEMO_RESET=true to force reload seed data"
+    fi
+
+    echo ""
+
+    # Step 4: Generate embeddings for RAG (after seed data is loaded)
+    if [ "$seed_loaded" = "true" ]; then
+        generate_embeddings
     fi
 
     echo ""
@@ -206,7 +258,7 @@ main() {
     log_info "Access the UI at http://localhost:${API_PORT:-8000}"
     echo ""
 
-    # Step 4: Start the API server
+    # Step 5: Start the API server
     exec uvicorn reconly_api.main:app --host 0.0.0.0 --port 8000
 }
 
