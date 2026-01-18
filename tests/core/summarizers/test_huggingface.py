@@ -33,9 +33,9 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         summarizer = HuggingFaceSummarizer()
 
         assert summarizer.api_key == 'test-hf-key'
-        # Check that default model is set (don't assert specific model ID)
-        assert summarizer.model_key in HuggingFaceSummarizer.AVAILABLE_MODELS
-        assert summarizer.model  # Has a full model path
+        # Check that default model is set
+        assert summarizer.model_key == HuggingFaceSummarizer.DEFAULT_MODEL
+        assert summarizer.model == HuggingFaceSummarizer.DEFAULT_MODEL
 
     def test_initialization_with_explicit_key(self):
         """WHEN API key is passed as parameter
@@ -57,12 +57,13 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
     def test_initialization_custom_model(self):
         """WHEN custom model is specified
         THEN correct model is selected."""
-        # Pick any model from AVAILABLE_MODELS for the test
-        test_model = list(HuggingFaceSummarizer.AVAILABLE_MODELS.keys())[1]  # Second model
+        # Use a full HuggingFace model path
+        test_model = 'Qwen/Qwen2.5-72B-Instruct'
         summarizer = HuggingFaceSummarizer(model=test_model)
 
+        # With full paths, model_key and model are the same
         assert summarizer.model_key == test_model
-        assert summarizer.model == HuggingFaceSummarizer.AVAILABLE_MODELS[test_model]
+        assert summarizer.model == test_model
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
     def test_get_provider_name(self):

@@ -1,5 +1,7 @@
 """HuggingFace Inference API summarizer implementation."""
+import logging
 import os
+import re
 import requests
 import time
 from typing import Dict, List, Optional
@@ -9,68 +11,133 @@ from reconly_core.summarizers.base import BaseSummarizer
 from reconly_core.summarizers.registry import register_provider
 from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
 
+logger = logging.getLogger(__name__)
+
 
 @register_provider('huggingface')
 class HuggingFaceSummarizer(BaseSummarizer):
     """Summarizes content using HuggingFace Inference API."""
 
-    # Available models with fallback order (key -> full HuggingFace model path)
-    # Organized by capability: reasoning, general, coding, compact
-    AVAILABLE_MODELS = {
-        # Reasoning & Advanced Models
-        'qwen-2.5-72b': 'Qwen/Qwen2.5-72B-Instruct',
-        'qwen-qwq-32b': 'Qwen/QwQ-32B',
-        'llama-3.3-70b': 'meta-llama/Llama-3.3-70B-Instruct',
-        'deepseek-r1-70b': 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
-        # General Purpose
-        'mixtral-8x7b': 'mistralai/Mixtral-8x7B-Instruct-v0.1',
-        'llama-3.1-70b': 'meta-llama/Llama-3.1-70B-Instruct',
-        'gemma-2-27b': 'google/gemma-2-27b-it',
-        'mistral-nemo': 'mistralai/Mistral-Nemo-Instruct-2407',
-        'phi-4': 'microsoft/phi-4',
-        # Efficient / Compact Models
-        'qwen-2.5-7b': 'Qwen/Qwen2.5-7B-Instruct',
-        'llama-3.2-3b': 'meta-llama/Llama-3.2-3B-Instruct',
-        'gemma-2-9b': 'google/gemma-2-9b-it',
-        'mistral-7b': 'mistralai/Mistral-7B-Instruct-v0.3',
-        'phi-3.5-mini': 'microsoft/Phi-3.5-mini-instruct',
-        # Coding & Technical
-        'qwen-2.5-coder-32b': 'Qwen/Qwen2.5-Coder-32B-Instruct',
-        'deepseek-coder-33b': 'deepseek-ai/deepseek-coder-33b-instruct',
-        'codellama-70b': 'meta-llama/CodeLlama-70b-Instruct-hf',
-        # Multilingual & Specialized
-        'aya-expanse-32b': 'CohereForAI/aya-expanse-32b',
-        'command-r': 'CohereForAI/c4ai-command-r-v01',
-        'zephyr-7b': 'HuggingFaceH4/zephyr-7b-beta',
+    # HuggingFace Hub API endpoint for model discovery
+    HUB_API_URL = "https://huggingface.co/api/models"
+
+    # Inference providers to query for available models
+    # These are serverless providers that support the router API
+    INFERENCE_PROVIDERS = "together,fireworks-ai,groq,cerebras,sambanova,novita"
+
+    # Fallback models if API discovery fails (known to work via inference providers)
+    FALLBACK_MODELS = {
+        'meta-llama/Llama-3.3-70B-Instruct': 'Llama 3.3 70B Instruct',
+        'meta-llama/Llama-3.1-8B-Instruct': 'Llama 3.1 8B Instruct',
+        'Qwen/Qwen2.5-72B-Instruct': 'Qwen 2.5 72B Instruct',
+        'Qwen/Qwen3-32B': 'Qwen 3 32B',
+        'deepseek-ai/DeepSeek-V3': 'DeepSeek V3',
+        'mistralai/Mixtral-8x7B-Instruct-v0.1': 'Mixtral 8x7B Instruct',
     }
 
-    # Reverse lookup: full model path -> short key
-    MODEL_PATH_TO_KEY = {v: k for k, v in AVAILABLE_MODELS.items()}
+    # Default model
+    DEFAULT_MODEL = 'meta-llama/Llama-3.3-70B-Instruct'
 
-    # Default fallback order (best for summarization first)
-    DEFAULT_FALLBACK_ORDER = ['qwen-2.5-72b', 'llama-3.3-70b', 'mixtral-8x7b', 'mistral-7b']
+    # Patterns to identify instruction-tuned models (good for summarization)
+    INSTRUCT_PATTERNS = [
+        r'-[Ii]nstruct',  # -Instruct, -instruct
+        r'-it$',          # -it (e.g., gemma-2-27b-it)
+        r'[Cc]hat',       # Chat models
+    ]
+
+    # Patterns to exclude (not ideal for general summarization)
+    EXCLUDE_PATTERNS = [
+        r'[Cc]oder',      # Coding-focused models
+        r'[Cc]ode[Ll]lama',
+        r'-code-',
+        r'safeguard',     # Safety/moderation models
+        r'guard',
+        r'embed',         # Embedding models
+        r'rerank',        # Reranking models
+    ]
+
+    @classmethod
+    def _is_instruct_model(cls, model_id: str) -> bool:
+        """Check if model is instruction-tuned (good for summarization)."""
+        return any(re.search(p, model_id) for p in cls.INSTRUCT_PATTERNS)
+
+    @classmethod
+    def _should_exclude(cls, model_id: str) -> bool:
+        """Check if model should be excluded (coding/specialized models)."""
+        return any(re.search(p, model_id) for p in cls.EXCLUDE_PATTERNS)
+
+    @classmethod
+    def _format_model_name(cls, model_id: str) -> str:
+        """
+        Format model ID into a human-readable name.
+
+        Example: 'meta-llama/Llama-3.3-70B-Instruct' -> 'Llama 3.3 70B Instruct'
+        """
+        # Extract model name (after the org/)
+        if '/' in model_id:
+            name = model_id.split('/')[-1]
+        else:
+            name = model_id
+
+        # Replace hyphens/underscores with spaces
+        name = re.sub(r'[-_]', ' ', name)
+
+        # Clean up common patterns
+        name = re.sub(r'\s+', ' ', name)  # Multiple spaces to single
+        name = name.strip()
+
+        return name
+
+    @classmethod
+    def _estimate_model_size(cls, model_id: str) -> str:
+        """
+        Estimate model size category from model ID.
+
+        Returns: 'small' (<10B), 'medium' (10-40B), 'large' (>40B), or 'unknown'
+        """
+        # Look for size indicators in model name
+        size_match = re.search(r'(\d+)[Bb]', model_id)
+        if size_match:
+            size_b = int(size_match.group(1))
+            if size_b < 10:
+                return 'small'
+            elif size_b <= 40:
+                return 'medium'
+            else:
+                return 'large'
+
+        # MoE models (e.g., 8x7B, 235B-A22B)
+        moe_match = re.search(r'(\d+)x(\d+)[Bb]', model_id)
+        if moe_match:
+            return 'large'  # MoE models are typically large
+
+        return 'unknown'
 
     @classmethod
     def resolve_model(cls, model: str) -> tuple[str, str]:
         """
         Resolve model identifier to (key, full_path).
 
-        Accepts both short keys ('glm-4') and full paths ('zai-org/GLM-4.7').
+        Accepts full HuggingFace model paths (e.g., 'meta-llama/Llama-3.3-70B-Instruct').
+        For backwards compatibility, also accepts the model path as the key.
 
         Returns:
             Tuple of (model_key, model_full_path)
         """
-        # Check if it's a short key
-        if model in cls.AVAILABLE_MODELS:
-            return model, cls.AVAILABLE_MODELS[model]
+        # If it looks like a full model path (contains /), use it directly
+        if '/' in model:
+            return model, model
 
-        # Check if it's a full model path
-        if model in cls.MODEL_PATH_TO_KEY:
-            key = cls.MODEL_PATH_TO_KEY[model]
-            return key, model
+        # Check fallback models for backwards compatibility
+        for full_path, name in cls.FALLBACK_MODELS.items():
+            # Check if model matches a known short name pattern
+            short_name = full_path.split('/')[-1].lower()
+            if model.lower() == short_name or model.lower().replace('-', '') == short_name.replace('-', ''):
+                return full_path, full_path
 
-        # Unknown model - fall back to default
-        return 'llama-3.3-70b', cls.AVAILABLE_MODELS['llama-3.3-70b']
+        # Unknown model - assume it's a valid model path and try it
+        # This allows users to use any model available on HuggingFace
+        return model, model
 
     # Default timeout for cloud API calls
     DEFAULT_TIMEOUT = 120  # 2 minutes
@@ -78,7 +145,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = 'llama-3.3-70b',
+        model: Optional[str] = None,
         timeout: Optional[int] = None,
     ):
         """
@@ -86,7 +153,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
 
         Args:
             api_key: HuggingFace API token (if not provided, reads from HUGGINGFACE_API_KEY env var)
-            model: Model identifier (default: 'llama-3.3-70b')
+            model: Model identifier - full HuggingFace path (e.g., 'meta-llama/Llama-3.3-70B-Instruct')
             timeout: Request timeout in seconds (default: 120s)
                      Can be configured via PROVIDER_TIMEOUT_HUGGINGFACE env var.
         """
@@ -98,7 +165,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
                 "or pass api_key parameter."
             )
 
-        self.model_key, self.model = self.resolve_model(model)
+        self.model_key, self.model = self.resolve_model(model or self.DEFAULT_MODEL)
 
         # Timeout priority: param > env var > default
         if timeout is not None:
@@ -168,9 +235,10 @@ class HuggingFaceSummarizer(BaseSummarizer):
         if not self.api_key:
             errors.append("HuggingFace API key is required but not set. Set HUGGINGFACE_API_KEY environment variable.")
 
-        if self.model_key not in self.AVAILABLE_MODELS:
-            available = list(self.AVAILABLE_MODELS.keys()) + list(self.MODEL_PATH_TO_KEY.keys())
-            errors.append(f"Unknown model '{self.model_key}'. Available: {available}")
+        # Model validation is lenient - we allow any model path since HuggingFace
+        # has thousands of models and we can't enumerate them all
+        if not self.model:
+            errors.append("Model is required but not set.")
 
         return errors
 
@@ -192,10 +260,10 @@ class HuggingFaceSummarizer(BaseSummarizer):
                     key="model",
                     type="string",
                     label="Model",
-                    description="Model to use (e.g., llama-3.3-70b, qwen-2.5-72b)",
-                    default="llama-3.3-70b",
+                    description="Model to use (e.g., meta-llama/Llama-3.3-70B-Instruct)",
+                    default=self.DEFAULT_MODEL,
                     editable=True,
-                    placeholder="llama-3.3-70b",
+                    placeholder="meta-llama/Llama-3.3-70B-Instruct",
                 ),
             ],
             requires_api_key=True,
@@ -204,22 +272,145 @@ class HuggingFaceSummarizer(BaseSummarizer):
     @classmethod
     def list_models(cls, api_key: Optional[str] = None) -> List[ModelInfo]:
         """
-        Return available HuggingFace models.
+        Dynamically fetch available models from HuggingFace Inference Providers.
 
-        Note: Returns curated list of models available via HuggingFace Inference API.
-        Uses short keys for display and maps to full model paths internally.
+        Queries the HuggingFace Hub API for models available via serverless inference
+        providers (Together, Fireworks, Groq, Cerebras, etc.). Filters for instruction-
+        tuned models suitable for summarization and excludes coding-focused models.
 
         Args:
-            api_key: Not used (curated list doesn't require API)
+            api_key: Not required for model discovery (public API)
 
         Returns:
-            List of ModelInfo for available HuggingFace models
+            List of ModelInfo for available HuggingFace models, sorted by popularity
+        """
+        try:
+            models = cls._fetch_available_models()
+            if models:
+                return models
+        except Exception as e:
+            logger.warning(f"Failed to fetch HuggingFace models from API: {e}")
+
+        # Fallback to curated list if API fails
+        return cls._get_fallback_models()
+
+    @classmethod
+    def _fetch_available_models(cls, limit: int = 50, max_results: int = 15) -> List[ModelInfo]:
+        """
+        Fetch available models from HuggingFace Hub API.
+
+        Args:
+            limit: Number of models to fetch from API
+            max_results: Maximum number of models to return after filtering
+
+        Returns:
+            List of ModelInfo for available models
+        """
+        response = requests.get(
+            cls.HUB_API_URL,
+            params={
+                "pipeline_tag": "text-generation",
+                "inference_provider": cls.INFERENCE_PROVIDERS,
+                "sort": "downloads",
+                "direction": "-1",
+                "limit": limit,
+            },
+            timeout=10,
+        )
+        response.raise_for_status()
+        models_data = response.json()
+
+        # Filter and process models
+        filtered_models = []
+        seen_orgs = set()  # Track orgs to ensure diversity
+
+        for model in models_data:
+            model_id = model.get('id', model.get('modelId', ''))
+            if not model_id:
+                continue
+
+            # Skip excluded models (coders, safeguards, etc.)
+            if cls._should_exclude(model_id):
+                continue
+
+            # Extract org for diversity tracking
+            org = model_id.split('/')[0] if '/' in model_id else 'unknown'
+
+            # Prioritize instruct models, but include popular base models too
+            is_instruct = cls._is_instruct_model(model_id)
+            downloads = model.get('downloads', 0)
+
+            # Score: instruct models get priority, then by downloads
+            score = (1 if is_instruct else 0, downloads)
+
+            filtered_models.append({
+                'id': model_id,
+                'name': cls._format_model_name(model_id),
+                'downloads': downloads,
+                'is_instruct': is_instruct,
+                'org': org,
+                'size': cls._estimate_model_size(model_id),
+                'score': score,
+            })
+
+        # Sort by score (instruct first, then by downloads)
+        filtered_models.sort(key=lambda x: x['score'], reverse=True)
+
+        # Select top models with some diversity (not all from same org)
+        result = []
+        org_counts = {}
+        max_per_org = 4  # Limit models per organization for diversity
+
+        for model in filtered_models:
+            org = model['org']
+            if org_counts.get(org, 0) >= max_per_org:
+                continue
+
+            org_counts[org] = org_counts.get(org, 0) + 1
+            is_default = model['id'] == cls.DEFAULT_MODEL
+
+            result.append(ModelInfo(
+                id=model['id'],
+                name=model['name'],
+                provider='huggingface',
+                is_default=is_default,
+            ))
+
+            if len(result) >= max_results:
+                break
+
+        # Ensure default model is in the list
+        default_in_list = any(m.id == cls.DEFAULT_MODEL for m in result)
+        if not default_in_list and result:
+            # Add default model at the beginning
+            result.insert(0, ModelInfo(
+                id=cls.DEFAULT_MODEL,
+                name=cls._format_model_name(cls.DEFAULT_MODEL),
+                provider='huggingface',
+                is_default=True,
+            ))
+            # Remove last item to maintain max_results
+            if len(result) > max_results:
+                result = result[:max_results]
+
+        return result
+
+    @classmethod
+    def _get_fallback_models(cls) -> List[ModelInfo]:
+        """
+        Return fallback model list when API discovery fails.
+
+        Returns:
+            List of ModelInfo for known working models
         """
         return [
-            ModelInfo(id='llama-3.3-70b', name='Llama 3.3 70B', provider='huggingface', is_default=True),
-            ModelInfo(id='qwen-2.5-72b', name='Qwen 2.5 72B', provider='huggingface'),
-            ModelInfo(id='mixtral-8x7b', name='Mixtral 8x7B', provider='huggingface'),
-            ModelInfo(id='mistral-7b', name='Mistral 7B', provider='huggingface'),
+            ModelInfo(
+                id=model_id,
+                name=name,
+                provider='huggingface',
+                is_default=(model_id == cls.DEFAULT_MODEL),
+            )
+            for model_id, name in cls.FALLBACK_MODELS.items()
         ]
 
     def _query_api(self, payload: dict, max_retries: int = 3) -> dict:
