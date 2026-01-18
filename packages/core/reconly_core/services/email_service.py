@@ -87,6 +87,20 @@ class EmailService:
         self.from_email = from_email or os.getenv('SMTP_FROM_EMAIL', self.smtp_user)
         self.from_name = from_name or os.getenv('SMTP_FROM_NAME', 'Reconly')
 
+    def _extract_youtube_video_id(self, url: str) -> Optional[str]:
+        """Extract YouTube video ID from URL."""
+        if not url:
+            return None
+        patterns = [
+            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
+            r'youtube\.com\/v\/([a-zA-Z0-9_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+
     def send_email(
         self,
         to_email: str,
@@ -183,6 +197,16 @@ class EmailService:
             processed['summary_html'] = markdown_to_html(summary)
             processed['summary_text'] = summary
 
+            # Get thumbnail URL - only use actual images, no placeholders
+            thumbnail_url = processed.get('image_url')
+            if not thumbnail_url and processed.get('source_type', '').lower() == 'youtube':
+                # For YouTube, construct thumbnail from video URL
+                url = processed.get('url', '')
+                video_id = self._extract_youtube_video_id(url)
+                if video_id:
+                    thumbnail_url = f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+            processed['thumbnail_url'] = thumbnail_url
+
             processed_digests.append(processed)
 
         # Language-specific text
@@ -216,7 +240,11 @@ class EmailService:
         .header p { margin: 10px 0 0 0; opacity: 0.9; }
         .content { padding: 20px; background: #ffffff; }
         .digest { background: #f8f9fa; margin: 20px 0; padding: 20px; border-left: 4px solid #667eea; border-radius: 4px; }
+        .digest-header { width: 100%; }
+        .digest-title { vertical-align: top; }
+        .digest-thumbnail-cell { vertical-align: top; text-align: right; padding-left: 15px; width: 115px; }
         .digest h3 { margin-top: 0; color: #667eea; font-size: 20px; }
+        .digest-thumbnail { width: 115px; height: 65px; object-fit: cover; border-radius: 4px; border: 1px solid #e0e0e0; }
         .metadata { color: #666; font-size: 0.9em; margin: 10px 0; padding: 10px 0; border-bottom: 1px solid #e0e0e0; }
         .metadata span { margin-right: 15px; }
         .summary { margin: 15px 0; line-height: 1.7; }
@@ -242,7 +270,12 @@ class EmailService:
 
         {% for digest in digests %}
         <div class="digest">
-            <h3>{{ digest.title }}</h3>
+            <table class="digest-header" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                    <td class="digest-title"><h3>{{ digest.title }}</h3></td>
+                    {% if digest.thumbnail_url %}<td class="digest-thumbnail-cell"><img src="{{ digest.thumbnail_url }}" alt="" class="digest-thumbnail" /></td>{% endif %}
+                </tr>
+            </table>
             <div class="metadata">
                 <span><strong>{{ source_label }}:</strong> {{ digest.source_type|upper }}</span>
                 <span><strong>{{ lang_label }}:</strong> {{ digest.language|upper }}</span>
