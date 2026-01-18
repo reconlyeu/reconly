@@ -8,43 +8,74 @@
  * - Warning icon if feeds are failing
  * - Detailed tooltip on hover with stats
  */
-import { ref, computed, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { AlertTriangle, Clock } from 'lucide-vue-next';
 import { dashboardApi, healthApi } from '@/services/api';
 import { strings } from '@/i18n/en';
 
 // Track health check status for connection indicator
-const failureCount = ref(0);
 const isDisconnected = ref(false);
 
-const { isError: healthError, isSuccess: healthSuccess } = useQuery({
+// Health check query with callbacks to track connection status
+useQuery({
   queryKey: ['health'],
-  queryFn: healthApi.check,
-  refetchInterval: 15000,
-  retry: 2,
-  retryDelay: 1000,
-  staleTime: 10000,
+  queryFn: async () => {
+    const result = await healthApi.check();
+    // On success, mark as connected
+    isDisconnected.value = false;
+    return result;
+  },
+  refetchInterval: 10000, // Check every 10 seconds
+  retry: 1, // Only retry once
+  retryDelay: 2000,
+  staleTime: 5000,
+  // Use gcTime (formerly cacheTime) to keep checking even when component is mounted
+  gcTime: 0,
+})
+
+// Also set up an error boundary by catching fetch errors
+const checkHealth = async () => {
+  try {
+    await healthApi.check();
+    isDisconnected.value = false;
+  } catch {
+    isDisconnected.value = true;
+  }
+};
+
+// Check immediately on mount and set up interval
+let healthInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  checkHealth();
+  healthInterval = setInterval(checkHealth, 10000);
 });
 
-// Track connection status based on health check results
-watch([healthError, healthSuccess], ([error, success]) => {
-  if (success) {
-    failureCount.value = 0;
-    isDisconnected.value = false;
-  } else if (error) {
-    failureCount.value++;
-    // Only show disconnected after 2 consecutive failures
-    if (failureCount.value >= 2) {
-      isDisconnected.value = true;
-    }
+onUnmounted(() => {
+  if (healthInterval) {
+    clearInterval(healthInterval);
   }
 });
+
+// Cache last known sync time so it persists when backend goes offline
+const cachedLastSync = ref<string | null>(null);
+const cachedFeedsHealthy = ref(0);
+const cachedFeedsFailing = ref(0);
 
 // Fetch dashboard insights for sync status
 const { data: insights, isLoading } = useQuery({
   queryKey: ['dashboard-insights'],
-  queryFn: dashboardApi.getInsights,
+  queryFn: async () => {
+    const result = await dashboardApi.getInsights();
+    // Cache values when we successfully fetch
+    if (result.last_sync_at) {
+      cachedLastSync.value = result.last_sync_at;
+    }
+    cachedFeedsHealthy.value = result.feeds_healthy;
+    cachedFeedsFailing.value = result.feeds_failing;
+    return result;
+  },
   refetchInterval: 30000,
   staleTime: 15000,
 });
@@ -83,17 +114,21 @@ function formatExactTime(timestamp: string | null): string {
   return parseTimestamp(timestamp).toLocaleString();
 }
 
-// Computed values
+// Computed values - use cached values as fallback when offline
+const lastSyncTimestamp = computed(() =>
+  insights.value?.last_sync_at ?? cachedLastSync.value
+);
+
 const lastSyncRelative = computed(() =>
-  formatRelativeTime(insights.value?.last_sync_at ?? null)
+  formatRelativeTime(lastSyncTimestamp.value)
 );
 
 const lastSyncExact = computed(() =>
-  formatExactTime(insights.value?.last_sync_at ?? null)
+  formatExactTime(lastSyncTimestamp.value)
 );
 
-const feedsHealthy = computed(() => insights.value?.feeds_healthy ?? 0);
-const feedsFailing = computed(() => insights.value?.feeds_failing ?? 0);
+const feedsHealthy = computed(() => insights.value?.feeds_healthy ?? cachedFeedsHealthy.value);
+const feedsFailing = computed(() => insights.value?.feeds_failing ?? cachedFeedsFailing.value);
 const hasFailing = computed(() => feedsFailing.value > 0);
 
 // Build tooltip text with sync time and feed health stats
@@ -113,14 +148,25 @@ const tooltipText = computed(() => {
 
 <template>
   <div
-    class="flex items-center gap-2"
+    class="flex items-center gap-3"
     :title="tooltipText"
   >
-    <!-- Connection status dot -->
+    <!-- Connection status indicator -->
     <div
-      class="h-2 w-2 rounded-full"
-      :class="isDisconnected ? 'bg-status-failed' : 'bg-accent-success animate-pulse'"
-    />
+      class="flex items-center gap-1.5 rounded-full px-2 py-1"
+      :class="isDisconnected ? 'bg-status-failed/10' : 'bg-accent-success/10'"
+    >
+      <div
+        class="h-2.5 w-2.5 rounded-full"
+        :class="isDisconnected ? 'bg-status-failed' : 'bg-accent-success animate-pulse'"
+      />
+      <span
+        class="text-xs font-medium"
+        :class="isDisconnected ? 'text-status-failed' : 'text-accent-success'"
+      >
+        {{ isDisconnected ? 'Offline' : 'Online' }}
+      </span>
+    </div>
 
     <!-- Last sync text -->
     <span v-if="isLoading" class="text-sm text-text-muted">
