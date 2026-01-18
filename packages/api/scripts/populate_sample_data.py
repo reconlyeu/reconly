@@ -1,5 +1,10 @@
 #!/usr/bin/env python
-"""Populate database with sample data for testing."""
+"""Populate database with sample data for testing.
+
+Sample feeds are loaded from JSON bundle files in the sample_bundles/ directory.
+To add new sample feeds, simply drop a valid bundle JSON file into that folder.
+"""
+import json
 import sys
 from pathlib import Path
 from datetime import datetime, UTC
@@ -9,11 +14,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from sqlalchemy.orm import Session
 from reconly_api.config import settings
-from reconly_core.database.models import (
-    User, Source, Feed, FeedSource, PromptTemplate, ReportTemplate
-)
+from reconly_core.database.models import User
 from reconly_core.database.crud import DigestDB
 from reconly_core.database.seed import seed_default_templates
+from reconly_core.marketplace.importer import FeedBundleImporter
+
+# Directory containing sample bundle JSON files
+SAMPLE_BUNDLES_DIR = Path(__file__).parent / "sample_bundles"
 
 
 def create_default_user(session: Session) -> User:
@@ -37,127 +44,76 @@ def create_default_user(session: Session) -> User:
     return user
 
 
-def create_sample_sources(session: Session, user: User) -> list[Source]:
-    """Create sample sources for testing."""
-    sample_sources = [
-        {
-            "name": "Hacker News",
-            "type": "rss",
-            "url": "https://news.ycombinator.com/rss",
-            "config": {"max_items": 20},
-            "enabled": True,
-        },
-        {
-            "name": "TechCrunch",
-            "type": "rss",
-            "url": "https://techcrunch.com/feed/",
-            "config": {"max_items": 15},
-            "enabled": True,
-        },
-        {
-            "name": "Fireship YouTube",
-            "type": "youtube",
-            "url": "https://www.youtube.com/@Fireship",
-            "config": {"max_items": 5},
-            "enabled": True,
-        },
-        {
-            "name": "Paul Graham's Blog",
-            "type": "blog",
-            "url": "http://www.paulgraham.com/articles.html",
-            "config": {"fetch_full_content": True},
-            "enabled": False,  # Disabled by default
-        },
-    ]
+def import_sample_bundles(session: Session, user: User) -> dict:
+    """Import all sample bundles from the sample_bundles directory.
 
-    created_sources = []
-    for source_data in sample_sources:
-        # Check if source already exists
-        existing = session.query(Source).filter(
-            Source.url == source_data["url"]
-        ).first()
+    Args:
+        session: Database session
+        user: User to associate with imported feeds
 
-        if existing:
-            print(f"[SKIP] Source already exists: {source_data['name']}")
-            created_sources.append(existing)
-            continue
+    Returns:
+        Dictionary with import statistics
+    """
+    stats = {
+        "imported": [],
+        "skipped": [],
+        "failed": [],
+    }
 
-        source = Source(
-            user_id=user.id,
-            name=source_data["name"],
-            type=source_data["type"],
-            url=source_data["url"],
-            config=source_data.get("config"),
-            enabled=source_data.get("enabled", True),
-            created_at=datetime.now(UTC),
-        )
-        session.add(source)
-        created_sources.append(source)
-        print(f"[OK] Created source: {source_data['name']} ({source_data['type']})")
+    if not SAMPLE_BUNDLES_DIR.exists():
+        print(f"[WARN] Sample bundles directory not found: {SAMPLE_BUNDLES_DIR}")
+        return stats
 
-    session.commit()
-    return created_sources
+    bundle_files = sorted(SAMPLE_BUNDLES_DIR.glob("*.json"))
+    if not bundle_files:
+        print(f"[WARN] No bundle files found in {SAMPLE_BUNDLES_DIR}")
+        return stats
 
+    importer = FeedBundleImporter(session)
 
-def create_sample_feed(session: Session, user: User, sources: list[Source]) -> Feed:
-    """Create a sample feed using the created sources."""
-    # Check if feed already exists
-    existing = session.query(Feed).filter(
-        Feed.name == "Tech Daily Digest"
-    ).first()
+    for bundle_file in bundle_files:
+        try:
+            data = json.loads(bundle_file.read_text(encoding="utf-8"))
+            result = importer.import_bundle(data, user_id=user.id)
 
-    if existing:
-        print(f"[SKIP] Feed already exists: {existing.name}")
-        return existing
+            if result.success:
+                print(f"[OK] Imported: {result.feed_name} ({result.sources_created} sources)")
+                stats["imported"].append({
+                    "file": bundle_file.name,
+                    "feed_name": result.feed_name,
+                    "feed_id": result.feed_id,
+                    "sources": result.sources_created,
+                })
+                for warning in result.warnings:
+                    print(f"     [WARN] {warning}")
+            else:
+                # Check if it's a duplicate (already exists)
+                if any("already exists" in err for err in result.errors):
+                    print(f"[SKIP] {bundle_file.name}: Feed already exists")
+                    stats["skipped"].append({
+                        "file": bundle_file.name,
+                        "reason": result.errors[0] if result.errors else "Unknown",
+                    })
+                else:
+                    print(f"[FAIL] {bundle_file.name}: {result.errors}")
+                    stats["failed"].append({
+                        "file": bundle_file.name,
+                        "errors": result.errors,
+                    })
+        except json.JSONDecodeError as e:
+            print(f"[FAIL] {bundle_file.name}: Invalid JSON - {e}")
+            stats["failed"].append({
+                "file": bundle_file.name,
+                "errors": [f"Invalid JSON: {e}"],
+            })
+        except Exception as e:
+            print(f"[FAIL] {bundle_file.name}: {e}")
+            stats["failed"].append({
+                "file": bundle_file.name,
+                "errors": [str(e)],
+            })
 
-    # Get default templates
-    prompt_template = session.query(PromptTemplate).filter(
-        PromptTemplate.name == "Standard Summary (English)",
-        PromptTemplate.is_system == True,
-    ).first()
-
-    report_template = session.query(ReportTemplate).filter(
-        ReportTemplate.name == "Daily Digest (Markdown)",
-        ReportTemplate.is_system == True,
-    ).first()
-
-    feed = Feed(
-        user_id=user.id,
-        name="Tech Daily Digest",
-        description="Daily digest of tech news from Hacker News and TechCrunch",
-        schedule_cron="0 8 * * *",  # Every day at 8 AM
-        schedule_enabled=True,
-        prompt_template_id=prompt_template.id if prompt_template else None,
-        report_template_id=report_template.id if report_template else None,
-        output_config={
-            "email": {
-                "enabled": False,  # Disabled by default
-                "recipients": ["dev@example.com"],
-            },
-            "file": {
-                "enabled": True,
-                "path": "./output/digests",
-            },
-        },
-        created_at=datetime.now(UTC),
-    )
-    session.add(feed)
-    session.commit()
-
-    # Associate enabled sources with the feed
-    enabled_sources = [s for s in sources if s.enabled]
-    for priority, source in enumerate(enabled_sources):
-        feed_source = FeedSource(
-            feed_id=feed.id,
-            source_id=source.id,
-            enabled=True,
-            priority=priority,
-        )
-        session.add(feed_source)
-
-    session.commit()
-    print(f"[OK] Created feed: {feed.name} with {len(enabled_sources)} sources")
-    return feed
+    return stats
 
 
 def main():
@@ -188,25 +144,28 @@ def main():
         user = create_default_user(session)
         print()
 
-        # 3. Create sample sources
-        print("3. Creating sample sources...")
-        sources = create_sample_sources(session, user)
-        print()
-
-        # 4. Create sample feed
-        print("4. Creating sample feed...")
-        feed = create_sample_feed(session, user, sources)
+        # 3. Import sample bundles
+        print(f"3. Importing sample bundles from {SAMPLE_BUNDLES_DIR.name}/...")
+        bundle_stats = import_sample_bundles(session, user)
         print()
 
         print("=" * 70)
         print("[SUCCESS] SAMPLE DATA POPULATION COMPLETE")
         print("=" * 70)
         print()
-        print(f"User:     {user.email}")
-        print(f"Sources:  {len(sources)} created")
-        print(f"Feed:     {feed.name}")
+        print(f"User:      {user.email}")
         print(f"Templates: {result['prompt_templates_created'] + result['prompt_templates_skipped']} prompt, "
               f"{result['report_templates_created'] + result['report_templates_skipped']} report")
+        print(f"Bundles:   {len(bundle_stats['imported'])} imported, "
+              f"{len(bundle_stats['skipped'])} skipped, "
+              f"{len(bundle_stats['failed'])} failed")
+
+        if bundle_stats['imported']:
+            print()
+            print("Imported feeds:")
+            for item in bundle_stats['imported']:
+                print(f"  - {item['feed_name']} ({item['sources']} sources)")
+
         print()
         print("You can now start the API server:")
         print("  cd packages/api")

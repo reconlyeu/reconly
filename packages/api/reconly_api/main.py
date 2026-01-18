@@ -18,7 +18,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from reconly_core.logging import configure_logging, get_logger, generate_trace_id, get_trace_id
-from reconly_core.database import Base, seed_default_templates
+from reconly_core.database import Base
 from reconly_api.config import settings, validate_secret_key, validate_configuration, SecretKeyValidationError
 from reconly_api.dependencies import SessionLocal, engine, limiter
 from reconly_api.middleware import SecurityHeadersMiddleware
@@ -101,16 +101,6 @@ async def lifespan(app: FastAPI):
     # Create database tables if they don't exist
     logger.info("Initializing database tables")
     Base.metadata.create_all(bind=engine)
-
-    # Seed default templates
-    logger.info("Seeding default templates")
-    with SessionLocal() as session:
-        result = seed_default_templates(session)
-        logger.info(
-            "Template seeding complete",
-            prompt_templates_created=result["prompt_templates_created"],
-            report_templates_created=result["report_templates_created"],
-        )
 
     # Startup: Clean up any stale feed runs from previous sessions
     cleanup_stale_feed_runs()
