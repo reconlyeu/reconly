@@ -286,29 +286,25 @@ class ChatService:
     def _get_default_model(self, provider: str) -> str:
         """Get the default model from app settings for the given provider.
 
+        Uses SettingsService which provides fallback chain: DB → env → default.
+
         Args:
             provider: Provider name to get default model for.
 
         Returns:
-            Model name, or empty string if not configured.
+            Model name from settings (with fallback to registry default).
         """
-        import json
-
-        from reconly_core.database.models import AppSetting
+        from reconly_core.services.settings_service import SettingsService
 
         try:
-            setting = self.db.query(AppSetting).filter(
-                AppSetting.key == "llm.default_model"
-            ).first()
-
-            if setting and setting.value:
-                model = json.loads(setting.value)
-                if model:
-                    return model
+            settings_service = SettingsService(self.db)
+            model = settings_service.get("llm.default_model")
+            if model:
+                return model
         except Exception:
             pass
 
-        # Return empty string - callers handle provider-specific defaults
+        # Fallback to empty string if SettingsService fails
         return ""
 
     def _get_provider_client(self, provider: str, model: str | None = None) -> Any:
