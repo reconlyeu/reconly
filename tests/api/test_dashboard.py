@@ -57,9 +57,10 @@ def sample_feed_run(test_db, sample_feed):
     feed_run = FeedRun(
         feed_id=sample_feed.id,
         status="completed",
+        triggered_by="manual",
         started_at=datetime.utcnow() - timedelta(minutes=5),
         completed_at=datetime.utcnow(),
-        digests_created=1
+        items_processed=1
     )
     test_db.add(feed_run)
     test_db.commit()
