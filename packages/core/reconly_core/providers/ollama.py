@@ -106,7 +106,7 @@ class OllamaProvider(BaseProvider):
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=2)
             return response.status_code == 200
-        except:
+        except Exception:
             return False
 
     def validate_config(self) -> List[str]:
@@ -178,7 +178,7 @@ class OllamaProvider(BaseProvider):
                 data = response.json()
                 models = [m['name'] for m in data.get('models', [])]
                 return models
-        except:
+        except Exception:
             pass
 
         return []

@@ -309,12 +309,12 @@ def _instantiate_provider(
                 return provider_class()
 
 
-def _get_api_key_for_provider(provider_name: str) -> Optional[str]:
+def get_api_key_for_provider(provider_name: str) -> Optional[str]:
     """
     Get API key for a provider from environment variables.
 
     Args:
-        provider_name: Name of the provider
+        provider_name: Name of the provider (e.g., 'openai', 'anthropic', 'huggingface')
 
     Returns:
         API key if found, None otherwise
@@ -328,6 +328,10 @@ def _get_api_key_for_provider(provider_name: str) -> Optional[str]:
     if env_var:
         return os.getenv(env_var)
     return None
+
+
+# Internal alias for backwards compatibility within this module
+_get_api_key_for_provider = get_api_key_for_provider
 
 
 def _get_setting_with_db_fallback(
@@ -486,33 +490,22 @@ def list_available_models() -> Dict[str, List[str]]:
     """
     List all available models by provider.
 
+    Uses each provider's list_models() method which fetches from API with fallback.
+
     Returns:
-        Dictionary mapping provider names to lists of available models
+        Dictionary mapping provider names to lists of available model IDs
     """
     models = {}
 
     # Get registered providers
     for provider_name in list_providers():
         try:
-            # Special handling for providers with known model lists
-            if provider_name == 'huggingface':
-                models[provider_name] = list(HuggingFaceProvider.AVAILABLE_MODELS.keys())
-            elif provider_name == 'anthropic':
-                # Use dynamic list_models() which fetches from API with fallback
-                models[provider_name] = [m.id for m in AnthropicProvider.list_models()]
-            elif provider_name == 'openai':
-                models[provider_name] = list(OpenAIProvider.MODEL_PRICING.keys())
-            elif provider_name == 'ollama':
-                # Try to fetch available models from Ollama server
-                try:
-                    ollama_instance = OllamaProvider()
-                    available = ollama_instance._fetch_available_models()
-                    models[provider_name] = available if available else ['llama3.2', 'mistral', 'gemma2']
-                except:
-                    models[provider_name] = ['llama3.2', 'mistral', 'gemma2']
-            else:
-                # Generic handling for new providers
-                models[provider_name] = ['default']
+            # Use the registry to get provider class
+            provider_cls = get_provider(provider_name)
+
+            # Use list_models() which handles API calls and fallbacks
+            model_list = provider_cls.list_models()
+            models[provider_name] = [m.id for m in model_list]
 
         except Exception:
             continue

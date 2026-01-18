@@ -19,6 +19,7 @@ from reconly_api.routes.component_utils import convert_config_fields
 from reconly_core.services.settings_service import SettingsService
 from reconly_core.providers.capabilities import ModelInfo
 from reconly_core.providers.cache import get_model_cache
+from reconly_core.providers.factory import get_api_key_for_provider
 from reconly_core.providers.registry import (
     list_providers,
     get_provider_entry,
@@ -33,17 +34,6 @@ DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 
 # Ollama URL is configurable via environment variable
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
-
-def _get_api_key_for_provider(provider_name: str) -> Optional[str]:
-    """Get the API key for a provider from environment variables."""
-    api_key_map = {
-        'openai': os.getenv('OPENAI_API_KEY'),
-        'anthropic': os.getenv('ANTHROPIC_API_KEY'),
-        'huggingface': os.getenv('HUGGINGFACE_API_KEY') or os.getenv('HF_TOKEN'),
-        'ollama': None,
-    }
-    return api_key_map.get(provider_name)
 
 
 def _mask_api_key(api_key: Optional[str], provider_name: str) -> Optional[str]:
@@ -198,7 +188,7 @@ async def get_provider_config(db: Session = Depends(get_db)):
             config_schema = _get_config_schema_with_fallback(entry, provider_cls)
 
             # Get API key
-            api_key = _get_api_key_for_provider(provider_name)
+            api_key = get_api_key_for_provider(provider_name)
 
             # Determine status
             is_local = capabilities.is_local
@@ -246,7 +236,7 @@ async def get_provider_models(provider_name: str):
     if not is_provider_registered(provider_name):
         raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_name}")
 
-    api_key = _get_api_key_for_provider(provider_name)
+    api_key = get_api_key_for_provider(provider_name)
     models = get_provider_models_cached(provider_name, api_key=api_key)
     return [m.to_dict() for m in models]
 
@@ -265,14 +255,14 @@ async def refresh_models(provider_name: Optional[str] = None):
     if provider_name:
         if not is_provider_registered(provider_name):
             raise HTTPException(status_code=404, detail=f"Unknown provider: {provider_name}")
-        api_key = _get_api_key_for_provider(provider_name)
+        api_key = get_api_key_for_provider(provider_name)
         models = get_provider_models_cached(provider_name, api_key=api_key)
         return {"provider": provider_name, "models": [m.to_dict() for m in models]}
     else:
         # Refresh all providers
         result = {}
         for name in list_providers():
-            api_key = _get_api_key_for_provider(name)
+            api_key = get_api_key_for_provider(name)
             models = get_provider_models_cached(name, api_key=api_key)
             result[name] = [m.to_dict() for m in models]
         return {"providers": result}
