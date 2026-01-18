@@ -138,6 +138,10 @@ def convert_config_fields(schema: ComponentConfigSchema) -> List[ConfigFieldResp
             default=f.default,
             required=f.required,
             placeholder=f.placeholder,
+            env_var=f.env_var or None,
+            editable=f.editable,
+            secret=f.secret,
+            options_from=f.options_from or None,
         )
         for f in schema.fields
     ]
