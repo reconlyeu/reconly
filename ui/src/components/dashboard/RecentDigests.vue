@@ -1,21 +1,38 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+/**
+ * RecentDigests - Shows recent digests with compact card design
+ */
+import { ref, computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
-import { FileText, Calendar, Tag, ExternalLink } from 'lucide-vue-next';
+import { FileText, Calendar, Tag, ChevronRight } from 'lucide-vue-next';
 import { marked } from 'marked';
 import { dashboardApi } from '@/services/api';
 import { strings } from '@/i18n/en';
+import { extractPreviewImage } from '@/utils/imageUtils';
+import { ArticlePlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
+import BaseCard from '@/components/common/BaseCard.vue';
+
+// Props
+interface Props {
+  limit?: number;
+}
+const props = withDefaults(defineProps<Props>(), {
+  limit: 6,
+});
 
 // Configure marked
 marked.setOptions({ breaks: false, gfm: true });
 
-const { data: digests, isLoading } = useQuery({
+const { data: digestsData, isLoading } = useQuery({
   queryKey: ['recent-digests'],
-  queryFn: () => dashboardApi.getRecentDigests(4),
+  queryFn: () => dashboardApi.getRecentDigestsFiltered('all', props.limit),
   refetchInterval: 30000,
 });
 
-const formatDate = (timestamp: string | null) => {
+// Extract digests array from response
+const digests = computed(() => digestsData.value?.digests ?? []);
+
+function formatDate(timestamp: string | null): string {
   if (!timestamp) return '';
   const date = new Date(timestamp);
   const now = new Date();
@@ -27,23 +44,54 @@ const formatDate = (timestamp: string | null) => {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return date.toLocaleDateString();
-};
-
-const getSourceIcon = (sourceType: string | null) => {
-  // Return appropriate icon based on source type
-  return FileText;
-};
+}
 
 // Check if digest has a real source URL (not consolidated)
-const hasSourceUrl = (url: string | null) => {
-  return url && !url.startsWith('consolidated://');
-};
+function hasSourceUrl(url: string | null): boolean {
+  return Boolean(url && !url.startsWith('consolidated://'));
+}
 
-// Render markdown for preview with formatting
-const getRenderedSummary = (summary: string | null) => {
-  if (!summary) return '<span class="text-text-muted">No summary available</span>';
-  return marked(summary) as string;
-};
+// Check if this is a YouTube source
+function isYouTube(sourceType: string | null): boolean {
+  return sourceType?.toLowerCase() === 'youtube';
+}
+
+// Extract YouTube video ID from URL
+function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+// Get preview image URL
+function getPreviewImageUrl(digest: { image_url?: string | null; url: string; source_type?: string | null; content?: string | null }): string | null {
+  if (digest.image_url) return digest.image_url;
+
+  if (isYouTube(digest.source_type) && digest.url) {
+    const videoId = extractYouTubeVideoId(digest.url);
+    if (videoId) {
+      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
+  }
+
+  if (!digest.content) return null;
+  const html = marked(digest.content) as string;
+  return extractPreviewImage(html);
+}
+
+// Track image load errors per digest
+const imageErrors = ref<Set<number>>(new Set());
+
+function handleImageError(digestId: number): void {
+  imageErrors.value.add(digestId);
+}
 </script>
 
 <template>
@@ -51,9 +99,9 @@ const getRenderedSummary = (summary: string | null) => {
     <!-- Loading skeleton -->
     <div v-if="isLoading" class="space-y-3">
       <div
-        v-for="i in 3"
+        v-for="i in 4"
         :key="i"
-        class="h-32 animate-pulse rounded-xl bg-bg-elevated"
+        class="h-24 animate-pulse rounded-xl bg-bg-elevated"
       />
     </div>
 
@@ -66,148 +114,76 @@ const getRenderedSummary = (summary: string | null) => {
       <p class="text-sm text-text-muted">{{ strings.dashboard.noDigests }}</p>
     </div>
 
-    <!-- Digests grid -->
-    <div v-else class="grid gap-3">
+    <!-- Digests list -->
+    <div v-else class="space-y-3">
       <a
         v-for="(digest, index) in digests"
         :key="digest.id"
         :href="`/digests?view=${digest.id}`"
-        class="group animate-slide-in-right-slow relative overflow-hidden rounded-xl border border-border-subtle bg-gradient-to-br from-bg-elevated/60 to-bg-surface/40 p-5 transition-all duration-300 hover:border-accent-primary/50 hover:shadow-xl hover:shadow-accent-primary/5"
-        :style="{ animationDelay: `${index * 200}ms` }"
+        class="group block animate-slide-in-right-fast"
+        :style="{ animationDelay: `${index * 50}ms` }"
       >
-        <!-- Hover gradient overlay -->
-        <div
-          class="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent-primary/5 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-        />
+        <BaseCard glow-color="primary" clickable>
+          <div class="flex gap-3">
+            <!-- Thumbnail -->
+            <div class="w-20 h-14 shrink-0 rounded-lg border border-border-subtle bg-bg-surface overflow-hidden">
+              <img
+                v-if="getPreviewImageUrl(digest) && !imageErrors.has(digest.id)"
+                :src="getPreviewImageUrl(digest)!"
+                alt=""
+                class="w-full h-full object-cover"
+                @error="handleImageError(digest.id)"
+              />
+              <YoutubePlaceholder v-else-if="isYouTube(digest.source_type)" class="w-full h-full" />
+              <ArticlePlaceholder v-else class="w-full h-full" />
+            </div>
 
-        <div class="relative z-10">
-          <!-- Header: Icon, source type, and timestamp -->
-          <div class="mb-3 flex items-start justify-between">
-            <div class="flex items-center gap-2">
-              <div
-                class="flex h-9 w-9 items-center justify-center rounded-lg bg-accent-primary/10"
-              >
-                <component
-                  :is="getSourceIcon(digest.source_type)"
-                  class="h-5 w-5 text-accent-primary"
-                />
-              </div>
-              <div>
-                <div class="text-xs font-medium uppercase tracking-wide text-text-muted">
-                  {{ digest.source_type || 'Article' }}
+            <!-- Content -->
+            <div class="min-w-0 flex-1">
+              <!-- Title -->
+              <h4 class="font-semibold text-text-primary group-hover:text-accent-primary transition-colors line-clamp-1 mb-1">
+                {{ digest.title || 'Untitled' }}
+              </h4>
+
+              <!-- Meta row -->
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-text-muted">
+                <!-- Source type badge -->
+                <div class="flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-blue-400">
+                  <FileText class="h-3 w-3" />
+                  {{ digest.source_type || 'article' }}
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-text-muted">
+                <!-- Date -->
+                <div class="flex items-center gap-1">
                   <Calendar class="h-3 w-3" />
                   {{ formatDate(digest.created_at) }}
                 </div>
+                <!-- Tags -->
+                <div v-if="digest.tags && digest.tags.length > 0" class="flex items-center gap-1">
+                  <Tag class="h-3 w-3" />
+                  <span>{{ digest.tags[0] }}</span>
+                  <span v-if="digest.tags.length > 1">+{{ digest.tags.length - 1 }}</span>
+                </div>
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <a
-                v-if="hasSourceUrl(digest.url)"
-                :href="digest.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                @click.stop
-                class="rounded-lg p-1.5 text-blue-400 opacity-0 transition-all hover:bg-blue-400/10 group-hover:opacity-100"
-                title="View original"
-              >
-                <ExternalLink class="h-4 w-4" />
-              </a>
-              <div
-                v-if="digest.provider"
-                class="rounded-full bg-purple-500/10 px-2 py-0.5 text-xs font-medium text-purple-400"
-              >
-                {{ digest.provider }}
-              </div>
+
+            <!-- Arrow -->
+            <div class="flex items-center">
+              <ChevronRight
+                class="h-5 w-5 shrink-0 text-text-muted opacity-0 transition-all group-hover:translate-x-1 group-hover:opacity-100"
+              />
             </div>
           </div>
-
-          <!-- Title -->
-          <h3
-            class="mb-2 line-clamp-2 font-semibold leading-snug text-text-primary transition-colors duration-300 group-hover:text-accent-primary"
-          >
-            {{ digest.title || 'Untitled' }}
-          </h3>
-
-          <!-- Summary preview -->
-          <div
-            class="mb-3 line-clamp-2 text-sm leading-relaxed text-text-secondary prose-preview"
-            v-html="getRenderedSummary(digest.summary)"
-          />
-
-          <!-- Footer: Tags -->
-          <div v-if="digest.tags && digest.tags.length > 0" class="flex items-center gap-1.5">
-            <Tag class="h-3.5 w-3.5 text-text-muted" />
-            <div class="flex gap-1.5">
-              <span
-                v-for="tag in digest.tags.slice(0, 2)"
-                :key="tag"
-                class="rounded-md bg-bg-surface px-2 py-0.5 text-xs font-medium text-text-muted"
-              >
-                {{ tag }}
-              </span>
-              <span
-                v-if="digest.tags.length > 2"
-                class="rounded-md bg-bg-surface px-2 py-0.5 text-xs font-medium text-text-muted"
-              >
-                +{{ digest.tags.length - 2 }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Accent line that grows on hover -->
-        <div
-          class="absolute bottom-0 left-0 h-0.5 w-0 bg-gradient-to-r from-accent-primary to-accent-primary-hover transition-all duration-500 group-hover:w-full"
-        />
+        </BaseCard>
       </a>
     </div>
   </div>
 </template>
 
 <style scoped>
-.line-clamp-2 {
+.line-clamp-1 {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* Prose preview styling for markdown content */
-.prose-preview :deep(p) {
-  margin: 0;
-  display: inline;
-}
-
-.prose-preview :deep(strong) {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.prose-preview :deep(em) {
-  font-style: italic;
-}
-
-.prose-preview :deep(ul),
-.prose-preview :deep(ol) {
-  display: inline;
-  padding: 0;
-  margin: 0;
-}
-
-.prose-preview :deep(li) {
-  display: inline;
-}
-
-.prose-preview :deep(li)::before {
-  content: ' • ';
-}
-
-.prose-preview :deep(code) {
-  background: var(--color-bg-hover);
-  padding: 0.1em 0.3em;
-  border-radius: 0.25rem;
-  font-size: 0.9em;
 }
 </style>

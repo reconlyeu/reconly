@@ -43,6 +43,7 @@ import type {
   SettingsResetRequest,
   SettingsResetResponse,
   DashboardStats,
+  DashboardInsights,
   PaginatedResponse,
   ApiError,
   FeedRunStatus,
@@ -142,9 +143,16 @@ export const healthApi = {
 // DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════════
 
+export type DigestTimeFilter = 'today' | 'week' | 'all';
+
 export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
     const { data } = await apiClient.get<DashboardStats>('/dashboard/stats');
+    return data;
+  },
+
+  getInsights: async (): Promise<DashboardInsights> => {
+    const { data } = await apiClient.get<DashboardInsights>('/dashboard/insights');
     return data;
   },
 
@@ -160,6 +168,38 @@ export const dashboardApi = {
       params: { limit },
     });
     return data.digests;
+  },
+
+  /**
+   * Get recent digests with time filtering for dashboard.
+   * @param since - Time filter: 'today', 'week', or 'all'
+   * @param limit - Maximum number of digests (default 8)
+   */
+  getRecentDigestsFiltered: async (
+    since: DigestTimeFilter = 'all',
+    limit = 8
+  ): Promise<{ total: number; digests: Digest[] }> => {
+    const { data } = await apiClient.get<{ total: number; digests: Digest[] }>(
+      '/dashboard/digests',
+      { params: { since, limit } }
+    );
+    return data;
+  },
+
+  /**
+   * Get recently run feeds with time filtering for dashboard.
+   * @param since - Time filter: 'today', 'week', or 'all'
+   * @param limit - Maximum number of feeds (default 6)
+   */
+  getRecentFeedsFiltered: async (
+    since: DigestTimeFilter = 'all',
+    limit = 6
+  ): Promise<Feed[]> => {
+    const { data } = await apiClient.get<Feed[]>(
+      '/dashboard/feeds',
+      { params: { since, limit } }
+    );
+    return data;
   },
 };
 

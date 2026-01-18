@@ -28,9 +28,17 @@ const sourceTableRef = ref<InstanceType<typeof SourceTable> | null>(null);
 // OAuth callback message state
 const oauthMessage = ref<{ type: 'success' | 'error'; message: string } | null>(null);
 
-// Handle OAuth callback parameters from URL
+// Handle URL parameters on mount (OAuth callbacks, action=create)
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search);
+
+  // Check for action=create to auto-open the create modal
+  if (urlParams.get('action') === 'create') {
+    isModalOpen.value = true;
+    editingSource.value = null;
+    // Clean up URL parameters
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 
   // Check for OAuth success
   if (urlParams.get('oauth_success') === 'true') {
@@ -126,41 +134,40 @@ const batchDeleteMutation = useMutation({
   },
 });
 
-const handleToggle = (sourceId: number, enabled: boolean) => {
+function handleToggle(sourceId: number, enabled: boolean): void {
   toggleMutation.mutate({ sourceId, enabled });
-};
+}
 
-const handleDelete = (sourceId: number) => {
+function handleDelete(sourceId: number): void {
   const source = sources.value?.find(s => s.id === sourceId);
   const sourceName = source?.name || 'this source';
   if (confirmDelete(sourceName, 'source')) {
     deleteMutation.mutate(sourceId);
   }
-};
+}
 
-const handleBatchDelete = (ids: number[]) => {
+function handleBatchDelete(ids: number[]): void {
   batchDeleteMutation.mutate(ids);
-};
+}
 
-const openCreateModal = () => {
+function openCreateModal(): void {
   editingSource.value = null;
   isModalOpen.value = true;
-};
+}
 
-const openEditModal = (source: Source) => {
+function openEditModal(source: Source): void {
   editingSource.value = source;
   isModalOpen.value = true;
-};
+}
 
-const closeModal = () => {
+function closeModal(): void {
   isModalOpen.value = false;
   editingSource.value = null;
-};
+}
 
-const handleSuccess = () => {
-  // Modal will close automatically, could add toast notification here
-  
-};
+function handleSuccess(): void {
+  // Modal closes automatically via @success event
+}
 </script>
 
 <template>

@@ -800,6 +800,18 @@ export interface DashboardStats {
   success_rate: number;
 }
 
+export interface DashboardInsights {
+  new_today: number;
+  new_this_week: number;
+  total_digests: number;
+  feeds_healthy: number;
+  feeds_failing: number;
+  last_sync_at: string | null;
+  daily_counts: number[];
+  change_today: number;
+  change_week: number;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // FEED BUNDLES (Marketplace Export/Import)
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { strings } from '@/i18n/en';
 import { feedsApi } from '@/services/api';
@@ -16,6 +16,7 @@ import { Plus } from 'lucide-vue-next';
 
 // View mode state
 const { viewMode, isCardView, isTableView } = useViewMode('feeds');
+
 const queryClient = useQueryClient();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
@@ -24,6 +25,28 @@ const isModalOpen = ref(false);
 const editingFeed = ref<Feed | null>(null);
 const feedTableRef = ref<InstanceType<typeof FeedTable> | null>(null);
 const runningFeeds = ref<Set<number>>(new Set());
+
+// Handle ?edit= query param to open edit modal on page load
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const editId = params.get('edit');
+  if (editId) {
+    // Clean up URL immediately
+    window.history.replaceState({}, '', window.location.pathname);
+
+    // Fetch the feed directly and open edit modal
+    try {
+      const feedId = parseInt(editId, 10);
+      const feed = await feedsApi.get(feedId);
+      if (feed) {
+        editingFeed.value = feed;
+        isModalOpen.value = true;
+      }
+    } catch (error) {
+      toast.error('Feed not found');
+    }
+  }
+});
 
 // Fetch feeds for table view
 const {
