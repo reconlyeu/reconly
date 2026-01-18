@@ -65,11 +65,11 @@ const poweredByText = computed(() => {
   if (provider && model) {
     return `Powered by ${provider} / ${model}`;
   } else if (provider) {
-    return `Powered by ${provider}`;
+    return `${provider} (no model selected)`;
   } else if (model) {
     return `Powered by ${model}`;
   }
-  return 'Powered by your configured LLM';
+  return 'LLM not configured';
 });
 
 // Format relative time

@@ -54,7 +54,7 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
     "llm.default_model": SettingDef(
         category="provider",
         type=str,
-        default="llama3.2",
+        default="",  # No default - user must configure
         editable=True,
         env_var="DEFAULT_MODEL",
         description="Default model for the selected provider",

@@ -33,7 +33,7 @@ const localSettings = ref<{
   fallback_chain: string[];
 }>({
   default_provider: 'ollama',
-  default_model: 'llama3.2',
+  default_model: '',  // No default - user must configure
   fallback_chain: ['ollama', 'huggingface', 'openai', 'anthropic'],
 });
 
