@@ -338,9 +338,21 @@ class IMAPFetcher(BaseFetcher):
             try:
                 from reconly_core.email.crypto import decrypt_token
                 password = decrypt_token(kwargs["imap_password_encrypted"])
+                if not password:
+                    raise ValueError("Decrypted password is empty")
             except Exception as e:
                 logger.error(f"Failed to decrypt IMAP password: {e}")
-                password = ""
+                raise IMAPError(
+                    f"Cannot decrypt IMAP password. Ensure SECRET_KEY is set correctly. "
+                    f"Error: {e}"
+                )
+
+        # Validate we have a password
+        if not password:
+            logger.error("No IMAP password provided (neither plaintext nor encrypted)")
+            raise IMAPError(
+                "IMAP password not configured. Please reconfigure the source with credentials."
+            )
 
         # Build config
         return IMAPConfig(
@@ -355,6 +367,56 @@ class IMAPFetcher(BaseFetcher):
             subject_filter=kwargs.get("imap_subject_filter"),
             timeout=int(kwargs.get("imap_timeout", 30)),
         )
+
+    def _extract_image_from_html(self, html_content: Optional[str]) -> Optional[str]:
+        """Extract the first meaningful image URL from HTML content.
+
+        Filters out tracking pixels, spacers, and other non-content images.
+
+        Args:
+            html_content: HTML string to parse
+
+        Returns:
+            URL of the first content image, or None
+        """
+        if not html_content:
+            return None
+
+        import re
+
+        # Find all img tags with src attribute
+        img_pattern = r'<img[^>]+src=["\']([^"\']+)["\']'
+        matches = re.findall(img_pattern, html_content, re.IGNORECASE)
+
+        # Filter out tracking pixels and tiny images
+        skip_patterns = [
+            r'tracking',
+            r'pixel',
+            r'spacer',
+            r'\.gif$',  # Most tracking pixels are GIFs
+            r'1x1',
+            r'beacon',
+            r'open\.gif',
+            r'mail\.google\.com',  # Gmail tracking
+            r'email-open',
+            r'cid:',  # Embedded content IDs (not URLs)
+            r'^data:',  # Data URIs (inline images)
+        ]
+
+        for img_url in matches:
+            # Skip if matches any skip pattern
+            if any(re.search(pattern, img_url, re.IGNORECASE) for pattern in skip_patterns):
+                continue
+
+            # Skip very short URLs (likely tracking)
+            if len(img_url) < 20:
+                continue
+
+            # Ensure it's a proper URL
+            if img_url.startswith(('http://', 'https://')):
+                return img_url
+
+        return None
 
     def _email_to_item(self, email: EmailMessage) -> Dict[str, Any]:
         """Convert EmailMessage to FetchedItem-compatible dict.
@@ -378,6 +440,9 @@ class IMAPFetcher(BaseFetcher):
         else:
             mailto_url = f"mailto:{quote(email.sender)}"
 
+        # Extract preview image from HTML content
+        image_url = self._extract_image_from_html(email.html_content)
+
         # Build item dictionary
         item = {
             "url": mailto_url,
@@ -386,6 +451,7 @@ class IMAPFetcher(BaseFetcher):
             "published": email.date.isoformat() if email.date else None,
             "author": email.sender_name or email.sender,
             "source_type": "imap",
+            "image_url": image_url,
             # Email-specific metadata
             "email_folder": email.folder,
             "message_id": email.message_id,

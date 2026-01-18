@@ -557,7 +557,7 @@ class FeedService:
         elif has_timeout:
             feed_run.status = "failed"  # Timeout errors are critical failures
         else:
-            feed_run.status = "completed_with_errors"
+            feed_run.status = "partial"
         feed_run.completed_at = datetime.utcnow()
         feed_run.sources_processed = sources_processed
         feed_run.sources_failed = sources_failed
@@ -733,6 +733,10 @@ class FeedService:
                 return self._process_youtube_source(
                     source, feed, feed_run, summarizer, language, options, session, fetcher
                 )
+            elif source.type == "imap":
+                return self._process_imap_source(
+                    source, feed, feed_run, summarizer, language, options, session, fetcher
+                )
             else:
                 return self._process_website_source(
                     source, feed, feed_run, summarizer, language, options, session, fetcher
@@ -820,6 +824,221 @@ class FeedService:
             "tokens_in": result.get("model_info", {}).get("input_tokens", 0),
             "tokens_out": result.get("model_info", {}).get("output_tokens", 0),
             "cost": result.get("estimated_cost", 0.0),
+        }
+
+    def _process_imap_source(
+        self,
+        source: Source,
+        feed: Feed,
+        feed_run: FeedRun,
+        summarizer: BaseSummarizer,
+        language: str,
+        options: FeedRunOptions,
+        session: Session,
+        fetcher=None,
+    ) -> Dict[str, Any]:
+        """Process an IMAP email source.
+
+        Fetches emails from IMAP server using credentials stored in source.config,
+        processes each email through summarization, and tracks processed message IDs
+        for incremental fetching.
+        """
+        if fetcher is None:
+            fetcher = get_fetcher('imap')
+
+        # Extract IMAP config from source
+        source_config = source.config or {}
+
+        # Build kwargs for IMAP fetcher
+        imap_kwargs = {
+            'imap_provider': source_config.get('provider', 'generic'),
+            'imap_host': source_config.get('imap_host'),
+            'imap_port': source_config.get('imap_port', 993),
+            'imap_username': source_config.get('imap_username'),
+            # Support both plaintext (dev/testing) and encrypted (production) passwords
+            'imap_password': source_config.get('imap_password'),
+            'imap_password_encrypted': source_config.get('imap_password_encrypted'),
+            'imap_use_ssl': source_config.get('imap_use_ssl', True),
+            'imap_folders': source_config.get('folders', ['INBOX']),
+            'imap_from_filter': source_config.get('from_filter'),
+            'imap_subject_filter': source_config.get('subject_filter'),
+            # Pass processed message IDs for incremental fetching
+            'processed_message_ids': source_config.get('processed_message_ids', []),
+        }
+
+        # Get last read timestamp and max_items
+        last_read = self.tracker.get_last_read(source.url) if source.url else None
+        max_items = source_config.get('max_items')
+
+        logger.info(
+            "imap_fetch_start",
+            source_id=source.id,
+            source_name=source.name,
+            provider=imap_kwargs['imap_provider'],
+            folders=imap_kwargs['imap_folders'],
+        )
+
+        try:
+            # Fetch emails
+            emails = fetcher.fetch(
+                source.url or f"imap://{imap_kwargs['imap_host']}",
+                since=last_read,
+                max_items=max_items,
+                **imap_kwargs
+            )
+        except Exception as e:
+            logger.error(
+                "imap_fetch_error",
+                source_id=source.id,
+                source_name=source.name,
+                error=str(e),
+                exc_info=True,
+            )
+            return {"success": False, "error": f"IMAP fetch failed: {e}"}
+
+        if not emails:
+            logger.info(
+                "imap_fetch_empty",
+                source_id=source.id,
+                source_name=source.name,
+            )
+            return {"success": True, "items_count": 0}
+
+        # Extract metadata if present (last item with _fetch_metadata key)
+        fetch_metadata = None
+        if emails and isinstance(emails[-1], dict) and emails[-1].get("_fetch_metadata"):
+            fetch_metadata = emails.pop()
+
+        logger.info(
+            "imap_fetch_complete",
+            source_id=source.id,
+            source_name=source.name,
+            email_count=len(emails),
+        )
+
+        # Apply content filter if configured
+        if source.include_keywords or source.exclude_keywords:
+            content_filter = ContentFilter(
+                include_keywords=source.include_keywords,
+                exclude_keywords=source.exclude_keywords,
+                filter_mode=source.filter_mode or "both",
+                use_regex=source.use_regex or False,
+            )
+            original_count = len(emails)
+            emails = [
+                e for e in emails
+                if content_filter.matches(e.get("title", ""), e.get("content", ""))
+            ]
+            if original_count != len(emails):
+                logger.info(
+                    "content_filter_applied",
+                    source_id=source.id,
+                    source_name=source.name,
+                    original_count=original_count,
+                    remaining_count=len(emails),
+                    filtered_out=original_count - len(emails),
+                )
+            if not emails:
+                return {"success": True, "items_count": 0}
+
+        items_count = 0
+        total_tokens_in = 0
+        total_tokens_out = 0
+        total_cost = 0.0
+        latest_timestamp = last_read
+        new_message_ids = []
+
+        # Resolve prompt template once for all emails
+        template = None
+        if feed.prompt_template_id:
+            template = session.query(PromptTemplate).filter(
+                PromptTemplate.id == feed.prompt_template_id
+            ).first()
+        if not template:
+            template = get_default_prompt_template(session, language=language)
+
+        for email in emails:
+            try:
+                # Track message ID for incremental fetching
+                message_id = email.get("message_id")
+                if message_id:
+                    new_message_ids.append(message_id)
+
+                # Skip if digest already exists for this message
+                email_url = email.get("url")
+                if email_url and self._digest_exists(email_url, session):
+                    logger.debug(f"Digest already exists for email: {email_url}, skipping")
+                    continue
+
+                # Build prompts from template
+                system_prompt, user_prompt = None, None
+                if template:
+                    system_prompt, user_prompt = _build_prompts_from_template(template, email)
+
+                result = summarizer.summarize(
+                    email,
+                    language=language,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                )
+
+                # Save digest
+                if not options.dry_run:
+                    digest = self._save_digest(
+                        result, source, feed, feed_run, session
+                    )
+                    self._log_llm_usage(
+                        result, source, feed, feed_run, digest, session
+                    )
+
+                items_count += 1
+                total_tokens_in += result.get("model_info", {}).get("input_tokens", 0)
+                total_tokens_out += result.get("model_info", {}).get("output_tokens", 0)
+                total_cost += result.get("estimated_cost", 0.0)
+
+                # Track latest timestamp
+                if email.get("published"):
+                    try:
+                        email_dt = datetime.fromisoformat(email["published"])
+                        if latest_timestamp is None or email_dt > latest_timestamp:
+                            latest_timestamp = email_dt
+                    except Exception:
+                        pass
+
+            except Exception as e:
+                logger.error(
+                    "imap_email_process_error",
+                    source_id=source.id,
+                    email_subject=email.get("title", "unknown"),
+                    error=str(e),
+                    exc_info=True,
+                )
+
+        # Update processed message IDs in source config (keep last 1000)
+        if new_message_ids and not options.dry_run:
+            existing_ids = source_config.get('processed_message_ids', [])
+            all_ids = list(set(existing_ids + new_message_ids))[-1000:]
+            source.config = {**source_config, 'processed_message_ids': all_ids}
+            session.add(source)
+
+        # Update tracker with latest timestamp
+        if latest_timestamp and not options.dry_run:
+            self.tracker.update_last_read(source.url or f"imap-source-{source.id}", latest_timestamp)
+
+        logger.info(
+            "imap_source_complete",
+            source_id=source.id,
+            source_name=source.name,
+            items_processed=items_count,
+            total_cost=total_cost,
+        )
+
+        return {
+            "success": True,
+            "items_count": items_count,
+            "tokens_in": total_tokens_in,
+            "tokens_out": total_tokens_out,
+            "cost": total_cost,
         }
 
     def _process_youtube_source(

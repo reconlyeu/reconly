@@ -8,7 +8,7 @@ import { features } from '@/config/features';
 import { extractPreviewImage } from '@/utils/imageUtils';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
-import { ArticlePlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
+import { ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
 
 // Configure marked
 marked.setOptions({ breaks: false, gfm: true });
@@ -41,9 +41,17 @@ const isConsolidated = computed(() => {
   return props.digest.url?.startsWith('consolidated://') || props.digest.consolidated_count > 1;
 });
 
-// Check if we have a real source URL to link to
+// Check if we have a real source URL to link to (not for consolidated or email digests)
 const hasSourceUrl = computed(() => {
-  return props.digest.url && !props.digest.url.startsWith('consolidated://');
+  if (!props.digest.url) return false;
+  if (props.digest.url.startsWith('consolidated://')) return false;
+  if (props.digest.source_type === 'imap') return false; // Email digests don't have meaningful URLs
+  return true;
+});
+
+// Check if this is an email/IMAP source
+const isEmail = computed(() => {
+  return props.digest.source_type?.toLowerCase() === 'imap';
 });
 
 const estimatedCost = computed(() => {
@@ -141,6 +149,7 @@ const handleImageError = () => {
         @error="handleImageError"
       />
       <YoutubePlaceholder v-else-if="isYouTube" />
+      <EmailPlaceholder v-else-if="isEmail" />
       <ArticlePlaceholder v-else />
     </div>
 

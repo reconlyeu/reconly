@@ -95,7 +95,7 @@ class DashboardService:
 
         A feed is considered:
         - Healthy: Most recent run completed successfully (status='completed')
-        - Failing: Most recent run failed (status='failed' or 'completed_with_errors')
+        - Failing: Most recent run failed (status='failed' or 'partial')
 
         Returns:
             Tuple of (feeds_healthy, feeds_failing)
@@ -129,7 +129,7 @@ class DashboardService:
         for _, status in latest_runs:
             if status == "completed":
                 feeds_healthy += 1
-            elif status in ("failed", "completed_with_errors"):
+            elif status in ("failed", "partial"):
                 feeds_failing += 1
             # Pending/running runs don't count toward either category
 

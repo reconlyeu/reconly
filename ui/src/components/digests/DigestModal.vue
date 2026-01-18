@@ -5,7 +5,7 @@ import { X, Calendar, Tag, Coins, FileText, ChevronDown, ChevronUp, ExternalLink
 import { marked } from 'marked';
 import type { Digest, Exporter } from '@/types/entities';
 import { extractPreviewImage } from '@/utils/imageUtils';
-import { ArticlePlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
+import { ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
 import TagInput from '@/components/common/TagInput.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import { digestsApi } from '@/services/api';
@@ -150,9 +150,17 @@ const tokenCount = computed(() => {
   return (props.digest.tokens_in || 0) + (props.digest.tokens_out || 0);
 });
 
-// Check if we have a real source URL to link to (not a consolidated synthetic URL)
+// Check if we have a real source URL to link to (not for consolidated or email digests)
 const hasSourceUrl = computed(() => {
-  return props.digest?.url && !props.digest.url.startsWith('consolidated://');
+  if (!props.digest?.url) return false;
+  if (props.digest.url.startsWith('consolidated://')) return false;
+  if (props.digest.source_type === 'imap') return false; // Email digests don't have meaningful URLs
+  return true;
+});
+
+// Check if this is an email/IMAP source
+const isEmail = computed(() => {
+  return props.digest?.source_type?.toLowerCase() === 'imap';
 });
 
 // Format source type nicely (e.g., "youtube" -> "YouTube")
@@ -164,6 +172,7 @@ const sourceLabel = computed(() => {
     rss: 'RSS Feed',
     website: 'Website',
     blog: 'Blog',
+    imap: 'Email',
   };
   return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
 });
@@ -302,6 +311,7 @@ const toggleContent = () => {
                 @error="handleImageError"
               />
               <YoutubePlaceholder v-else-if="isYouTube" />
+              <EmailPlaceholder v-else-if="isEmail" />
               <ArticlePlaceholder v-else />
             </div>
             <!-- Title -->

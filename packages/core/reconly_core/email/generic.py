@@ -79,6 +79,9 @@ class GenericIMAPProvider(EmailProvider):
                 logger.debug(f"Connecting to {host}:{port} without SSL")
                 self._connection = imaplib.IMAP4(host, port)
 
+            # Enable UTF-8 encoding for non-ASCII passwords and usernames
+            self._connection._encoding = 'utf-8'
+
         except socket.timeout:
             raise IMAPConnectionError(
                 f"Connection to {host}:{port} timed out after {timeout}s"

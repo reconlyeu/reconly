@@ -324,12 +324,17 @@ const saveMutation = useMutation({
   },
 });
 
-// Watch for modal open to reset mutation state
+// Watch for modal open to reset state
 watch(
   () => props.isOpen,
   (isOpen) => {
     if (isOpen) {
       saveMutation.reset();
+      // Reset form when opening in create mode (not edit mode)
+      if (!props.source) {
+        resetForm();
+        resetFilterFields();
+      }
     }
   }
 );
@@ -386,13 +391,14 @@ const urlPlaceholder = computed(() => {
 
         <!-- Modal -->
         <div
-          class="relative w-full max-w-lg rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface p-8 shadow-2xl shadow-black/50"
+          class="relative flex w-full max-w-lg flex-col rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface shadow-2xl shadow-black/50"
+          style="max-height: 85vh;"
         >
           <!-- Decorative gradient orb -->
           <div class="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent-primary/20 blur-3xl" />
 
-          <!-- Header -->
-          <div class="relative mb-6 flex items-center justify-between">
+          <!-- Header (fixed) -->
+          <div class="relative flex shrink-0 items-center justify-between p-6 pb-4">
             <h2 class="text-2xl font-bold text-text-primary">
               {{ isEditMode ? 'Edit Source' : 'Add New Source' }}
             </h2>
@@ -405,8 +411,8 @@ const urlPlaceholder = computed(() => {
             </button>
           </div>
 
-          <!-- Form -->
-          <form @submit.prevent="onSubmit" class="relative space-y-6">
+          <!-- Form (scrollable) -->
+          <form @submit.prevent="onSubmit" class="relative flex-1 space-y-5 overflow-y-auto px-6">
             <!-- Name Field -->
             <div>
               <label for="name" class="mb-2 block text-sm font-medium text-text-primary">
@@ -417,7 +423,7 @@ const urlPlaceholder = computed(() => {
                 v-model="name"
                 v-bind="nameAttrs"
                 type="text"
-                placeholder="My RSS Feed"
+                placeholder="Enter source name"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                 :class="
                   errors.name
@@ -483,6 +489,7 @@ const urlPlaceholder = computed(() => {
               v-model:imap-password="imapPassword"
               v-model:imap-use-ssl="imapUseSsl"
               :is-loading="isSaving"
+              :is-edit-mode="isEditMode"
             />
 
             <!-- URL Field (hidden for agent and imap types) -->
@@ -516,33 +523,8 @@ const urlPlaceholder = computed(() => {
               </p>
             </div>
 
-            <!-- Enabled Toggle -->
-            <div class="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-surface p-4">
-              <div>
-                <label for="enabled" class="block text-sm font-medium text-text-primary">
-                  Enable Source
-                </label>
-                <p class="mt-1 text-xs text-text-muted">
-                  Disabled sources will not be fetched
-                </p>
-              </div>
-              <button
-                type="button"
-                @click="enabled = !enabled"
-                class="relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-                :class="enabled ? 'bg-accent-primary' : 'bg-bg-hover'"
-                role="switch"
-                :aria-checked="enabled"
-              >
-                <span
-                  class="inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300"
-                  :class="enabled ? 'translate-x-8' : 'translate-x-1'"
-                />
-              </button>
-            </div>
-
-            <!-- Filters Section (hidden for agent and imap types - they have their own filtering) -->
-            <div v-if="type !== 'agent' && type !== 'imap'" class="rounded-lg border border-border-subtle bg-bg-surface">
+            <!-- Filters Section (hidden for agent type only) -->
+            <div v-if="type !== 'agent'" class="rounded-lg border border-border-subtle bg-bg-surface">
               <!-- Toggle Header -->
               <button
                 type="button"
@@ -706,30 +688,57 @@ const urlPlaceholder = computed(() => {
               </Transition>
             </div>
 
-            <!-- Actions -->
-            <div class="flex gap-3 pt-4">
+            <!-- Enabled Toggle -->
+            <div class="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-surface p-4">
+              <div>
+                <label for="enabled" class="block text-sm font-medium text-text-primary">
+                  Enable Source
+                </label>
+                <p class="mt-1 text-xs text-text-muted">
+                  Disabled sources will not be fetched
+                </p>
+              </div>
               <button
                 type="button"
-                @click="handleClose"
-                :disabled="isSaving"
-                class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
+                @click="enabled = !enabled"
+                class="relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
+                :class="enabled ? 'bg-accent-primary' : 'bg-bg-hover'"
+                role="switch"
+                :aria-checked="enabled"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                :disabled="isSaving"
-                class="flex-1 rounded-lg bg-accent-primary px-6 py-3 font-medium text-white transition-all hover:bg-accent-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Loader2
-                  v-if="isSaving"
-                  :size="18"
-                  class="animate-spin"
+                <span
+                  class="inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform duration-300"
+                  :class="enabled ? 'translate-x-8' : 'translate-x-1'"
                 />
-                {{ isSaving ? 'Saving...' : (isEditMode ? 'Update' : 'Create') }}
               </button>
             </div>
+
           </form>
+
+          <!-- Actions (fixed at bottom) -->
+          <div class="flex shrink-0 gap-3 border-t border-border-subtle p-6 pt-4">
+            <button
+              type="button"
+              @click="handleClose"
+              :disabled="isSaving"
+              class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              @click="onSubmit"
+              :disabled="isSaving"
+              class="flex-1 rounded-lg bg-accent-primary px-6 py-3 font-medium text-white transition-all hover:bg-accent-primary-hover disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Loader2
+                v-if="isSaving"
+                :size="18"
+                class="animate-spin"
+              />
+              {{ isSaving ? 'Saving...' : (isEditMode ? 'Update' : 'Create') }}
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
