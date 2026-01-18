@@ -10,6 +10,10 @@
 # With sample data (recommended for first-time users):
 #   LOAD_SAMPLE_DATA=true docker compose up -d
 #
+# Note: Sample data only loads once. A .seeded marker file in ./state/ prevents
+# re-loading on subsequent starts. To fully reset with fresh sample data:
+#   rm state/.seeded && docker compose down -v && docker compose up -d
+#
 # Environment variables (set in .env file or export):
 #   LOAD_SAMPLE_DATA      - Load sample feeds/sources on first start (default: false)
 #   API_PORT              - API port (default: 8000)
@@ -62,6 +66,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
       - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-ollama}
       # Edition & Auth
       - RECONLY_EDITION=${RECONLY_EDITION:-oss}
@@ -70,6 +75,7 @@ services:
       - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
     volumes:
       - reconly_data:/app/data
+      - ./state:/app/state
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

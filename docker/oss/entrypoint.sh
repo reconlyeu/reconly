@@ -27,9 +27,16 @@ else:
 
 # Check if we should load seed data
 # We do the actual check and loading AFTER the API starts and creates tables
+# The .seeded marker file prevents re-seeding on subsequent starts (even after down -v)
+SEEDED_MARKER="/app/state/.seeded"
 if [ "$LOAD_SAMPLE_DATA" = "true" ]; then
-    echo "Sample data loading enabled - will check after API starts"
-    export _PENDING_SEED=true
+    if [ -f "$SEEDED_MARKER" ]; then
+        echo "Sample data already loaded (marker file exists). Skipping seed."
+        echo "To re-seed: rm state/.seeded && docker compose down -v && docker compose up -d"
+    else
+        echo "Sample data loading enabled - will check after API starts"
+        export _PENDING_SEED=true
+    fi
 fi
 
 # Start the API server in background first to create tables
@@ -72,7 +79,9 @@ except Exception as e:
     if grep -q "NEEDS_SEED" /tmp/seed_check.txt; then
         echo "Loading sample data..."
         python /app/scripts/load_demo_seed.py
-        echo "Sample data loaded successfully!"
+        # Create marker file to prevent re-seeding on future starts
+        touch "$SEEDED_MARKER"
+        echo "Sample data loaded successfully! (marker created: $SEEDED_MARKER)"
     else
         cat /tmp/seed_check.txt
     fi
