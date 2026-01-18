@@ -322,7 +322,6 @@ class HuggingFaceSummarizer(BaseSummarizer):
 
         # Filter and process models
         filtered_models = []
-        seen_orgs = set()  # Track orgs to ensure diversity
 
         for model in models_data:
             model_id = model.get('id', model.get('modelId', ''))

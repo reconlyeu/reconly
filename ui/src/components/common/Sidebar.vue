@@ -103,28 +103,29 @@ const isActive = (href: string) => {
       </a>
     </nav>
 
-    <!-- Footer -->
-    <div class="p-4 border-t border-border-subtle space-y-3">
+    <!-- Footer - height matches the fixed quick actions bar (h-14 = 56px) -->
+    <div class="h-14 px-4 border-t border-border-subtle flex items-center justify-center gap-3">
       <!-- Logout Button (shown when auth is required) -->
       <button
         v-if="showLogout"
         @click="handleLogout"
-        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-status-failed hover:bg-status-failed/10 transition-colors"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-status-failed hover:bg-status-failed/10 transition-colors"
+        title="Logout"
       >
-        <LogOut class="w-5 h-5 flex-shrink-0" />
+        <LogOut class="w-4 h-4 flex-shrink-0" />
         <span>Logout</span>
       </button>
 
       <!-- Demo Mode Indicator -->
       <div
         v-if="demoStore?.isDemoMode"
-        class="flex items-center justify-center gap-1.5 text-xs text-amber-500/70"
+        class="flex items-center gap-1.5 text-xs text-amber-500/70"
       >
         <FlaskConical class="w-3.5 h-3.5" />
         <span>Demo Mode</span>
       </div>
 
-      <div class="text-xs text-text-muted text-center">
+      <div class="text-xs text-text-muted">
         {{ strings.app.tagline }}
       </div>
     </div>

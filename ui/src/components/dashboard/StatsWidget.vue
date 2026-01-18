@@ -45,7 +45,7 @@ const iconColor = computed(() => {
   <component
     :is="href ? 'a' : 'div'"
     :href="href"
-    class="group relative block overflow-hidden rounded-2xl border border-border-subtle bg-gradient-to-br p-6 transition-all duration-300 hover:border-border-default hover:shadow-xl hover:shadow-black/20"
+    class="group relative block overflow-hidden rounded-2xl border border-border-subtle bg-gradient-to-br p-6 transition-all duration-300 hover:border-border-default hover:shadow-xl hover:shadow-black/20 animate-slide-in-right-fast"
     :class="[variantClasses, href && 'cursor-pointer']"
   >
     <!-- Animated gradient overlay on hover -->

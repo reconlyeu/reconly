@@ -42,6 +42,32 @@ export const strings = {
     recentDigests: 'Recent Digests',
     noRuns: 'No recent feed runs',
     noDigests: 'No recent digests',
+    digestFilters: {
+      today: 'Today',
+      thisWeek: 'This Week',
+      all: 'All',
+    },
+  },
+
+  // Quick Insights (Dashboard)
+  quickInsights: {
+    newToday: 'New Today',
+    thisWeek: 'This Week',
+    feedHealth: 'Feed Health',
+    allHealthy: 'healthy',
+    needsAttention: 'need attention',
+  },
+
+  // Quick Actions (Dashboard)
+  quickActions: {
+    chat: 'Chat',
+    runFeeds: 'Run Feeds',
+    runningFeeds: 'Running...',
+    addSource: 'Add Source',
+    runAllSuccess: 'Started {count} feeds successfully',
+    runAllPartial: 'Started {succeeded} of {total} feeds',
+    runAllError: 'Failed to run feeds',
+    noFeedsToRun: 'No enabled feeds to run',
   },
 
   // Sources
@@ -512,6 +538,16 @@ export const strings = {
     hoursAgo: '{count} hours ago',
     daysAgo: '{count} days ago',
     never: 'Never',
+  },
+
+  // Sync Status
+  syncStatus: {
+    lastSync: 'Last sync',
+    neverSynced: 'Never',
+    justNow: 'Just now',
+    healthyFeeds: 'Healthy feeds',
+    failingFeeds: 'Failing feeds',
+    feedsNeedAttention: 'feeds need attention',
   },
 
   // Chat

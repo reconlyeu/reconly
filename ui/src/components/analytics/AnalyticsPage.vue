@@ -57,7 +57,7 @@ const periods = [
       <StatsWidget
         :label="strings.analytics.summary.tokensOut"
         :value="summary?.total_tokens_out?.toLocaleString() || '-'"
-        variant="accent"
+        variant="primary"
         :icon="TrendingDown"
       />
       <StatsWidget
