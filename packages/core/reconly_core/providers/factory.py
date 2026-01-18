@@ -1,4 +1,4 @@
-"""Provider factory with intelligent fallback logic."""
+"""Provider factory with fallback chain from settings."""
 import os
 from typing import Optional, Dict, List, TYPE_CHECKING, Any
 
@@ -14,6 +14,9 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
 logger = structlog.get_logger(__name__)
+
+# Default fallback chain when no setting is configured
+DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 
 # Import providers to ensure they're registered
 from reconly_core.providers.anthropic import AnthropicProvider
@@ -224,121 +227,107 @@ class SummarizerWithFallback:
         return self.retry_config
 
 
-def _build_intelligent_fallback_chain(
-    primary_provider: str,
-    exclude_model: Optional[str] = None
-) -> List[BaseProvider]:
+def _instantiate_provider(
+    provider_name: str,
+    db: Optional["Session"] = None,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
+) -> BaseProvider:
     """
-    Build intelligent fallback chain prioritizing local/free providers over paid ones.
+    Instantiate a provider using provider-specific settings.
 
-    Priority order:
-    1. Local providers (is_local=True) - Ollama
-    2. Free cloud providers (cost_free=True) - HuggingFace
-    3. Paid cloud providers (sorted by cost) - OpenAI, Anthropic
+    Reads configuration from:
+    - llm.{provider}.model - Default model for the provider
+    - llm.{provider}.base_url - Base URL (for providers like Ollama)
+    - Environment variables for API keys
 
     Args:
-        primary_provider: Name of primary provider (excluded from fallback)
-        exclude_model: For HuggingFace, which model to exclude (already primary)
+        provider_name: Name of the provider (e.g., 'ollama', 'openai')
+        db: Optional database session for reading settings
+        api_key: Optional API key override
+        model: Optional model override
 
     Returns:
-        List of initialized provider instances for fallback chain
+        Initialized provider instance
+
+    Raises:
+        ValueError: If provider is not registered
+        Exception: If provider cannot be instantiated
     """
-    fallback_chain = []
+    if not is_provider_registered(provider_name):
+        available = list_providers()
+        raise ValueError(
+            f"Unknown provider: {provider_name}. Available providers: {available}. "
+            f"See docs/ADDING_PROVIDERS.md for information on adding new providers."
+        )
 
-    # Get all registered providers
-    all_providers = list_providers()
+    # Get provider class from registry
+    provider_class = get_provider(provider_name)
 
-    # Categorize providers by priority
-    local_providers = []
-    free_providers = []
-    paid_providers = []
+    # Read provider-specific model from settings if not overridden
+    if model is None:
+        model = _get_setting_with_db_fallback(
+            f"provider.{provider_name}.model",
+            db=db,
+            env_var=None,
+            default=None,
+        )
 
-    for provider_name in all_providers:
-        if provider_name == primary_provider:
-            continue  # Skip primary provider
+    # Get API key from environment if not provided
+    if api_key is None:
+        api_key = _get_api_key_for_provider(provider_name)
 
+    # Initialize provider based on type
+    if provider_name == 'huggingface':
+        return provider_class(api_key=api_key, model=model or 'glm-4')
+    elif provider_name == 'anthropic':
+        return provider_class(api_key=api_key)
+    elif provider_name == 'openai':
+        return provider_class(api_key=api_key)
+    elif provider_name == 'ollama':
+        # Ollama doesn't need API key, but may have custom base_url
+        base_url = _get_setting_with_db_fallback(
+            f"provider.{provider_name}.base_url",
+            db=db,
+            env_var="OLLAMA_BASE_URL",
+            default=None,
+        )
         try:
-            provider_class = get_provider(provider_name)
-            caps = provider_class.get_capabilities()
-
-            # Categorize by cost and locality
-            if caps.is_local:
-                local_providers.append((provider_name, caps))
-            elif caps.is_free():
-                free_providers.append((provider_name, caps))
-            else:
-                # For paid providers, store cost for sorting
-                avg_cost = (caps.cost_per_1k_input or 0) + (caps.cost_per_1k_output or 0)
-                paid_providers.append((provider_name, caps, avg_cost))
-        except:
-            continue  # Skip providers we can't get capabilities for
-
-    # Sort paid providers by cost (cheapest first)
-    paid_providers.sort(key=lambda x: x[2])
-
-    # Build fallback chain in priority order
-    priority_order = []
-    priority_order.extend([(name, caps) for name, caps in local_providers])
-    priority_order.extend([(name, caps) for name, caps in free_providers])
-    priority_order.extend([(name, caps, cost) for name, caps, cost in paid_providers])
-
-    # Try to initialize each provider in priority order
-    for item in priority_order:
-        provider_name = item[0]
-
+            return provider_class(api_key=None, model=model, base_url=base_url)
+        except TypeError:
+            # Some versions may not accept base_url
+            return provider_class(api_key=None, model=model)
+    else:
+        # Generic provider initialization
         try:
-            provider_class = get_provider(provider_name)
+            return provider_class(api_key=api_key, model=model)
+        except TypeError:
+            # Try without model if not supported
+            try:
+                return provider_class(api_key=api_key)
+            except TypeError:
+                return provider_class()
 
-            # Special handling for providers with specific initialization
-            if provider_name == 'huggingface':
-                # Add multiple HuggingFace models as separate fallbacks
-                hf_api_key = os.getenv('HUGGINGFACE_API_KEY')
-                if hf_api_key:
-                    hf_models = ['glm-4', 'mixtral', 'llama', 'mistral']
-                    for hf_model in hf_models:
-                        if hf_model != exclude_model:
-                            try:
-                                fallback_chain.append(
-                                    provider_class(api_key=hf_api_key, model=hf_model)
-                                )
-                            except:
-                                pass  # Skip if can't initialize this model
 
-            elif provider_name == 'anthropic':
-                anthropic_key = os.getenv('ANTHROPIC_API_KEY')
-                if anthropic_key:
-                    fallback_chain.append(provider_class(api_key=anthropic_key))
+def _get_api_key_for_provider(provider_name: str) -> Optional[str]:
+    """
+    Get API key for a provider from environment variables.
 
-            elif provider_name == 'openai':
-                openai_key = os.getenv('OPENAI_API_KEY')
-                if openai_key:
-                    fallback_chain.append(provider_class(api_key=openai_key))
+    Args:
+        provider_name: Name of the provider
 
-            elif provider_name == 'ollama':
-                # Ollama doesn't require API key, try to initialize
-                try:
-                    ollama_instance = provider_class()
-                    # Only add if Ollama server is actually available
-                    if ollama_instance.is_available():
-                        fallback_chain.append(ollama_instance)
-                except:
-                    pass  # Skip if Ollama not available
-
-            else:
-                # Generic provider initialization
-                try:
-                    fallback_chain.append(provider_class())
-                except TypeError:
-                    # Try with empty api_key
-                    try:
-                        fallback_chain.append(provider_class(api_key=None))
-                    except:
-                        pass  # Skip if can't initialize
-
-        except Exception:
-            continue  # Skip providers that fail to initialize
-
-    return fallback_chain
+    Returns:
+        API key if found, None otherwise
+    """
+    env_var_map = {
+        'anthropic': 'ANTHROPIC_API_KEY',
+        'openai': 'OPENAI_API_KEY',
+        'huggingface': 'HUGGINGFACE_API_KEY',
+    }
+    env_var = env_var_map.get(provider_name)
+    if env_var:
+        return os.getenv(env_var)
+    return None
 
 
 def _get_setting_with_db_fallback(
@@ -388,89 +377,109 @@ def get_summarizer(
     db: Optional["Session"] = None
 ) -> BaseProvider:
     """
-    Get a summarizer instance with optional intelligent fallback chain.
+    Get a summarizer instance with fallback chain from settings.
 
-    Intelligent fallback order (if enabled):
-    1. Local providers (Ollama) - $0 cost, privacy-focused
-    2. Free cloud providers (HuggingFace) - Free tier available
-    3. Paid cloud providers (OpenAI, Anthropic) - Sorted by cost
+    The fallback chain is configured via the `llm.fallback_chain` setting.
+    Position 0 in the chain is the default provider when no explicit provider is given.
 
     Args:
         provider: Provider name (e.g., 'huggingface', 'anthropic', 'ollama', 'openai')
-                 If None, reads from SettingsService or DEFAULT_PROVIDER env var
-        api_key: API key (provider-specific)
-        model: Model identifier for HuggingFace (default: 'glm-4')
-        enable_fallback: Enable automatic fallback to other providers
+                 If None, uses first provider in fallback chain
+        api_key: API key override (provider-specific)
+        model: Model override (reads from provider.{name}.model if not specified)
+        enable_fallback: Enable automatic fallback to other providers in chain
         db: Optional database session for reading settings from DB
 
     Returns:
         BaseProvider instance (possibly with fallback wrapper)
     """
-    # Get provider from settings (DB > env > default)
-    if provider is None:
-        provider = _get_setting_with_db_fallback(
-            "llm.default_provider",
-            db=db,
-            env_var="DEFAULT_PROVIDER",
-            default="ollama"
-        )
+    # Get fallback chain from settings
+    chain = _get_fallback_chain(db)
 
-    # Validate provider is registered
-    if not is_provider_registered(provider):
-        available = list_providers()
-        raise ValueError(
-            f"Unknown provider: {provider}. Available providers: {available}. "
-            f"See docs/ADDING_PROVIDERS.md for information on adding new providers."
-        )
+    # Position 0 = default provider (or explicit override)
+    primary_name = provider or (chain[0] if chain else "ollama")
 
-    # Get model from settings if not specified
-    if model is None:
-        model = _get_setting_with_db_fallback(
-            "llm.default_model",
-            db=db,
-            env_var="DEFAULT_MODEL",
-            default="llama3.2" if provider == "ollama" else "glm-4"
-        )
-
-    # Get provider class from registry
-    provider_class = get_provider(provider)
-
-    # Initialize primary provider based on type
-    primary = None
-
-    if provider == 'huggingface':
-        primary = provider_class(api_key=api_key, model=model or 'glm-4')
-    elif provider == 'anthropic':
-        primary = provider_class(api_key=api_key)
-    elif provider == 'openai':
-        primary = provider_class(api_key=api_key)
-    elif provider == 'ollama':
-        # Ollama doesn't need API key
-        try:
-            primary = provider_class(api_key=None, model=model)
-        except TypeError:
-            primary = provider_class()
-    else:
-        # Generic provider initialization
-        try:
-            primary = provider_class(api_key=api_key)
-        except TypeError:
-            # Try without api_key for local providers
-            primary = provider_class()
+    # Instantiate primary provider with any overrides
+    primary = _instantiate_provider(
+        primary_name,
+        db=db,
+        api_key=api_key,
+        model=model,
+    )
 
     # If fallback disabled, return primary only
     if not enable_fallback:
         return primary
 
-    # Build intelligent fallback chain
-    exclude_model = model if provider == 'huggingface' else None
-    fallback_chain = _build_intelligent_fallback_chain(provider, exclude_model)
+    # Build fallback chain from remaining providers in settings
+    fallbacks = []
+    for name in chain:
+        if name == primary_name:
+            continue  # Skip primary provider
+
+        try:
+            instance = _instantiate_provider(name, db=db)
+            # Keep in chain even if not available - checked at runtime
+            fallbacks.append(instance)
+            logger.debug("fallback_provider_added", provider=name)
+        except Exception as e:
+            # Skip providers that fail to instantiate (missing API key, etc.)
+            logger.debug(
+                "fallback_provider_skipped",
+                provider=name,
+                reason=str(e),
+            )
+            continue
 
     # If we have fallbacks, wrap with fallback logic
-    if fallback_chain:
-        return SummarizerWithFallback(primary, fallback_chain)
+    if fallbacks:
+        return SummarizerWithFallback(primary, fallbacks)
     else:
         return primary
+
+
+def _get_fallback_chain(db: Optional["Session"] = None) -> List[str]:
+    """
+    Get the fallback chain from settings.
+
+    Args:
+        db: Optional database session for reading settings
+
+    Returns:
+        List of provider names in fallback order
+    """
+    chain = _get_setting_with_db_fallback(
+        "llm.fallback_chain",
+        db=db,
+        env_var=None,  # No direct env var for lists
+        default=None,
+    )
+
+    if chain is None:
+        return DEFAULT_FALLBACK_CHAIN.copy()
+
+    # Handle string values (from env or misconfigured DB)
+    if isinstance(chain, str):
+        try:
+            import json
+            chain = json.loads(chain)
+        except (json.JSONDecodeError, ValueError):
+            # Comma-separated fallback
+            chain = [p.strip() for p in chain.split(",") if p.strip()]
+
+    # Validate all providers in chain are registered
+    valid_chain = []
+    for name in chain:
+        if is_provider_registered(name):
+            valid_chain.append(name)
+        else:
+            logger.warning(
+                "invalid_provider_in_chain",
+                provider=name,
+                message="Provider not registered, removing from chain",
+            )
+
+    return valid_chain if valid_chain else DEFAULT_FALLBACK_CHAIN.copy()
 
 
 def list_available_models() -> Dict[str, List[str]]:
