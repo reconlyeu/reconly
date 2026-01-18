@@ -102,6 +102,7 @@ const createApiClient = (): AxiosInstance => {
       'Content-Type': 'application/json',
     },
     timeout: 30000, // 30 seconds
+    withCredentials: true, // Required for session cookies
   });
 
   // Response interceptor for error handling
@@ -877,6 +878,7 @@ export const settingsApi = {
 
 export interface AuthConfig {
   auth_required: boolean;
+  authenticated: boolean;
   edition: string;
 }
 

@@ -1,18 +1,6 @@
 {
   "version": "1.0",
-  "last_updated": "2026-01-15T00:00:00Z",
-  "extensions": [
-    {
-      "package": "reconly-ext-txt",
-      "name": "Plain Text Exporter",
-      "type": "exporter",
-      "description": "Export digests as readable plain text files. Ideal for terminals, simple text editors, or archival. Example extension included in the repository.",
-      "author": "Reconly Team",
-      "version": "0.1.0",
-      "verified": true,
-      "homepage": "https://github.com/reconlyeu/reconly",
-      "local_only": true
-    }
-  ],
-  "_comment": "Extensions listed here must be available for pip install. The reconly-ext-txt example is included in the repo for local development only. Create an openspec change to track publishing extensions to PyPI."
+  "last_updated": "2026-01-18T00:00:00Z",
+  "extensions": [],
+  "_comment": "Add extensions here when they are published to PyPI or available via GitHub URL. Use install_source: 'github' with github_url for git-based installation."
 }

@@ -101,21 +101,20 @@ const isActive = (href: string) => {
         <component :is="item.icon" class="w-[1.35rem] h-[1.35rem] flex-shrink-0" />
         <span>{{ item.name }}</span>
       </a>
-    </nav>
 
-    <!-- Footer - height matches the fixed quick actions bar (h-14 = 56px) -->
-    <div class="h-14 px-4 border-t border-border-subtle flex items-center justify-center gap-3">
       <!-- Logout Button (shown when auth is required) -->
       <button
         v-if="showLogout"
         @click="handleLogout"
-        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-status-failed hover:bg-status-failed/10 transition-colors"
-        title="Logout"
+        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium text-text-secondary hover:text-status-failed hover:bg-status-failed/10 transition-colors"
       >
-        <LogOut class="w-4 h-4 flex-shrink-0" />
+        <LogOut class="w-[1.35rem] h-[1.35rem] flex-shrink-0" />
         <span>Logout</span>
       </button>
+    </nav>
 
+    <!-- Footer - height matches the fixed quick actions bar (h-14 = 56px) -->
+    <div class="h-14 px-4 border-t border-border-subtle flex items-center justify-center gap-3">
       <!-- Demo Mode Indicator -->
       <div
         v-if="demoStore?.isDemoMode"

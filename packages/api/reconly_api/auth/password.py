@@ -50,6 +50,7 @@ class LoginResponse(BaseModel):
 class ConfigResponse(BaseModel):
     """Response body for config endpoint."""
     auth_required: bool
+    authenticated: bool
     edition: str
 
 

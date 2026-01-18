@@ -30,14 +30,12 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       authConfig.value = await authApi.getConfig();
 
-      // If auth is not required, we're automatically authenticated
-      if (!authConfig.value.auth_required) {
-        isAuthenticated.value = true;
-      }
+      // Use the authenticated field from the backend
+      isAuthenticated.value = authConfig.value.authenticated;
     } catch (err: any) {
       // If we get a 401, auth is required and we're not authenticated
       if (err.status_code === 401) {
-        authConfig.value = { auth_required: true, edition: 'oss' };
+        authConfig.value = { auth_required: true, authenticated: false, edition: 'oss' };
         isAuthenticated.value = false;
       } else {
         error.value = err.detail || 'Failed to check authentication status';

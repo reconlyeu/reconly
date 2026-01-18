@@ -106,14 +106,26 @@ async def logout(response: Response):
 
 
 @router.get("/config", response_model=ConfigResponse)
-async def get_config():
+async def get_config(request: Request):
     """
     Get authentication configuration.
 
-    This is a public endpoint that returns whether authentication is required.
+    This is a public endpoint that returns whether authentication is required
+    and whether the current user is authenticated (has valid session).
     Used by the UI to determine if it should show a login page.
     """
+    from reconly_api.auth.password import check_auth_cookie, check_basic_auth
+
+    # Check if user is authenticated via cookie or basic auth
+    is_authenticated = False
+    if not settings.auth_required:
+        # No auth required means everyone is "authenticated"
+        is_authenticated = True
+    else:
+        is_authenticated = check_auth_cookie(request) or check_basic_auth(request)
+
     return ConfigResponse(
         auth_required=settings.auth_required,
+        authenticated=is_authenticated,
         edition=settings.reconly_edition,
     )

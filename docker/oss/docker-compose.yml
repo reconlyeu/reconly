@@ -1,11 +1,17 @@
 # Reconly OSS - Docker Compose Configuration
 #
-# Usage:
-#   docker-compose up -d        # Start all services
-#   docker-compose logs -f api  # View API logs
-#   docker-compose down         # Stop all services
+# Quick Start:
+#   docker compose up -d             # Start (empty database)
+#   docker compose up -d --build     # Start with rebuild
+#   docker compose logs -f api       # View API logs
+#   docker compose down              # Stop all services
+#   docker compose down -v           # Stop and delete data
+#
+# With sample data (recommended for first-time users):
+#   LOAD_SAMPLE_DATA=true docker compose up -d
 #
 # Environment variables (set in .env file or export):
+#   LOAD_SAMPLE_DATA      - Load sample feeds/sources on first start (default: false)
 #   API_PORT              - API port (default: 8000)
 #   POSTGRES_PASSWORD     - PostgreSQL password (default: reconly)
 #   ANTHROPIC_API_KEY     - Anthropic API key
@@ -28,6 +34,7 @@ services:
       - POSTGRES_DB=reconly
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ../init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U reconly -d reconly"]
       interval: 5s
@@ -48,6 +55,8 @@ services:
     environment:
       # Database (PostgreSQL required)
       - DATABASE_URL=postgresql://reconly:${POSTGRES_PASSWORD:-reconly}@postgres:5432/reconly
+      # Sample data (loads on first start if database is empty)
+      - LOAD_SAMPLE_DATA=${LOAD_SAMPLE_DATA:-false}
       # LLM Providers
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -61,7 +70,6 @@ services:
       - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
     volumes:
       - reconly_data:/app/data
-      - ./config:/app/config
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

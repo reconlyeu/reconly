@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue';
 import { useMutation } from '@tanstack/vue-query';
 import { authApi } from '@/services/api';
-import { Lock, Loader2, AlertCircle } from 'lucide-vue-next';
+import { Loader2, AlertCircle } from 'lucide-vue-next';
 
 const password = ref('');
 const errorMessage = ref('');
@@ -38,9 +38,7 @@ const isSubmitting = computed(() => loginMutation.isPending.value);
     <div class="w-full max-w-md">
       <!-- Logo/Brand -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-primary to-accent-primary/70 mb-4">
-          <Lock :size="32" class="text-white" />
-        </div>
+        <img src="/reconly-logo.png" alt="Reconly" class="w-16 h-16 mx-auto mb-4" />
         <h1 class="text-2xl font-bold text-text-primary">Reconly</h1>
         <p class="text-text-secondary mt-2">Enter your password to continue</p>
       </div>

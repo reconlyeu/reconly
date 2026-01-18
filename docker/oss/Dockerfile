@@ -26,6 +26,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages
@@ -40,11 +41,19 @@ RUN pip install --no-cache-dir \
 # Copy built UI from builder stage
 COPY --from=ui-builder /app/ui/dist /app/ui/dist
 
+# Copy seed script and data
+COPY scripts/load_demo_seed.py /app/scripts/
+COPY docker/demo/seed /app/seed
+
+# Copy entrypoint script
+COPY docker/oss/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Create data directory
 RUN mkdir -p /app/data
 
 # Expose port
 EXPOSE 8000
 
-# Default command: run the API server
-CMD ["uvicorn", "reconly_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use entrypoint script
+ENTRYPOINT ["/app/entrypoint.sh"]

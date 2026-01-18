@@ -1,141 +1,95 @@
+<p align="right">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License: AGPL-3.0"/></a>
+</p>
+
 <p align="center">
   <img src="reconly-logo.png" alt="Reconly Logo" width="160"/>
 </p>
 
-<h1 align="center">Reconly — Privacy-first research intelligence platform.</h1>
-
----
+<h1 align="center">Reconly — Privacy-First News & Research Intelligence</h1>
 
 <p align="center">
   Aggregate all your sources, build knowledge in your system of choice, and keep full ownership of your data.
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="docs/setup.md">Documentation</a> •
-  <a href="#why-reconly">Why Reconly?</a>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License: AGPL-3.0"/></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="Python 3.10+"/></a>
-  <img src="https://img.shields.io/badge/status-beta-yellow.svg" alt="Status: Beta"/>
-  <img src="https://img.shields.io/badge/tests-1632%20passing-brightgreen.svg" alt="Tests"/>
-  <a href="https://docs.astral.sh/ruff/"><img src="https://img.shields.io/badge/code%20style-ruff-000000.svg" alt="Ruff"/></a>
-</p>
-
-<p align="center">
   <img src="docs/images/demo.gif" alt="Reconly Demo - Feed Management, Configuration, and AI Digests" width="700"/>
+  <br/>
+  <sub>
+    <a href="docs/images/FeedManagement.png">Feeds</a> ·
+    <a href="docs/images/Create%20Feed.png">Create Feed</a> ·
+    <a href="docs/images/Digests.png">Digests</a> ·
+    <a href="docs/images/Chat.png">Chat</a> ·
+    <a href="docs/images/Knowledge.png">Knowledge Graph</a> ·
+    <a href="docs/images/E-Mail.png">E-Mail Digest</a>
+  </sub>
 </p>
 
 ---
 
 ## Why Reconly?
 
-- **Research & Monitoring** — Aggregate RSS feeds, YouTube channels, websites, email (IMAP), and autonomous research agents into consolidated, topic-specific AI briefings
-- **Privacy-First Intelligence** — Run entirely offline with local AI (Ollama) and private search (SearXNG self-hosted, or Brave) — your data never leaves your machine
-- **Smart Filtering** — Keyword-based content filters and tags to focus on what matters
-- **Cost-Optimized** — From free local models to cloud open-source to premium commercial, with automatic fallbacks
-- **Knowledge Management** — Export digests to Obsidian, Logseq, or any PKM tool via Markdown, JSON, or custom formats
-- **Knowledge Graph** — Discover connections between topics with semantic search and AI-powered Q&A — MCP-enabled for AI assistants
-- **Automation & Extensibility** — Trigger webhooks for Zapier/n8n, connect new sources via plugins, or install community bundles
+- **Research & Monitoring** — Aggregate RSS, YouTube, websites, email, and AI agents into briefings
+- **Privacy-First** — Run offline with local AI (Ollama) and private search — data stays local
+- **Smart Filtering** — Keyword filters and tags to focus on what matters
+- **Cost-Optimized** — Free local models to premium cloud, with automatic fallbacks
+- **Knowledge Export** — Sync to Obsidian, Logseq, or any PKM via Markdown/JSON
+- **AI Chat** — Ask questions about your digests and get answers with citations
+- **Knowledge Graph** — Discover topic connections with semantic search — MCP-enabled
+- **Automation** — Webhooks for Zapier/n8n, plugins, and community bundles
 - **Docker Ready** — Production setup in 5 minutes
-
----
-
-## Try the Demo
-
-Experience Reconly instantly with pre-loaded data — **ready in 30 seconds**:
-
-```bash
-git clone https://github.com/reconlyeu/reconly.git
-cd reconly/docker/demo
-docker compose up
-```
-
-Open **http://localhost:8002** and explore:
-- 7 curated feeds (tech news, AI research, GitHub trends, finance)
-- 41 pre-generated AI summaries
-- Working knowledge graph with semantic search
-
-> **Requirements:** Docker with 2GB+ RAM, ~500MB disk
-> **No LLM needed** — all content is pre-generated
-> **Details:** [Demo Mode Guide](docs/demo-mode.md)
-
----
-
-## Table of Contents
-
-- [Try the Demo](#try-the-demo)
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [AI Providers](#ai-providers)
-- [AI Research Agents](#ai-research-agents)
-- [RAG Knowledge System](#rag-knowledge-system-optional)
-- [Documentation](#documentation)
-- [Architecture](#architecture)
-- [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
 
 ---
 
 ## Quick Start
 
-### Option 1: Docker (Recommended)
+**Requirements:** Docker with 2GB+ RAM
 
 ```bash
-# Clone the repository
+# Clone and start
 git clone https://github.com/reconlyeu/reconly.git
-cd reconly
-
-# Start all services (API + UI + PostgreSQL with pgvector)
-cd docker/oss
-docker-compose up -d
-
-# Open the Web UI
-open http://localhost:8000
+cd reconly/docker/oss
+cp .env.example .env
+docker compose up -d
 ```
 
-API docs available at http://localhost:8000/docs
+Open **http://localhost:8000** — you'll see sample feeds, sources, and digests ready to explore.
 
-### Option 2: Manual Setup
+> The default `.env` loads sample data automatically. Edit `.env` to customize settings.
 
-**Prerequisites:** Python 3.10+, PostgreSQL 16+ (or use Docker for database only)
+### Configure AI (Optional)
+
+To generate new summaries, configure an LLM provider:
+
+**Option A: Ollama (Free, Local, Private)** — Recommended
+```bash
+# Install Ollama: https://ollama.com
+ollama pull llama3.2
+ollama serve
+```
+Reconly auto-connects to Ollama on your host machine.
+
+**Option B: Cloud Provider**
+
+Edit `.env` and add your API key:
+```bash
+ANTHROPIC_API_KEY=sk-ant-...   # or
+OPENAI_API_KEY=sk-...          # or
+HUGGINGFACE_API_KEY=hf_...
+```
+
+### Useful Commands
 
 ```bash
-# 1. Install Python packages
-pip install -e packages/core
-pip install -e packages/api
-
-# 2. Start PostgreSQL (if not running)
-docker-compose -f docker/docker-compose.postgres.yml up -d
-
-# 3. Configure database
-export DATABASE_URL=postgresql://reconly:reconly@localhost:5432/reconly
-
-# 4. Run migrations
-cd packages/api && python -m alembic upgrade head
-
-# 5. Start the API server
-python -m uvicorn reconly_api.main:app --reload --port 8000
+docker compose logs -f api    # View logs
+docker compose down           # Stop
+docker compose down -v        # Stop and delete all data
+docker compose up -d --build  # Rebuild after updates
 ```
 
-### Optional: Web UI
+### Development Setup
 
-```bash
-cd ui
-npm install
-npm run dev
-# UI runs at http://localhost:4321
-```
-
-### Next Steps
-
-1. **Configure an AI Provider** — Start with [Ollama](https://ollama.com/) for free, private summarization
-2. **Add your first feed** — Via the UI at http://localhost:4321 or the API
-3. **Read the full guide** — [Setup Guide](docs/setup.md)
+For contributing or running without Docker, see the [Setup Guide](docs/setup.md).
 
 ---
 
@@ -226,7 +180,7 @@ View detailed execution logs including:
 
 ---
 
-## RAG Knowledge System (Optional)
+## RAG Knowledge System
 
 Reconly includes semantic search and AI-powered question answering over your digest library.
 
@@ -236,29 +190,16 @@ Reconly includes semantic search and AI-powered question answering over your dig
 - Knowledge graph discovery
 - Multi-provider embedding support (Ollama, OpenAI, HuggingFace)
 
-**Requirements:**
-- PostgreSQL with pgvector extension (for production)
-- Embedding provider (Ollama recommended for local/free)
+The Docker setup includes PostgreSQL with pgvector — RAG features work out of the box.
 
-**Quick Setup:**
-
+**Configure embedding provider (optional):**
 ```bash
-# 1. Start PostgreSQL with pgvector
-docker-compose -f docker/docker-compose.postgres.yml up -d
-
-# 2. Configure database
-export DATABASE_URL=postgresql://reconly:reconly_dev@localhost:5432/reconly
-
-# 3. Run migrations
-cd packages/api
-python -m alembic upgrade head
-
-# 4. Configure embedding provider (optional, defaults to Ollama)
-export EMBEDDING_PROVIDER=ollama
-export EMBEDDING_MODEL=bge-m3
+# In .env
+EMBEDDING_PROVIDER=ollama
+EMBEDDING_MODEL=bge-m3
 ```
 
-**Documentation:** See [RAG Setup Guide](docs/rag-setup.md) for complete details.
+**Documentation:** See [RAG Setup Guide](docs/rag-setup.md) for details.
 
 ---
 
@@ -266,9 +207,8 @@ export EMBEDDING_MODEL=bge-m3
 
 | Guide | Description |
 |-------|-------------|
-| [Demo Mode Guide](docs/demo-mode.md) | Try Reconly with pre-loaded data and local AI |
 | [Setup Guide](docs/setup.md) | Installation, database, AI providers |
-| [RAG Setup Guide](docs/rag-setup.md) | PostgreSQL + pgvector, embedding providers, semantic search |
+| [RAG Setup Guide](docs/rag-setup.md) | Embedding providers, semantic search |
 | [Configuration Reference](docs/configuration.md) | All environment variables |
 | [CLI Reference](docs/cli.md) | Command-line usage and options |
 | [API Documentation](docs/api.md) | REST API endpoints |
@@ -358,6 +298,15 @@ Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management,
 
 ## Troubleshooting
 
+### Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| Container won't start | Check logs: `docker compose logs api` |
+| Database connection error | Ensure postgres is healthy: `docker compose ps` |
+| Empty UI (no data) | Set `LOAD_SAMPLE_DATA=true` in `.env` and restart |
+| LLM not working | Ensure Ollama is running or API key is set in `.env` |
+
 ### Agent Source Issues
 
 | Problem | Solution |
@@ -366,23 +315,12 @@ Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management,
 | "SearXNG URL required" | Set `SEARXNG_URL` in `.env` or switch to `AGENT_SEARCH_PROVIDER=brave` |
 | Agent returns empty results | Check search provider connectivity; try a simpler prompt |
 | "Max iterations reached" | Increase `max_iterations` on the source (default: 5, max: 20) |
-| Search rate limit errors | Brave free tier: 2000 queries/month; consider SearXNG for unlimited |
-| Agent runs but no digest | Ensure the agent source is added to a Feed and the feed is run |
-
-### Common API Errors
-
-| Error | Cause | Solution |
-|-------|-------|----------|
-| 404 on `/api/v1/feeds/` | Server not running | Start with `uvicorn reconly_api.main:app` |
-| 401 Unauthorized | Password protection enabled | Set `RECONLY_AUTH_PASSWORD` or authenticate |
-| 500 Database error | PostgreSQL not running | Start PostgreSQL: `docker-compose up -d postgres` |
-| LLM timeout | Provider unreachable | Check Ollama is running or API keys are valid |
 
 ### RAG/Search Issues
 
 | Problem | Solution |
 |---------|----------|
-| "pgvector extension not found" | Run: `CREATE EXTENSION vector;` in PostgreSQL |
+| "pgvector extension not found" | Use the Docker setup — pgvector is included |
 | Embeddings not generating | Check `EMBEDDING_PROVIDER` config; ensure Ollama has `bge-m3` model |
 | Search returns no results | Embeddings may not be generated yet; check digest `embedding_status` |
 
