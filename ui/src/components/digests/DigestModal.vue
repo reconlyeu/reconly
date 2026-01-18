@@ -208,8 +208,11 @@ const extractYouTubeVideoId = (url: string): string | null => {
   return null;
 };
 
-// Extract first non-badge image URL from content for preview
+// Get preview image: prefer explicit image_url, then YouTube thumbnail, fall back to extracting from content
 const previewImageUrl = computed(() => {
+  // First check for explicit image_url (e.g., from email extraction)
+  if (props.digest?.image_url) return props.digest.image_url;
+
   // For YouTube, construct thumbnail URL from video ID
   if (isYouTube.value && props.digest?.url) {
     const videoId = extractYouTubeVideoId(props.digest.url);

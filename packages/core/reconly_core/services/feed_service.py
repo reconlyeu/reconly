@@ -2122,6 +2122,7 @@ class FeedService:
                 "language": d.language or "en",
                 "tags": d.tags or [],
                 "consolidated_count": d.consolidated_count or 1,
+                "image_url": d.image_url,
             }
             for d in digests
         ]
