@@ -14,6 +14,9 @@ os.environ.setdefault(
     os.getenv("TEST_DATABASE_URL", "postgresql://reconly:reconly_dev@localhost:5432/reconly_test")
 )
 
+# Disable rate limiting during tests by setting a very high limit
+os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "10000")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
