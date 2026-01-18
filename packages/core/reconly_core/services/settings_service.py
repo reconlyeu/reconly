@@ -235,3 +235,156 @@ class SettingsService:
         if len(s) <= 8:
             return "••••••••"
         return f"{s[:4]}...{s[-4:]}"
+
+    def delete(self, key: str) -> bool:
+        """
+        Delete a setting from the database by key.
+
+        Unlike reset(), this method doesn't require the key to be in the registry.
+        Used for migration cleanup of deprecated settings.
+
+        Args:
+            key: Setting key to delete
+
+        Returns:
+            True if a database value was removed, False if none existed
+        """
+        db_setting = self.db.query(AppSetting).filter(AppSetting.key == key).first()
+        if db_setting:
+            self.db.delete(db_setting)
+            self.db.commit()
+            return True
+        return False
+
+    def get_raw(self, key: str) -> Any | None:
+        """
+        Get raw setting value from database only, bypassing registry check.
+
+        Used for migration to read deprecated settings that may not be in registry.
+
+        Args:
+            key: Setting key
+
+        Returns:
+            The decoded value from database, or None if not found
+        """
+        db_setting = self.db.query(AppSetting).filter(AppSetting.key == key).first()
+        if db_setting:
+            try:
+                return json.loads(db_setting.value)
+            except json.JSONDecodeError:
+                return db_setting.value
+        return None
+
+    def set_raw(self, key: str, value: Any) -> bool:
+        """
+        Set a setting value in the database, bypassing registry check.
+
+        Used for migration to write to keys that may not be in registry yet.
+
+        Args:
+            key: Setting key
+            value: New value
+
+        Returns:
+            True if successful
+        """
+        encoded_value = self._encode_value(value)
+
+        db_setting = self.db.query(AppSetting).filter(AppSetting.key == key).first()
+        if db_setting:
+            db_setting.value = encoded_value
+        else:
+            db_setting = AppSetting(key=key, value=encoded_value)
+            self.db.add(db_setting)
+
+        self.db.commit()
+        return True
+
+
+def migrate_provider_settings(db: Session) -> dict[str, Any]:
+    """
+    Migrate old provider settings to new format.
+
+    This is a one-time migration that:
+    1. Moves llm.default_provider to position 0 in llm.fallback_chain
+    2. Moves llm.default_model to llm.{provider}.model
+    3. Deletes the old keys from the database
+
+    This function is idempotent - safe to run multiple times.
+
+    Args:
+        db: Database session
+
+    Returns:
+        Dict with migration results:
+        - migrated_provider: The old default provider (if any)
+        - migrated_model: The old default model (if any)
+        - chain: The updated fallback chain
+    """
+    import structlog
+    logger = structlog.get_logger(__name__)
+
+    service = SettingsService(db)
+    result = {
+        "migrated_provider": None,
+        "migrated_model": None,
+        "chain": None,
+    }
+
+    # Get old settings (directly from DB to avoid registry check)
+    old_provider = service.get_raw("llm.default_provider")
+    old_model = service.get_raw("llm.default_model")
+
+    # Get current fallback chain from registry-aware getter (has default)
+    try:
+        chain = service.get("llm.fallback_chain")
+    except KeyError:
+        # If somehow not in registry, use default
+        chain = ["ollama", "huggingface", "openai", "anthropic"]
+
+    if chain is None:
+        chain = ["ollama", "huggingface", "openai", "anthropic"]
+
+    # Ensure chain is a list
+    if not isinstance(chain, list):
+        chain = ["ollama", "huggingface", "openai", "anthropic"]
+
+    # Migration 1: Ensure old default provider is first in chain
+    if old_provider:
+        result["migrated_provider"] = old_provider
+        if old_provider in chain:
+            chain.remove(old_provider)
+        chain.insert(0, old_provider)
+        logger.info(
+            "Migrated default provider to chain position 0",
+            old_provider=old_provider,
+        )
+
+    # Migration 2: Move old default model to provider-specific key
+    if old_provider and old_model:
+        provider_model_key = f"provider.{old_provider}.model"
+        # Only migrate if there's no existing provider-specific model setting
+        existing_model = service.get_raw(provider_model_key)
+        if existing_model is None:
+            service.set_raw(provider_model_key, old_model)
+            result["migrated_model"] = old_model
+            logger.info(
+                "Migrated default model to provider-specific setting",
+                provider=old_provider,
+                model=old_model,
+                new_key=provider_model_key,
+            )
+
+    # Save updated chain if we made changes
+    if old_provider:
+        service.set("llm.fallback_chain", chain)
+        result["chain"] = chain
+
+    # Cleanup: Delete old keys from database
+    if service.delete("llm.default_provider"):
+        logger.info("Deleted deprecated setting llm.default_provider")
+    if service.delete("llm.default_model"):
+        logger.info("Deleted deprecated setting llm.default_model")
+
+    return result

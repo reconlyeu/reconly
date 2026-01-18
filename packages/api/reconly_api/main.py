@@ -31,6 +31,31 @@ from reconly_api.routes import settings as settings_routes
 from reconly_api.auth.password import is_public_route
 
 
+def migrate_deprecated_settings() -> None:
+    """
+    Run one-time settings migrations on startup.
+
+    Currently migrates:
+    - llm.default_provider -> llm.fallback_chain[0]
+    - llm.default_model -> provider.{name}.model
+
+    This function is idempotent - safe to run on every startup.
+    """
+    from reconly_core.services.settings_service import migrate_provider_settings
+
+    try:
+        db = SessionLocal()
+        try:
+            result = migrate_provider_settings(db)
+            if result["migrated_provider"] or result["migrated_model"]:
+                print(f"[Startup] Migrated provider settings: {result}")
+        finally:
+            db.close()
+    except Exception as e:
+        # Gracefully handle errors during startup migration (e.g., during tests)
+        print(f"[Startup] Skipping settings migration: {e}")
+
+
 def cleanup_stale_feed_runs(stale_threshold_hours: int = 1) -> int:
     """
     Mark feed runs that have been 'running' for too long as 'failed'.
@@ -104,6 +129,9 @@ async def lifespan(app: FastAPI):
 
     # Startup: Clean up any stale feed runs from previous sessions
     cleanup_stale_feed_runs()
+
+    # Startup: Migrate deprecated provider settings to new format
+    migrate_deprecated_settings()
 
     # Start feed scheduler (APScheduler)
     from reconly_api.scheduler import init_scheduler, start_scheduler, shutdown_scheduler

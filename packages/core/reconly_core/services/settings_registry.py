@@ -42,30 +42,18 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
     # Global LLM/Provider Settings
     # Per-provider settings (api_key, model, base_url) are auto-registered
     # via @register_provider decorator using provider.{name}.{field} pattern
+    #
+    # NOTE: llm.default_provider and llm.default_model have been removed.
+    # - Default provider is now chain[0] (first in fallback chain)
+    # - Default model is now provider-specific: provider.{name}.model
     # ─────────────────────────────────────────────────────────────────────────
-    "llm.default_provider": SettingDef(
-        category="provider",
-        type=str,
-        default="ollama",
-        editable=True,
-        env_var="DEFAULT_PROVIDER",
-        description="Default LLM provider for summarization",
-    ),
-    "llm.default_model": SettingDef(
-        category="provider",
-        type=str,
-        default="",  # No default - user must configure
-        editable=True,
-        env_var="DEFAULT_MODEL",
-        description="Default model for the selected provider",
-    ),
     "llm.fallback_chain": SettingDef(
         category="provider",
         type=list,
         default=["ollama", "huggingface", "openai", "anthropic"],
         editable=True,
         env_var="",  # No direct env var, JSON in DB
-        description="Provider fallback order when primary fails",
+        description="Provider fallback order (position 0 = default provider)",
     ),
 
     # ─────────────────────────────────────────────────────────────────────────
