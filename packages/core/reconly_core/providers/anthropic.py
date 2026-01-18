@@ -13,6 +13,9 @@ from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 class AnthropicProvider(BaseProvider):
     """LLM provider using Anthropic Claude API."""
 
+    # Human-readable description for UI
+    description = "Anthropic Claude models (Claude 4, Sonnet, Haiku)"
+
     # Default timeout for cloud API calls
     DEFAULT_TIMEOUT = 120  # 2 minutes
 
@@ -113,19 +116,19 @@ class AnthropicProvider(BaseProvider):
                     type="string",
                     label="API Key",
                     description="Anthropic API key",
+                    required=True,
                     env_var="ANTHROPIC_API_KEY",
                     editable=False,
                     secret=True,
-                    required=True,
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model to use (e.g., claude-opus-4-5-20251101)",
-                    default="claude-opus-4-5-20251101",
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="claude-opus-4-5-20251101",
+                    options_from="models",
                 ),
             ],
             requires_api_key=True,

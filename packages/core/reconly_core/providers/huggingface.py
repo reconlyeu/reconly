@@ -18,6 +18,9 @@ logger = logging.getLogger(__name__)
 class HuggingFaceProvider(BaseProvider):
     """LLM provider using HuggingFace Inference API."""
 
+    # Human-readable description for UI
+    description = "HuggingFace Inference API (free tier available)"
+
     # HuggingFace Hub API endpoint for model discovery
     HUB_API_URL = "https://huggingface.co/api/models"
 
@@ -251,19 +254,19 @@ class HuggingFaceProvider(BaseProvider):
                     type="string",
                     label="API Key",
                     description="HuggingFace API token",
+                    required=True,
                     env_var="HUGGINGFACE_API_KEY",
                     editable=False,
                     secret=True,
-                    required=True,
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model to use (e.g., meta-llama/Llama-3.3-70B-Instruct)",
-                    default=self.DEFAULT_MODEL,
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="meta-llama/Llama-3.3-70B-Instruct",
+                    options_from="models",
                 ),
             ],
             requires_api_key=True,

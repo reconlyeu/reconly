@@ -13,6 +13,9 @@ from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 class OpenAIProvider(BaseProvider):
     """LLM provider using OpenAI API (GPT models)."""
 
+    # Human-readable description for UI
+    description = "OpenAI GPT models (GPT-4, GPT-4o)"
+
     # Model pricing (per 1M tokens) - OSS stub with zero values
     # Enterprise edition overrides with actual pricing
     MODEL_PRICING = {
@@ -143,19 +146,19 @@ class OpenAIProvider(BaseProvider):
                     type="string",
                     label="API Key",
                     description="OpenAI API key",
+                    required=True,
                     env_var="OPENAI_API_KEY",
                     editable=False,
                     secret=True,
-                    required=True,
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model to use (e.g., gpt-4-turbo, gpt-3.5-turbo)",
-                    default="gpt-4-turbo",
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="gpt-4-turbo",
+                    options_from="models",
                 ),
             ],
             requires_api_key=True,

@@ -26,7 +26,14 @@ class BaseProvider(ABC):
     Extension Point:
         Enterprise edition can override estimate_cost() and get_capabilities()
         to provide real pricing data without modifying the OSS codebase.
+
+    Class Attributes:
+        description: Human-readable description of this provider for UI display.
+                     Subclasses should override this with a provider-specific description.
     """
+
+    # Human-readable description of this provider
+    description: str = "LLM provider"
 
     def __init__(self, api_key: Optional[str] = None):
         """
