@@ -133,7 +133,10 @@ class ResearchAgent:
                 except (json.JSONDecodeError, ValueError) as e:
                     logger.warning(
                         "Failed to parse final answer, continuing",
-                        extra={"error": str(e)},
+                        extra={
+                            "error": str(e),
+                            "response_preview": response[:500] if response else None,
+                        },
                     )
 
             # Parse and execute tool call
@@ -176,6 +179,10 @@ class ResearchAgent:
                 })
             else:
                 # No tool call found, prompt to use tools or provide answer
+                logger.debug(
+                    "No tool call or final answer found in response",
+                    extra={"response_preview": response[:500] if response else None},
+                )
                 messages.append({"role": "assistant", "content": response})
                 messages.append({
                     "role": "user",
@@ -251,20 +258,29 @@ class ResearchAgent:
     def _is_final_answer(self, response: str) -> bool:
         """Check if response contains a final JSON answer.
 
-        Looks for JSON with title, content, and sources keys (without "tool").
+        Actually tries to extract and validate JSON rather than just pattern matching,
+        to avoid false positives from narrative text mentioning "title" or "content".
 
         Args:
             response: LLM response text
 
         Returns:
-            True if response appears to contain a final answer
+            True if response contains valid final answer JSON
         """
-        # Must have title key but not be a tool call
-        has_title = bool(re.search(r'"title"\s*:', response))
-        has_content = bool(re.search(r'"content"\s*:', response))
-        has_tool = bool(re.search(r'"tool"\s*:', response))
+        # Try to extract JSON and validate it's a final answer
+        json_str = self._extract_json(response)
+        if not json_str:
+            return False
 
-        return has_title and has_content and not has_tool
+        try:
+            data = json.loads(json_str)
+            # Must have title and content, but NOT be a tool call
+            has_title = "title" in data
+            has_content = "content" in data
+            is_tool_call = "tool" in data
+            return has_title and has_content and not is_tool_call
+        except json.JSONDecodeError:
+            return False
 
     def _parse_final_answer(self, response: str) -> AgentResult:
         """Extract AgentResult from JSON in response.
