@@ -2,8 +2,8 @@
 import pytest
 from datetime import datetime, timedelta
 
-from reconly_core.summarizers.capabilities import ModelInfo, ProviderCapabilities
-from reconly_core.summarizers.cache import ModelCache, get_model_cache
+from reconly_core.providers.capabilities import ModelInfo, ProviderCapabilities
+from reconly_core.providers.cache import ModelCache, get_model_cache
 
 
 class TestModelInfo:

@@ -26,8 +26,8 @@ from reconly_core.database.models import (
 from reconly_core.database.crud import DEFAULT_DATABASE_URL
 from reconly_core.database.seed import get_default_prompt_template, get_default_consolidated_template
 from reconly_core.fetchers import get_fetcher
-from reconly_core.summarizers import get_summarizer
-from reconly_core.summarizers.base import BaseSummarizer
+from reconly_core.providers import get_summarizer
+from reconly_core.providers.base import BaseProvider
 from reconly_core.tracking import FeedTracker
 from reconly_core.logging import get_logger, generate_trace_id, clear_trace_id
 from reconly_core.services.email_service import EmailService
@@ -668,7 +668,7 @@ class FeedService:
             errors=errors,
         )
 
-    def _get_summarizer(self, feed: Feed, options: FeedRunOptions) -> BaseSummarizer:
+    def _get_summarizer(self, feed: Feed, options: FeedRunOptions) -> BaseProvider:
         """Get summarizer based on feed/template settings.
 
         Priority order:
@@ -714,7 +714,7 @@ class FeedService:
         source: Source,
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         options: FeedRunOptions,
         session: Session,
     ) -> Dict[str, Any]:
@@ -750,7 +750,7 @@ class FeedService:
         source: Source,
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         language: str,
         options: FeedRunOptions,
         session: Session,
@@ -831,7 +831,7 @@ class FeedService:
         source: Source,
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         language: str,
         options: FeedRunOptions,
         session: Session,
@@ -1046,7 +1046,7 @@ class FeedService:
         source: Source,
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         language: str,
         options: FeedRunOptions,
         session: Session,
@@ -1220,7 +1220,7 @@ class FeedService:
         source: Source,
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         language: str,
         options: FeedRunOptions,
         session: Session,
@@ -1384,7 +1384,7 @@ class FeedService:
         source: Optional[Source],
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         language: str,
         mode: str,
         options: FeedRunOptions,
@@ -1765,7 +1765,7 @@ class FeedService:
         sources: List[Source],
         feed: Feed,
         feed_run: FeedRun,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         options: FeedRunOptions,
         session: Session,
     ) -> Dict[str, Any]:

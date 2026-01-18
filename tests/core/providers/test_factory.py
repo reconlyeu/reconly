@@ -2,16 +2,16 @@
 import pytest
 from unittest.mock import Mock, patch
 from reconly_core.resilience import ErrorCategory, RetryConfig, classify_error
-from reconly_core.summarizers.factory import (
+from reconly_core.providers.factory import (
     get_summarizer,
     SummarizerWithFallback,
     list_available_models,
     _build_intelligent_fallback_chain
 )
-from reconly_core.summarizers.anthropic import AnthropicSummarizer
-from reconly_core.summarizers.huggingface import HuggingFaceSummarizer
-from reconly_core.summarizers.ollama import OllamaSummarizer
-from reconly_core.summarizers.openai_provider import OpenAISummarizer
+from reconly_core.providers.anthropic import AnthropicProvider
+from reconly_core.providers.huggingface import HuggingFaceProvider
+from reconly_core.providers.ollama import OllamaProvider
+from reconly_core.providers.openai_provider import OpenAIProvider
 
 
 def create_mock_summarizer(name: str, summarize_return=None, summarize_side_effect=None):
@@ -51,15 +51,15 @@ class TestSummarizerFactory:
 
         result = get_summarizer(enable_fallback=False)
 
-        assert isinstance(result, OllamaSummarizer)
+        assert isinstance(result, OllamaProvider)
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-anthropic-key'})
     def test_get_summarizer_anthropic_provider(self):
         """WHEN 'anthropic' provider is specified
-        THEN AnthropicSummarizer is returned."""
+        THEN AnthropicProvider is returned."""
         result = get_summarizer(provider='anthropic', enable_fallback=False)
 
-        assert isinstance(result, AnthropicSummarizer)
+        assert isinstance(result, AnthropicProvider)
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
     def test_get_summarizer_custom_model(self):
@@ -67,7 +67,7 @@ class TestSummarizerFactory:
         THEN it's passed to HuggingFace summarizer."""
         result = get_summarizer(provider='huggingface', model='mixtral-8x7b', enable_fallback=False)
 
-        assert isinstance(result, HuggingFaceSummarizer)
+        assert isinstance(result, HuggingFaceProvider)
         # HuggingFace expands 'mixtral-8x7b' to full model name
         assert 'mixtral' in result.model.lower()
 
@@ -89,7 +89,7 @@ class TestSummarizerFactory:
         result = get_summarizer(provider='huggingface', enable_fallback=True)
 
         assert isinstance(result, SummarizerWithFallback)
-        assert isinstance(result.primary, HuggingFaceSummarizer)
+        assert isinstance(result.primary, HuggingFaceProvider)
 
     @patch.dict('os.environ', {'DEFAULT_PROVIDER': 'anthropic', 'ANTHROPIC_API_KEY': 'test-key'})
     def test_get_summarizer_env_provider(self):
@@ -97,7 +97,7 @@ class TestSummarizerFactory:
         THEN that provider is used."""
         result = get_summarizer(enable_fallback=False)
 
-        assert isinstance(result, AnthropicSummarizer)
+        assert isinstance(result, AnthropicProvider)
 
     def test_list_available_models(self):
         """WHEN list_available_models is called
@@ -119,21 +119,21 @@ class TestSummarizerFactory:
     @patch('requests.get')
     def test_get_summarizer_ollama_provider(self, mock_get):
         """WHEN 'ollama' provider is specified
-        THEN OllamaSummarizer is returned."""
+        THEN OllamaProvider is returned."""
         mock_get.return_value.status_code = 200
         mock_get.return_value.json.return_value = {'models': [{'name': 'llama3.2'}]}
 
         result = get_summarizer(provider='ollama', enable_fallback=False)
 
-        assert isinstance(result, OllamaSummarizer)
+        assert isinstance(result, OllamaProvider)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test-openai-key'})
     def test_get_summarizer_openai_provider(self):
         """WHEN 'openai' provider is specified
-        THEN OpenAISummarizer is returned."""
+        THEN OpenAIProvider is returned."""
         result = get_summarizer(provider='openai', enable_fallback=False)
 
-        assert isinstance(result, OpenAISummarizer)
+        assert isinstance(result, OpenAIProvider)
 
     @patch.dict('os.environ', {'OPENAI_API_KEY': 'test-key'})
     def test_get_summarizer_openai_custom_model(self):
@@ -142,7 +142,7 @@ class TestSummarizerFactory:
         # OpenAI model is set in constructor, not via factory parameter
         result = get_summarizer(provider='openai', enable_fallback=False)
 
-        assert isinstance(result, OpenAISummarizer)
+        assert isinstance(result, OpenAIProvider)
 
     @patch('requests.get')
     def test_get_summarizer_ollama_custom_model(self, mock_get):
@@ -153,7 +153,7 @@ class TestSummarizerFactory:
 
         result = get_summarizer(provider='ollama', model='mistral', enable_fallback=False)
 
-        assert isinstance(result, OllamaSummarizer)
+        assert isinstance(result, OllamaProvider)
         # Note: model selection happens in __init__, we just verify instance was created
 
     @patch.dict('os.environ', {
@@ -175,7 +175,7 @@ class TestSummarizerFactory:
         assert isinstance(result, SummarizerWithFallback)
 
         # Primary should be HuggingFace
-        assert isinstance(result.primary, HuggingFaceSummarizer)
+        assert isinstance(result.primary, HuggingFaceProvider)
 
         # Fallback chain should include other providers
         assert len(result.fallbacks) > 0
@@ -190,7 +190,7 @@ class TestSummarizerFactory:
 
         result = get_summarizer(enable_fallback=False)
 
-        assert isinstance(result, OllamaSummarizer)
+        assert isinstance(result, OllamaProvider)
 
     @patch.dict('os.environ', {'DEFAULT_PROVIDER': 'openai', 'OPENAI_API_KEY': 'test-key'})
     def test_get_summarizer_env_provider_openai(self):
@@ -198,7 +198,7 @@ class TestSummarizerFactory:
         THEN OpenAI provider is used."""
         result = get_summarizer(enable_fallback=False)
 
-        assert isinstance(result, OpenAISummarizer)
+        assert isinstance(result, OpenAIProvider)
 
 
 class TestSummarizerWithFallback:
@@ -354,7 +354,7 @@ class TestIntelligentFallbackChain:
         'ANTHROPIC_API_KEY': 'anthropic-key'
     })
     @patch('requests.get')
-    @patch('reconly_core.summarizers.factory.OllamaSummarizer')
+    @patch('reconly_core.providers.factory.OllamaProvider')
     def test_fallback_chain_includes_local_providers_first(self, mock_ollama, mock_get):
         """WHEN building fallback chain
         THEN local providers (Ollama) appear before cloud providers."""
@@ -385,7 +385,7 @@ class TestIntelligentFallbackChain:
         chain = _build_intelligent_fallback_chain(primary_provider='huggingface')
 
         # Check that no HuggingFace instance is in the chain
-        hf_instances = [p for p in chain if isinstance(p, HuggingFaceSummarizer)]
+        hf_instances = [p for p in chain if isinstance(p, HuggingFaceProvider)]
         # Note: HuggingFace might appear with different models, so we check the primary isn't duplicated
         assert isinstance(chain, list)
 
@@ -409,8 +409,8 @@ class TestIntelligentFallbackChain:
         chain = _build_intelligent_fallback_chain(primary_provider='huggingface')
 
         # Find OpenAI and Anthropic in chain (if present)
-        openai_instances = [i for i, p in enumerate(chain) if isinstance(p, OpenAISummarizer)]
-        anthropic_instances = [i for i, p in enumerate(chain) if isinstance(p, AnthropicSummarizer)]
+        openai_instances = [i for i, p in enumerate(chain) if isinstance(p, OpenAIProvider)]
+        anthropic_instances = [i for i, p in enumerate(chain) if isinstance(p, AnthropicProvider)]
 
         # If both are present, OpenAI (cheaper) should come before Anthropic
         if openai_instances and anthropic_instances:
@@ -426,7 +426,7 @@ class TestIntelligentFallbackChain:
         chain = _build_intelligent_fallback_chain(primary_provider='anthropic')
 
         # HuggingFace should be in the chain (with different models)
-        hf_in_chain = any(isinstance(p, HuggingFaceSummarizer) for p in chain)
+        hf_in_chain = any(isinstance(p, HuggingFaceProvider) for p in chain)
         assert hf_in_chain or len(chain) >= 0  # HuggingFace might be added
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'hf-key'})

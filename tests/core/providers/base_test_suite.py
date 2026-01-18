@@ -1,21 +1,21 @@
 """Abstract test suite for provider implementations."""
 from abc import ABC, abstractmethod
 import pytest
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.capabilities import ProviderCapabilities
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.capabilities import ProviderCapabilities
 
 
-class BaseSummarizerTestSuite(ABC):
+class BaseProviderTestSuite(ABC):
     """
     Abstract test suite that all provider tests must inherit.
 
     This provides contract tests to ensure providers correctly implement
-    the BaseSummarizer interface and follow expected behaviors.
+    the BaseProvider interface and follow expected behaviors.
 
     Subclasses must implement the `summarizer` fixture.
 
     Example:
-        >>> class TestMyProvider(BaseSummarizerTestSuite):
+        >>> class TestMyProvider(BaseProviderTestSuite):
         >>>     @pytest.fixture
         >>>     def summarizer(self):
         >>>         return MyProviderSummarizer(api_key='test-key')
@@ -23,12 +23,12 @@ class BaseSummarizerTestSuite(ABC):
 
     @pytest.fixture
     @abstractmethod
-    def summarizer(self) -> BaseSummarizer:
+    def summarizer(self) -> BaseProvider:
         """
         Return a configured summarizer instance for testing.
 
         Returns:
-            Configured BaseSummarizer instance
+            Configured BaseProvider instance
         """
         pass
 
@@ -36,7 +36,7 @@ class BaseSummarizerTestSuite(ABC):
 
     def test_implements_base_interface(self, summarizer):
         """Verify all required abstract methods are implemented."""
-        assert isinstance(summarizer, BaseSummarizer)
+        assert isinstance(summarizer, BaseProvider)
         assert hasattr(summarizer, 'summarize')
         assert callable(summarizer.summarize)
         assert hasattr(summarizer, 'get_provider_name')

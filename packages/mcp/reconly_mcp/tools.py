@@ -72,7 +72,7 @@ class ToolContext:
         """Get or create RAG service."""
         if self._rag_service is None:
             from reconly_core.rag import RAGService
-            from reconly_core.summarizers import get_summarizer
+            from reconly_core.providers import get_summarizer
 
             provider = self.get_embedding_provider()
 

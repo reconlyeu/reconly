@@ -3,12 +3,12 @@ import pytest
 from unittest.mock import patch, Mock
 import requests
 
-from reconly_core.summarizers.ollama import OllamaSummarizer
-from tests.core.summarizers.base_test_suite import BaseSummarizerTestSuite
+from reconly_core.providers.ollama import OllamaProvider
+from tests.core.providers.base_test_suite import BaseProviderTestSuite
 
 
-class TestOllamaSummarizer(BaseSummarizerTestSuite):
-    """Test suite for OllamaSummarizer (inherits contract tests from BaseSummarizerTestSuite)."""
+class TestOllamaProvider(BaseProviderTestSuite):
+    """Test suite for OllamaProvider (inherits contract tests from BaseProviderTestSuite)."""
 
     @pytest.fixture
     def summarizer(self):
@@ -22,27 +22,27 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                     {'name': 'mistral'}
                 ]
             }
-            return OllamaSummarizer(model='llama3.2')
+            return OllamaProvider(model='llama3.2')
 
     # Provider-specific tests
 
     def test_initialization_default_base_url(self):
         """Test that default base URL is set correctly."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             assert summarizer.base_url == 'http://localhost:11434'
 
     def test_initialization_custom_base_url(self):
         """Test initialization with custom base URL."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer(base_url='http://192.168.1.100:11434')
+            summarizer = OllamaProvider(base_url='http://192.168.1.100:11434')
             assert summarizer.base_url == 'http://192.168.1.100:11434'
 
     def test_initialization_from_env_var(self, monkeypatch):
         """Test that base URL is read from environment variable."""
         monkeypatch.setenv('OLLAMA_BASE_URL', 'http://custom:11434')
         with patch('requests.get'):
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             assert summarizer.base_url == 'http://custom:11434'
 
     def test_initialization_auto_detects_models(self):
@@ -57,7 +57,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 ]
             }
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
 
             # Should use first available model
             assert summarizer.model in ['llama3.2', 'mistral', 'gemma2']
@@ -65,19 +65,19 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
     def test_initialization_uses_specified_model(self):
         """Test initialization with specified model."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer(model='mistral')
+            summarizer = OllamaProvider(model='mistral')
             assert summarizer.model == 'mistral'
 
     def test_get_provider_name(self):
         """Test provider name."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             assert summarizer.get_provider_name() == 'ollama'
 
     def test_get_model_info(self):
         """Test model info includes local flag."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer(model='llama3.2')
+            summarizer = OllamaProvider(model='llama3.2')
             info = summarizer.get_model_info()
 
             assert info['provider'] == 'ollama'
@@ -87,7 +87,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
     def test_estimate_cost_always_zero(self):
         """Test that cost estimation always returns 0.0 for local models."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
 
             assert summarizer.estimate_cost(100) == 0.0
             assert summarizer.estimate_cost(10000) == 0.0
@@ -95,7 +95,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
 
     def test_get_capabilities_is_local(self):
         """Test capabilities indicate local provider."""
-        caps = OllamaSummarizer.get_capabilities()
+        caps = OllamaProvider.get_capabilities()
 
         assert caps.is_local is True
         assert caps.requires_api_key is False
@@ -108,7 +108,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get') as mock_get:
             mock_get.return_value.status_code = 200
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             assert summarizer.is_available() is True
 
     def test_is_available_when_server_not_running(self):
@@ -116,7 +116,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get') as mock_get:
             mock_get.side_effect = requests.ConnectionError("Connection refused")
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             assert summarizer.is_available() is False
 
     def test_is_available_does_not_raise_exception(self):
@@ -124,7 +124,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get') as mock_get:
             mock_get.side_effect = Exception("Unexpected error")
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             # Should return False, not raise
             assert summarizer.is_available() is False
 
@@ -136,7 +136,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'models': [{'name': 'llama3.2'}]
             }
 
-            summarizer = OllamaSummarizer(model='llama3.2')
+            summarizer = OllamaProvider(model='llama3.2')
             errors = summarizer.validate_config()
 
             assert isinstance(errors, list)
@@ -145,7 +145,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
     def test_validate_config_invalid_url(self):
         """Test validate_config catches invalid base URL."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer(base_url='invalid-url')
+            summarizer = OllamaProvider(base_url='invalid-url')
             errors = summarizer.validate_config()
 
             assert len(errors) > 0
@@ -156,7 +156,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get') as mock_get:
             mock_get.side_effect = requests.ConnectionError()
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             errors = summarizer.validate_config()
 
             assert len(errors) > 0
@@ -170,7 +170,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'models': [{'name': 'llama3.2'}]
             }
 
-            summarizer = OllamaSummarizer(model='nonexistent-model')
+            summarizer = OllamaProvider(model='nonexistent-model')
             errors = summarizer.validate_config()
 
             assert len(errors) > 0
@@ -186,7 +186,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'done': True
             }
 
-            summarizer = OllamaSummarizer(model='llama3.2')
+            summarizer = OllamaProvider(model='llama3.2')
             content_data = self.create_mock_content_data(
                 title='Test Article',
                 content='This is test content for summarization.'
@@ -209,7 +209,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'done': True
             }
 
-            summarizer = OllamaSummarizer(model='llama3.2')
+            summarizer = OllamaProvider(model='llama3.2')
             content_data = self.create_mock_content_data(
                 title='Test Artikel',
                 content='Dies ist ein Testinhalt.'
@@ -224,7 +224,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
     def test_summarize_empty_content(self, mock_post):
         """Test that summarize raises error for empty content."""
         with patch('requests.get'):
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             content_data = self.create_mock_content_data(title='Test', content='')
 
             with pytest.raises(ValueError) as exc_info:
@@ -238,7 +238,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get'):
             mock_post.side_effect = requests.ConnectionError("Connection refused")
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             content_data = self.create_mock_content_data()
 
             with pytest.raises(Exception) as exc_info:
@@ -252,7 +252,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get'):
             mock_post.side_effect = requests.Timeout("Request timed out")
 
-            summarizer = OllamaSummarizer(timeout=30)
+            summarizer = OllamaProvider(timeout=30)
             content_data = self.create_mock_content_data()
 
             with pytest.raises(Exception) as exc_info:
@@ -267,7 +267,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
             mock_post.return_value.status_code = 500
             mock_post.return_value.text = 'Internal server error'
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             content_data = self.create_mock_content_data()
 
             with pytest.raises(Exception) as exc_info:
@@ -285,7 +285,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'done': True
             }
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             content_data = self.create_mock_content_data()
 
             with pytest.raises(Exception) as exc_info:
@@ -303,7 +303,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 'done': True
             }
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             content_data = self.create_mock_content_data()
             summarizer.summarize(content_data, language='de')
 
@@ -320,7 +320,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
             mock_post.return_value.status_code = 200
             mock_post.return_value.json.return_value = {'response': 'Summary'}
 
-            summarizer = OllamaSummarizer(timeout=120)
+            summarizer = OllamaProvider(timeout=120)
             content_data = self.create_mock_content_data()
             summarizer.summarize(content_data)
 
@@ -340,7 +340,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
                 ]
             }
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             models = summarizer._fetch_available_models()
 
             assert 'llama3.2' in models
@@ -352,7 +352,7 @@ class TestOllamaSummarizer(BaseSummarizerTestSuite):
         with patch('requests.get') as mock_get:
             mock_get.side_effect = requests.ConnectionError()
 
-            summarizer = OllamaSummarizer()
+            summarizer = OllamaProvider()
             models = summarizer._fetch_available_models()
 
             assert models == []

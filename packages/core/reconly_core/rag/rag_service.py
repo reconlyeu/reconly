@@ -22,7 +22,7 @@ from reconly_core.rag.citations import (
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
     from reconly_core.rag.embeddings.base import EmbeddingProvider
-    from reconly_core.summarizers.base import BaseSummarizer
+    from reconly_core.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,7 @@ class RAGService:
 
     Example:
         >>> from reconly_core.rag import RAGService, get_embedding_provider
-        >>> from reconly_core.summarizers import get_summarizer
+        >>> from reconly_core.providers import get_summarizer
         >>>
         >>> provider = get_embedding_provider(db=db)
         >>> summarizer = get_summarizer(db=db, enable_fallback=False)
@@ -124,7 +124,7 @@ class RAGService:
         self,
         db: "Session",
         embedding_provider: "EmbeddingProvider",
-        summarizer: "BaseSummarizer",
+        summarizer: "BaseProvider",
         system_prompt: str | None = None,
         max_chunks: int = 10,
         search_mode: SearchMode = 'hybrid',

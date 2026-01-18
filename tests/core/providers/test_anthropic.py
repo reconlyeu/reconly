@@ -1,18 +1,18 @@
 """Tests for Anthropic Claude summarizer."""
 import pytest
 from unittest.mock import Mock, patch
-from reconly_core.summarizers.anthropic import AnthropicSummarizer
-from tests.core.summarizers.base_test_suite import BaseSummarizerTestSuite
+from reconly_core.providers.anthropic import AnthropicProvider
+from tests.core.providers.base_test_suite import BaseProviderTestSuite
 
 
-class TestAnthropicSummarizer(BaseSummarizerTestSuite):
-    """Test suite for AnthropicSummarizer (inherits contract tests from BaseSummarizerTestSuite)."""
+class TestAnthropicProvider(BaseProviderTestSuite):
+    """Test suite for AnthropicProvider (inherits contract tests from BaseProviderTestSuite)."""
 
     @pytest.fixture
     def summarizer(self):
         """Return configured Anthropic summarizer instance."""
-        with patch('reconly_core.summarizers.anthropic.Anthropic'):
-            return AnthropicSummarizer(api_key='test-anthropic-key')
+        with patch('reconly_core.providers.anthropic.Anthropic'):
+            return AnthropicProvider(api_key='test-anthropic-key')
 
     @pytest.fixture
     def content_data(self):
@@ -27,11 +27,11 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
     # Provider-specific tests
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-api-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_initialization_with_env_var(self, mock_anthropic_class):
         """WHEN API key is in environment variable
         THEN summarizer initializes successfully."""
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         assert summarizer.api_key == 'test-api-key'
         assert summarizer.model.startswith('claude-')  # Valid Anthropic model
@@ -41,11 +41,11 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
             timeout=120.0  # Default timeout
         )
 
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_initialization_with_explicit_key(self, mock_anthropic_class):
         """WHEN API key is passed as parameter
         THEN it takes precedence over environment variable."""
-        summarizer = AnthropicSummarizer(api_key='explicit-key')
+        summarizer = AnthropicProvider(api_key='explicit-key')
 
         assert summarizer.api_key == 'explicit-key'
         mock_anthropic_class.assert_called_once_with(
@@ -58,24 +58,24 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         """WHEN no API key is provided
         THEN ValueError is raised."""
         with pytest.raises(ValueError) as exc_info:
-            AnthropicSummarizer()
+            AnthropicProvider()
 
         assert "Anthropic API key required" in str(exc_info.value)
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_get_provider_name(self, mock_anthropic_class):
         """WHEN get_provider_name is called
         THEN 'anthropic' is returned."""
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
         assert summarizer.get_provider_name() == 'anthropic'
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_get_model_info(self, mock_anthropic_class):
         """WHEN get_model_info is called
         THEN model details are returned with expected structure."""
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
         model_info = summarizer.get_model_info()
 
         assert model_info['provider'] == 'anthropic'
@@ -83,11 +83,11 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert 'name' in model_info  # Has a display name
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_estimate_cost(self, mock_anthropic_class):
         """WHEN cost is estimated in OSS edition
         THEN 0.0 is returned (cost tracking is Enterprise only)."""
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         # Test with 1000 characters
         cost = summarizer.estimate_cost(1000)
@@ -96,7 +96,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert cost == 0.0
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_success_german(self, mock_anthropic_class, content_data):
         """WHEN summarization succeeds with German language
         THEN summary is added to content data."""
@@ -111,7 +111,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.return_value = mock_message
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
         result = summarizer.summarize(content_data, language='de')
 
         # Verify result contains original data plus summary
@@ -132,7 +132,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert 'Test Article' in prompt
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_success_english(self, mock_anthropic_class, content_data):
         """WHEN summarization succeeds with English language
         THEN English prompt is used."""
@@ -147,7 +147,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.return_value = mock_message
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
         result = summarizer.summarize(content_data, language='en')
 
         assert result['summary'] == "This is an English summary."
@@ -159,11 +159,11 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert 'Summarize the following content' in prompt
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_empty_content(self, mock_anthropic_class):
         """WHEN content is empty
         THEN ValueError is raised."""
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         empty_data = {
             'title': 'Empty Article',
@@ -177,7 +177,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert "No content to summarize" in str(exc_info.value)
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_api_error(self, mock_anthropic_class, content_data):
         """WHEN API returns an error
         THEN exception is raised with error message."""
@@ -185,7 +185,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.side_effect = Exception("API rate limit exceeded")
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         with pytest.raises(Exception) as exc_info:
             summarizer.summarize(content_data)
@@ -194,7 +194,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert "API rate limit exceeded" in str(exc_info.value)
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_auth_error(self, mock_anthropic_class, content_data):
         """WHEN authentication fails
         THEN exception is raised."""
@@ -202,7 +202,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.side_effect = Exception("Invalid API key")
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         with pytest.raises(Exception) as exc_info:
             summarizer.summarize(content_data)
@@ -210,7 +210,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert "Failed to generate summary with Claude" in str(exc_info.value)
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_different_source_types(self, mock_anthropic_class):
         """WHEN different source types are used
         THEN appropriate labels are used in prompts."""
@@ -224,7 +224,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.return_value = mock_message
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         # Test YouTube source type
         youtube_data = {
@@ -254,7 +254,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         assert 'rss' in prompt
 
     @patch.dict('os.environ', {'ANTHROPIC_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.anthropic.Anthropic')
+    @patch('reconly_core.providers.anthropic.Anthropic')
     def test_summarize_preserves_original_data(self, mock_anthropic_class, content_data):
         """WHEN summarization completes
         THEN original content data is preserved."""
@@ -268,7 +268,7 @@ class TestAnthropicSummarizer(BaseSummarizerTestSuite):
         mock_client.messages.create.return_value = mock_message
         mock_anthropic_class.return_value = mock_client
 
-        summarizer = AnthropicSummarizer()
+        summarizer = AnthropicProvider()
 
         # Add custom field to test preservation
         content_data['custom_field'] = 'custom_value'

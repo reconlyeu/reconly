@@ -1,17 +1,17 @@
-"""Ollama local LLM summarizer implementation."""
+"""Ollama local LLM provider implementation."""
 import os
 import requests
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
 @register_provider('ollama')
-class OllamaSummarizer(BaseSummarizer):
-    """Summarizes content using local Ollama LLMs."""
+class OllamaProvider(BaseProvider):
+    """LLM provider using local Ollama server."""
 
     # Default timeout for local Ollama models (longer since they run locally)
     DEFAULT_TIMEOUT = 900  # 15 minutes
@@ -334,3 +334,7 @@ Create a concise summary of approximately 150 words."""
             )
         except Exception as e:
             raise Exception(f"Failed to generate summary with Ollama ({self.model}): {str(e)}")
+
+
+# Backwards compatibility alias
+OllamaSummarizer = OllamaProvider

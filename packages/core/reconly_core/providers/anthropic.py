@@ -1,17 +1,17 @@
-"""Anthropic Claude summarizer implementation."""
+"""Anthropic Claude LLM provider implementation."""
 import os
 from anthropic import Anthropic
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
 @register_provider('anthropic')
-class AnthropicSummarizer(BaseSummarizer):
-    """Summarizes content using Claude AI via Anthropic API."""
+class AnthropicProvider(BaseProvider):
+    """LLM provider using Anthropic Claude API."""
 
     # Default timeout for cloud API calls
     DEFAULT_TIMEOUT = 120  # 2 minutes
@@ -249,3 +249,7 @@ class AnthropicSummarizer(BaseSummarizer):
 
         except Exception as e:
             raise Exception(f"Failed to generate summary with Claude: {str(e)}")
+
+
+# Backwards compatibility alias
+AnthropicSummarizer = AnthropicProvider

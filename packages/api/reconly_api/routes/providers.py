@@ -8,12 +8,12 @@ import logging
 
 from reconly_api.dependencies import get_db
 from reconly_core.services.settings_service import SettingsService
-from reconly_core.summarizers.capabilities import ModelInfo
-from reconly_core.summarizers.cache import get_model_cache
-from reconly_core.summarizers.ollama import OllamaSummarizer
-from reconly_core.summarizers.anthropic import AnthropicSummarizer
-from reconly_core.summarizers.openai_provider import OpenAISummarizer
-from reconly_core.summarizers.huggingface import HuggingFaceSummarizer
+from reconly_core.providers.capabilities import ModelInfo
+from reconly_core.providers.cache import get_model_cache
+from reconly_core.providers.ollama import OllamaProvider
+from reconly_core.providers.anthropic import AnthropicProvider
+from reconly_core.providers.openai_provider import OpenAIProvider
+from reconly_core.providers.huggingface import HuggingFaceProvider
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -23,10 +23,10 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Provider class mapping
 PROVIDER_CLASSES = {
-    'ollama': OllamaSummarizer,
-    'anthropic': AnthropicSummarizer,
-    'openai': OpenAISummarizer,
-    'huggingface': HuggingFaceSummarizer,
+    'ollama': OllamaProvider,
+    'anthropic': AnthropicProvider,
+    'openai': OpenAIProvider,
+    'huggingface': HuggingFaceProvider,
 }
 
 

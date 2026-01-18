@@ -1,17 +1,17 @@
-"""OpenAI API summarizer implementation."""
+"""OpenAI API LLM provider implementation."""
 import os
 from openai import OpenAI
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
 @register_provider('openai')
-class OpenAISummarizer(BaseSummarizer):
-    """Summarizes content using OpenAI API (GPT models)."""
+class OpenAIProvider(BaseProvider):
+    """LLM provider using OpenAI API (GPT models)."""
 
     # Model pricing (per 1M tokens) - OSS stub with zero values
     # Enterprise edition overrides with actual pricing
@@ -307,3 +307,7 @@ class OpenAISummarizer(BaseSummarizer):
                 )
             else:
                 raise Exception(f"Failed to generate summary with OpenAI ({self.model}): {error_msg}")
+
+
+# Backwards compatibility alias
+OpenAISummarizer = OpenAIProvider

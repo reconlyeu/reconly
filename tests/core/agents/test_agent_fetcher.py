@@ -384,7 +384,7 @@ class TestAgentFetcherIntegration:
         with patch(
             'reconly_core.agents.ResearchAgent'
         ) as mock_agent_class, patch(
-            'reconly_core.summarizers.factory.get_summarizer'
+            'reconly_core.providers.factory.get_summarizer'
         ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
         ) as mock_get_settings:
@@ -420,7 +420,7 @@ class TestAgentFetcherIntegration:
         with patch(
             'reconly_core.agents.ResearchAgent'
         ) as mock_agent_class, patch(
-            'reconly_core.summarizers.factory.get_summarizer'
+            'reconly_core.providers.factory.get_summarizer'
         ), patch.object(
             agent_fetcher, '_get_agent_settings'
         ) as mock_get_settings:
@@ -449,7 +449,7 @@ class TestAgentFetcherIntegration:
         with patch(
             'reconly_core.agents.ResearchAgent'
         ) as mock_agent_class, patch(
-            'reconly_core.summarizers.factory.get_summarizer'
+            'reconly_core.providers.factory.get_summarizer'
         ), patch.object(
             agent_fetcher, '_get_agent_settings'
         ) as mock_get_settings:

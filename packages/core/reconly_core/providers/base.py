@@ -1,6 +1,6 @@
-"""Base summarizer interface.
+"""Base LLM provider interface.
 
-This module defines the abstract base class for all content summarizers.
+This module defines the abstract base class for all LLM providers.
 
 Edition Notes:
     - OSS edition: Cost estimation methods return 0.0 (stubbed)
@@ -13,11 +13,11 @@ from typing import Dict, Optional, List, Union
 from reconly_core.config_types import ProviderConfigSchema
 from reconly_core.resilience.config import RetryConfig
 from reconly_core.resilience.errors import ErrorCategory, classify_error
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
-class BaseSummarizer(ABC):
-    """Abstract base class for content summarizers.
+class BaseProvider(ABC):
+    """Abstract base class for LLM providers.
 
     Subclasses must implement all abstract methods. In OSS edition, cost-related
     methods return 0.0. Enterprise edition extends these classes to provide
@@ -30,7 +30,7 @@ class BaseSummarizer(ABC):
 
     def __init__(self, api_key: Optional[str] = None):
         """
-        Initialize the summarizer.
+        Initialize the provider.
 
         Args:
             api_key: API key for the service (if required)
@@ -163,7 +163,7 @@ class BaseSummarizer(ABC):
             ProviderCapabilities instance describing this provider's features
 
         Example:
-            >>> class MyProvider(BaseSummarizer):
+            >>> class MyProvider(BaseProvider):
             >>>     @classmethod
             >>>     def get_capabilities(cls):
             >>>         return ProviderCapabilities(
@@ -349,3 +349,7 @@ class BaseSummarizer(ABC):
         # Ensure url is set correctly
         result['url'] = url
         return result
+
+
+# Backwards compatibility alias
+BaseSummarizer = BaseProvider

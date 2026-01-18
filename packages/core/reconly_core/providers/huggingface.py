@@ -1,4 +1,4 @@
-"""HuggingFace Inference API summarizer implementation."""
+"""HuggingFace Inference API LLM provider implementation."""
 import logging
 import os
 import re
@@ -7,16 +7,16 @@ import time
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 logger = logging.getLogger(__name__)
 
 
 @register_provider('huggingface')
-class HuggingFaceSummarizer(BaseSummarizer):
-    """Summarizes content using HuggingFace Inference API."""
+class HuggingFaceProvider(BaseProvider):
+    """LLM provider using HuggingFace Inference API."""
 
     # HuggingFace Hub API endpoint for model discovery
     HUB_API_URL = "https://huggingface.co/api/models"
@@ -553,3 +553,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
 
         except Exception as e:
             raise Exception(f"Failed to generate summary with {self.model_key}: {str(e)}")
+
+
+# Backwards compatibility alias
+HuggingFaceSummarizer = HuggingFaceProvider

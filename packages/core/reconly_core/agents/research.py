@@ -11,7 +11,7 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from reconly_core.summarizers.base import BaseSummarizer
+    from reconly_core.providers.base import BaseProvider
     from reconly_core.agents.settings import AgentSettings
 
 from reconly_core.agents.schema import AgentResult
@@ -73,7 +73,7 @@ class ResearchAgent:
 
     def __init__(
         self,
-        summarizer: "BaseSummarizer",
+        summarizer: "BaseProvider",
         settings: "AgentSettings",
         max_iterations: int = 5,
     ):

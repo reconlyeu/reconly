@@ -1,4 +1,4 @@
-"""Summarizer factory with intelligent fallback logic."""
+"""Provider factory with intelligent fallback logic."""
 import os
 from typing import Optional, Dict, List, TYPE_CHECKING, Any
 
@@ -7,8 +7,8 @@ import structlog
 from reconly_core.resilience.config import RetryConfig
 from reconly_core.resilience.errors import ErrorCategory
 from reconly_core.resilience.retry import retry_with_result
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import get_provider, list_providers, is_provider_registered
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import get_provider, list_providers, is_provider_registered
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -16,10 +16,10 @@ if TYPE_CHECKING:
 logger = structlog.get_logger(__name__)
 
 # Import providers to ensure they're registered
-from reconly_core.summarizers.anthropic import AnthropicSummarizer
-from reconly_core.summarizers.huggingface import HuggingFaceSummarizer
-from reconly_core.summarizers.ollama import OllamaSummarizer
-from reconly_core.summarizers.openai_provider import OpenAISummarizer
+from reconly_core.providers.anthropic import AnthropicProvider
+from reconly_core.providers.huggingface import HuggingFaceProvider
+from reconly_core.providers.ollama import OllamaProvider
+from reconly_core.providers.openai_provider import OpenAIProvider
 
 
 class SummarizerWithFallback:
@@ -34,8 +34,8 @@ class SummarizerWithFallback:
 
     def __init__(
         self,
-        primary_summarizer: BaseSummarizer,
-        fallback_chain: List[BaseSummarizer],
+        primary_summarizer: BaseProvider,
+        fallback_chain: List[BaseProvider],
         retry_config: Optional[RetryConfig] = None,
     ):
         """
@@ -53,7 +53,7 @@ class SummarizerWithFallback:
 
     def _attempt_summarize(
         self,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         content_data: Dict[str, str],
         language: str,
         system_prompt: Optional[str],
@@ -227,7 +227,7 @@ class SummarizerWithFallback:
 def _build_intelligent_fallback_chain(
     primary_provider: str,
     exclude_model: Optional[str] = None
-) -> List[BaseSummarizer]:
+) -> List[BaseProvider]:
     """
     Build intelligent fallback chain prioritizing local/free providers over paid ones.
 
@@ -386,7 +386,7 @@ def get_summarizer(
     model: Optional[str] = None,
     enable_fallback: bool = True,
     db: Optional["Session"] = None
-) -> BaseSummarizer:
+) -> BaseProvider:
     """
     Get a summarizer instance with optional intelligent fallback chain.
 
@@ -404,7 +404,7 @@ def get_summarizer(
         db: Optional database session for reading settings from DB
 
     Returns:
-        BaseSummarizer instance (possibly with fallback wrapper)
+        BaseProvider instance (possibly with fallback wrapper)
     """
     # Get provider from settings (DB > env > default)
     if provider is None:
@@ -487,16 +487,16 @@ def list_available_models() -> Dict[str, List[str]]:
         try:
             # Special handling for providers with known model lists
             if provider_name == 'huggingface':
-                models[provider_name] = list(HuggingFaceSummarizer.AVAILABLE_MODELS.keys())
+                models[provider_name] = list(HuggingFaceProvider.AVAILABLE_MODELS.keys())
             elif provider_name == 'anthropic':
                 # Use dynamic list_models() which fetches from API with fallback
-                models[provider_name] = [m.id for m in AnthropicSummarizer.list_models()]
+                models[provider_name] = [m.id for m in AnthropicProvider.list_models()]
             elif provider_name == 'openai':
-                models[provider_name] = list(OpenAISummarizer.MODEL_PRICING.keys())
+                models[provider_name] = list(OpenAIProvider.MODEL_PRICING.keys())
             elif provider_name == 'ollama':
                 # Try to fetch available models from Ollama server
                 try:
-                    ollama_instance = OllamaSummarizer()
+                    ollama_instance = OllamaProvider()
                     available = ollama_instance._fetch_available_models()
                     models[provider_name] = available if available else ['llama3.2', 'mistral', 'gemma2']
                 except:
