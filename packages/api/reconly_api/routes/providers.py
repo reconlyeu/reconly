@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 # Default fallback chain (local-first)
 DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 
-# Ollama URL is configurable via environment variable
+# Local provider URLs are configurable via environment variables
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+LMSTUDIO_BASE_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
 
 
 def _mask_api_key(api_key: Optional[str], provider_name: str) -> Optional[str]:
@@ -127,6 +128,14 @@ async def _check_local_provider_availability(provider_name: str) -> bool:
                 return response.status_code == 200
         except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
             logger.debug(f"Ollama check failed: {e}")
+            return False
+    elif provider_name == 'lmstudio':
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{LMSTUDIO_BASE_URL}/models", timeout=2.0)
+                return response.status_code == 200
+        except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
+            logger.debug(f"LMStudio check failed: {e}")
             return False
     return False
 

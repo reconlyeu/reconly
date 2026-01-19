@@ -56,9 +56,19 @@ const statusConfig = computed(() => {
   return configs[props.provider.status] || configs.unavailable;
 });
 
+// Provider name to display name mapping
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  ollama: 'Ollama',
+  lmstudio: 'LM Studio',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  huggingface: 'HuggingFace',
+};
+
 // Get display name for provider
 const displayName = computed(() => {
-  return props.provider.name.charAt(0).toUpperCase() + props.provider.name.slice(1);
+  return PROVIDER_DISPLAY_NAMES[props.provider.name] ||
+    props.provider.name.charAt(0).toUpperCase() + props.provider.name.slice(1);
 });
 
 // Get current model - prefer configured model, then provider default
