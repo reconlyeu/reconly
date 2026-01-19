@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
 from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.metadata import ProviderMetadata
 from reconly_core.providers.registry import register_provider
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
@@ -15,6 +16,21 @@ class OllamaProvider(BaseProvider):
 
     # Human-readable description for UI
     description = "Local LLM via Ollama server"
+
+    # Provider metadata
+    metadata = ProviderMetadata(
+        name='ollama',
+        display_name='Ollama',
+        description='Local LLM via Ollama server',
+        icon='simple-icons:ollama',
+        is_local=True,
+        requires_api_key=False,
+        base_url_env_var='OLLAMA_BASE_URL',
+        base_url_default='http://localhost:11434',
+        timeout_env_var='PROVIDER_TIMEOUT_OLLAMA',
+        timeout_default=300,
+        availability_endpoint='/api/tags',
+    )
 
     # Default timeout for local Ollama models (longer since they run locally)
     DEFAULT_TIMEOUT = 900  # 15 minutes

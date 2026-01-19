@@ -449,25 +449,26 @@ async def export_digests_to_path(
                 detail=f"Format '{request.format}' does not support direct file export"
             )
 
-        # Determine target path
+        # Get path setting key from exporter metadata (for settings lookup and error messages)
+        try:
+            metadata = exporter.get_metadata()
+            path_setting_key = metadata.path_setting_key
+        except (AttributeError, NotImplementedError):
+            # Fallback: use 'export_path' as default
+            path_setting_key = 'export_path'
+
+        # Determine target path using exporter metadata
         target_path = request.path
         if not target_path:
-            # Try to get from settings - different exporters use different key names
             from reconly_core.services.settings_service import SettingsService
             settings_service = SettingsService(db)
-
-            # Obsidian uses vault_path, others use export_path
-            if request.format == "obsidian":
-                target_path = settings_service.get(f"export.{request.format}.vault_path")
-            else:
-                target_path = settings_service.get(f"export.{request.format}.export_path")
+            target_path = settings_service.get(f"export.{request.format}.{path_setting_key}")
 
         if not target_path:
-            path_setting = "vault_path" if request.format == "obsidian" else "export_path"
             raise HTTPException(
                 status_code=400,
                 detail=f"No target path provided and no default path configured. "
-                       f"Set path in request or configure export.{request.format}.{path_setting} in settings."
+                       f"Set path in request or configure export.{request.format}.{path_setting_key} in settings."
             )
 
         # Validate path

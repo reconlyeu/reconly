@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconly_api.schemas.common import ConfigFieldResponse
+from reconly_api.schemas.components import FetcherMetadataResponse
 
 
 class FetcherConfigSchemaResponse(BaseModel):
@@ -30,6 +31,10 @@ class FetcherResponse(BaseModel):
         None,
         description="List of OAuth providers supported by this fetcher (e.g., ['gmail', 'outlook'])"
     )
+    # Metadata
+    metadata: Optional[FetcherMetadataResponse] = Field(
+        default=None, description="Fetcher metadata including display name, icon, capabilities, etc."
+    )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -42,7 +47,19 @@ class FetcherResponse(BaseModel):
             "is_configured": True,
             "can_enable": True,
             "is_extension": False,
-            "oauth_providers": None
+            "oauth_providers": None,
+            "metadata": {
+                "name": "rss",
+                "display_name": "RSS Feed",
+                "description": "Fetch content from RSS/Atom feeds",
+                "icon": "mdi:rss",
+                "url_schemes": ["http", "https"],
+                "supports_oauth": False,
+                "oauth_providers": [],
+                "supports_incremental": True,
+                "supports_validation": True,
+                "supports_test_fetch": True
+            }
         }
     })
 

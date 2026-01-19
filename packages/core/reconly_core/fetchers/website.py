@@ -7,12 +7,24 @@ import requests
 from bs4 import BeautifulSoup
 
 from reconly_core.fetchers.base import BaseFetcher, ValidationResult
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 
 @register_fetcher('website')
 class WebsiteFetcher(BaseFetcher):
     """Fetches and extracts content from websites."""
+
+    metadata = FetcherMetadata(
+        name='website',
+        display_name='Website',
+        description='Scrape content from web pages',
+        icon='mdi:web',
+        url_schemes=['http', 'https'],
+        supports_incremental=False,
+        supports_validation=True,
+        supports_test_fetch=True,
+    )
 
     def __init__(self, timeout: int = 10):
         self.timeout = timeout

@@ -3,6 +3,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconly_api.schemas.common import ConfigFieldResponse
+from reconly_api.schemas.components import ExporterMetadataResponse
 
 
 class ExporterConfigSchemaResponse(BaseModel):
@@ -29,6 +30,10 @@ class ExporterResponse(BaseModel):
     can_enable: bool = Field(default=True, description="Whether exporter can be enabled")
     # Extension flag
     is_extension: bool = Field(default=False, description="Whether this is an external extension")
+    # Metadata
+    metadata: Optional[ExporterMetadataResponse] = Field(
+        default=None, description="Exporter metadata including display name, icon, etc."
+    )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -53,7 +58,16 @@ class ExporterResponse(BaseModel):
             },
             "enabled": False,
             "is_configured": False,
-            "can_enable": False
+            "can_enable": False,
+            "metadata": {
+                "name": "obsidian",
+                "display_name": "Obsidian",
+                "description": "Export digests to Obsidian vault with frontmatter",
+                "icon": "simple-icons:obsidian",
+                "file_extension": ".md",
+                "mime_type": "text/markdown",
+                "ui_color": "#7C3AED"
+            }
         }
     })
 

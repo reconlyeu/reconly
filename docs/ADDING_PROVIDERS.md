@@ -27,16 +27,30 @@ from typing import Dict, List
 from reconly_core.summarizers.base import BaseSummarizer
 from reconly_core.summarizers.registry import register_provider
 from reconly_core.summarizers.capabilities import ProviderCapabilities
+from reconly_core.providers.metadata import ProviderMetadata
 
 
 @register_provider('my-provider')  # <-- Register your provider
 class MyProviderSummarizer(BaseSummarizer):
     """Summarizes content using My Custom Provider."""
 
+    # Provider metadata (required)
+    metadata = ProviderMetadata(
+        name='my-provider',
+        display_name='My Provider',
+        description='Cloud LLM via My Provider API',
+        icon='simple-icons:myprovider',  # Iconify format
+        is_local=False,
+        requires_api_key=True,
+        api_key_env_var='MY_PROVIDER_API_KEY',
+        api_key_prefix='mp-',  # For API key masking
+        timeout_default=120,
+    )
+
     def __init__(self, api_key: str = None):
         """Initialize the provider."""
         super().__init__(api_key)
-        self.api_key = api_key or os.getenv('MY_PROVIDER_API_KEY')
+        self.api_key = api_key or self.metadata.get_api_key()
 
         if not self.api_key:
             raise ValueError(
@@ -184,6 +198,79 @@ def validate_config(self) -> List[str]:
 
     return errors  # Empty list means valid configuration
 ```
+
+### 2.5 Define Provider Metadata
+
+Every provider **must** define a `metadata` class variable of type `ProviderMetadata`. This metadata enables:
+
+- **Dynamic UI rendering** - Frontend displays provider names and icons from API
+- **Metadata-driven initialization** - Factory uses metadata for API keys and base URLs
+- **Generic availability checks** - Local providers checked using `availability_endpoint`
+
+```python
+from reconly_core.providers.metadata import ProviderMetadata
+
+class MyProviderSummarizer(BaseSummarizer):
+    metadata = ProviderMetadata(
+        name='my-provider',           # Must match @register_provider name
+        display_name='My Provider',   # Human-readable name for UI
+        description='Cloud LLM via My Provider API',
+        icon='simple-icons:myprovider',  # Iconify format
+
+        # API Key configuration
+        is_local=False,               # True for local providers (Ollama, LMStudio)
+        requires_api_key=True,        # Whether API key is needed
+        api_key_env_var='MY_PROVIDER_API_KEY',  # Environment variable name
+        api_key_prefix='mp-',         # Prefix for masking (e.g., "mp-***xyz")
+
+        # Base URL configuration (for local/self-hosted providers)
+        base_url_env_var=None,        # Environment variable for custom URL
+        base_url_default=None,        # Default URL (e.g., 'http://localhost:11434')
+
+        # Timeout configuration
+        timeout_env_var='PROVIDER_TIMEOUT_MY_PROVIDER',
+        timeout_default=120,          # Default timeout in seconds
+
+        # Availability check (for local providers)
+        availability_endpoint=None,   # e.g., '/api/tags' for Ollama
+    )
+```
+
+#### Metadata Fields Reference
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Internal identifier, must match `@register_provider` name |
+| `display_name` | Yes | Human-readable name for UI display |
+| `description` | Yes | Short description for tooltips/help |
+| `icon` | No | Iconify icon identifier (e.g., `simple-icons:openai`) |
+| `is_local` | No | `True` for local providers, `False` for cloud APIs |
+| `requires_api_key` | No | Whether the provider needs an API key |
+| `api_key_env_var` | No | Environment variable for API key |
+| `api_key_prefix` | No | Key prefix for masking (e.g., `sk-` for OpenAI) |
+| `base_url_env_var` | No | Environment variable for custom base URL |
+| `base_url_default` | No | Default base URL for local providers |
+| `timeout_env_var` | No | Environment variable for timeout |
+| `timeout_default` | No | Default timeout in seconds |
+| `availability_endpoint` | No | Endpoint path for availability checks |
+
+#### Using Metadata Helper Methods
+
+The metadata object provides helper methods for configuration:
+
+```python
+def __init__(self, api_key: str = None, base_url: str = None):
+    # Get API key from parameter or environment
+    self.api_key = api_key or self.metadata.get_api_key()
+
+    # Get base URL from parameter, environment, or default
+    self.base_url = base_url or self.metadata.get_base_url()
+
+    # Get timeout from environment or default
+    self.timeout = self.metadata.get_timeout()
+```
+
+For more details on the metadata system, see [Component Metadata Architecture](architecture/component-metadata.md).
 
 ### 3. Create Tests
 

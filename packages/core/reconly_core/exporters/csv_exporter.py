@@ -12,6 +12,7 @@ from reconly_core.exporters.base import (
     ExportResult,
     ExportToPathResult,
 )
+from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import register_exporter
 
 
@@ -32,6 +33,17 @@ class CSVExporter(BaseExporter):
     Exports digests to comma-separated values format with headers.
     Supports direct export to filesystem.
     """
+
+    metadata = ExporterMetadata(
+        name='csv',
+        display_name='CSV',
+        description='Export digests as CSV spreadsheet',
+        icon='mdi:file-delimited',
+        file_extension='.csv',
+        mime_type='text/csv',
+        path_setting_key='export_path',
+        ui_color='#22A74E',  # Spreadsheet green
+    )
 
     def export(
         self,

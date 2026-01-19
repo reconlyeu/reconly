@@ -25,6 +25,7 @@ from reconly_core.email import (
     IMAPError,
 )
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 logger = logging.getLogger(__name__)
@@ -111,6 +112,19 @@ class IMAPFetcher(BaseFetcher):
         ...     imap_folders=["INBOX"],
         ... )
     """
+
+    metadata = FetcherMetadata(
+        name='imap',
+        display_name='Email (IMAP)',
+        description='Fetch emails via IMAP protocol',
+        icon='mdi:email',
+        url_schemes=['imap', 'imaps'],
+        supports_oauth=True,
+        oauth_providers=['gmail', 'outlook'],
+        supports_incremental=True,
+        supports_validation=True,
+        supports_test_fetch=True,
+    )
 
     def __init__(self):
         pass

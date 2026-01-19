@@ -235,12 +235,16 @@ def _instantiate_provider(
     model: Optional[str] = None,
 ) -> BaseProvider:
     """
-    Instantiate a provider using provider-specific settings.
+    Instantiate a provider using provider metadata for configuration.
 
-    Reads configuration from:
-    - llm.{provider}.model - Default model for the provider
-    - llm.{provider}.base_url - Base URL (for providers like Ollama)
-    - Environment variables for API keys
+    Uses ProviderMetadata to determine:
+    - API key environment variable (metadata.get_api_key())
+    - Base URL configuration (metadata.get_base_url())
+    - Timeout settings (metadata.get_timeout())
+
+    Also reads from settings service:
+    - provider.{name}.model - Default model override
+    - provider.{name}.base_url - Base URL override
 
     Args:
         provider_name: Name of the provider (e.g., 'ollama', 'openai')
@@ -265,6 +269,13 @@ def _instantiate_provider(
     # Get provider class from registry
     provider_class = get_provider(provider_name)
 
+    # Get provider metadata for configuration
+    try:
+        metadata = provider_class.get_metadata()
+    except (AttributeError, NotImplementedError):
+        # Fallback for providers without metadata - use legacy behavior
+        metadata = None
+
     # Read provider-specific model from settings if not overridden
     if model is None:
         model = _get_setting_with_db_fallback(
@@ -274,58 +285,100 @@ def _instantiate_provider(
             default=None,
         )
 
-    # Get API key from environment if not provided
+    # Get API key using metadata or fallback to legacy method
     if api_key is None:
-        api_key = _get_api_key_for_provider(provider_name)
+        if metadata:
+            api_key = metadata.get_api_key()
+        else:
+            api_key = _get_api_key_for_provider(provider_name)
 
-    # Initialize provider based on type
-    if provider_name == 'huggingface':
-        return provider_class(api_key=api_key, model=model or 'glm-4')
-    elif provider_name == 'anthropic':
-        return provider_class(api_key=api_key)
-    elif provider_name == 'openai':
-        return provider_class(api_key=api_key)
-    elif provider_name == 'ollama':
-        # Ollama doesn't need API key, but may have custom base_url
-        base_url = _get_setting_with_db_fallback(
-            f"provider.{provider_name}.base_url",
-            db=db,
-            env_var="OLLAMA_BASE_URL",
-            default=None,
-        )
-        try:
-            return provider_class(api_key=None, model=model, base_url=base_url)
-        except TypeError:
-            # Some versions may not accept base_url
-            return provider_class(api_key=None, model=model)
-    elif provider_name == 'lmstudio':
-        # LMStudio doesn't need API key, but may have custom base_url
-        base_url = _get_setting_with_db_fallback(
-            f"provider.{provider_name}.base_url",
-            db=db,
-            env_var="LMSTUDIO_BASE_URL",
-            default=None,
-        )
-        try:
-            return provider_class(api_key=None, model=model, base_url=base_url)
-        except TypeError:
-            # Some versions may not accept base_url
-            return provider_class(api_key=None, model=model)
+    # Build initialization kwargs based on metadata
+    init_kwargs: Dict[str, Any] = {}
+
+    # Add API key if provider requires it
+    if metadata:
+        if metadata.requires_api_key or api_key:
+            init_kwargs['api_key'] = api_key
+        else:
+            init_kwargs['api_key'] = None
     else:
-        # Generic provider initialization
+        init_kwargs['api_key'] = api_key
+
+    # Add model if provided
+    if model:
+        init_kwargs['model'] = model
+
+    # Handle base_url for local providers or providers with configurable endpoints
+    if metadata and metadata.base_url_env_var:
+        # Get base_url from settings first, then fallback to metadata
+        base_url = _get_setting_with_db_fallback(
+            f"provider.{provider_name}.base_url",
+            db=db,
+            env_var=metadata.base_url_env_var,
+            default=metadata.base_url_default,
+        )
+        if base_url:
+            init_kwargs['base_url'] = base_url
+
+    # Handle timeout from metadata
+    if metadata:
+        timeout = metadata.get_timeout()
+        if timeout != metadata.timeout_default:  # Only pass if customized via env
+            init_kwargs['timeout'] = timeout
+
+    # Instantiate provider with kwargs
+    try:
+        return provider_class(**init_kwargs)
+    except TypeError as e:
+        # Handle providers that don't accept all kwargs
+        # Try progressively simpler initializations
+        logger.debug(
+            "provider_init_fallback",
+            provider=provider_name,
+            error=str(e),
+            kwargs=list(init_kwargs.keys()),
+        )
+
+        # Try without timeout
+        if 'timeout' in init_kwargs:
+            del init_kwargs['timeout']
+            try:
+                return provider_class(**init_kwargs)
+            except TypeError:
+                pass
+
+        # Try without base_url
+        if 'base_url' in init_kwargs:
+            del init_kwargs['base_url']
+            try:
+                return provider_class(**init_kwargs)
+            except TypeError:
+                pass
+
+        # Try with just api_key and model
         try:
             return provider_class(api_key=api_key, model=model)
         except TypeError:
-            # Try without model if not supported
-            try:
-                return provider_class(api_key=api_key)
-            except TypeError:
-                return provider_class()
+            pass
+
+        # Try with just api_key
+        try:
+            return provider_class(api_key=api_key)
+        except TypeError:
+            pass
+
+        # Last resort: no arguments
+        return provider_class()
 
 
 def get_api_key_for_provider(provider_name: str) -> Optional[str]:
     """
-    Get API key for a provider from environment variables.
+    Get API key for a provider using provider metadata.
+
+    Uses the provider's metadata.get_api_key() method which reads from the
+    configured environment variable (metadata.api_key_env_var).
+
+    Falls back to a hardcoded map for providers without metadata.
 
     Args:
         provider_name: Name of the provider (e.g., 'openai', 'anthropic', 'huggingface')
@@ -333,6 +386,16 @@ def get_api_key_for_provider(provider_name: str) -> Optional[str]:
     Returns:
         API key if found, None otherwise
     """
+    # Try to get API key from provider metadata
+    if is_provider_registered(provider_name):
+        try:
+            provider_class = get_provider(provider_name)
+            metadata = provider_class.get_metadata()
+            return metadata.get_api_key()
+        except (AttributeError, NotImplementedError):
+            pass
+
+    # Fallback: hardcoded map for providers without metadata
     env_var_map = {
         'anthropic': 'ANTHROPIC_API_KEY',
         'openai': 'OPENAI_API_KEY',
@@ -388,7 +451,7 @@ def _get_setting_with_db_fallback(
 
 
 def get_summarizer(
-    provider: str = None,
+    provider: Optional[str] = None,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
     enable_fallback: bool = True,

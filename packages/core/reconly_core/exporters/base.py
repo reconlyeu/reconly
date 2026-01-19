@@ -5,9 +5,12 @@ Exporters transform Digest objects into various output formats (JSON, CSV, Markd
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Union
 
 from reconly_core.config_types import ConfigField, ComponentConfigSchema
+
+if TYPE_CHECKING:
+    from reconly_core.exporters.metadata import ExporterMetadata
 
 
 # Re-export ConfigField for backwards compatibility
@@ -68,13 +71,41 @@ class BaseExporter(ABC):
     Subclasses must implement all abstract methods to provide format-specific
     export functionality.
 
+    Class Attributes:
+        metadata: ExporterMetadata instance with exporter configuration metadata.
+                  Subclasses must define this class variable.
+
     Example:
         >>> @register_exporter('json')
         >>> class JSONExporter(BaseExporter):
+        >>>     metadata = ExporterMetadata(
+        >>>         name='json',
+        >>>         display_name='JSON',
+        >>>         description='Export digests as JSON files',
+        >>>     )
         >>>     def export(self, digests, config=None):
         >>>         # Export logic here
         >>>         return ExportResult(...)
     """
+
+    # Exporter metadata (subclasses must override)
+    metadata: ClassVar["ExporterMetadata"]
+
+    @classmethod
+    def get_metadata(cls) -> "ExporterMetadata":
+        """Get the exporter metadata.
+
+        Returns:
+            ExporterMetadata instance with configuration and display information.
+
+        Raises:
+            NotImplementedError: If subclass hasn't defined metadata class variable.
+        """
+        if not hasattr(cls, 'metadata') or cls.metadata is None:
+            raise NotImplementedError(
+                f"{cls.__name__} must define a 'metadata' class variable"
+            )
+        return cls.metadata
 
     @abstractmethod
     def export(

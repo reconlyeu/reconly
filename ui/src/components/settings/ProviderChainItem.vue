@@ -56,18 +56,9 @@ const statusConfig = computed(() => {
   return configs[props.provider.status] || configs.unavailable;
 });
 
-// Provider name to display name mapping
-const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
-  ollama: 'Ollama',
-  lmstudio: 'LM Studio',
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  huggingface: 'HuggingFace',
-};
-
-// Get display name for provider
+// Get display name for provider - use metadata if available, fallback to name capitalization
 const displayName = computed(() => {
-  return PROVIDER_DISPLAY_NAMES[props.provider.name] ||
+  return props.provider.metadata?.display_name ||
     props.provider.name.charAt(0).toUpperCase() + props.provider.name.slice(1);
 });
 

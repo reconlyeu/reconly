@@ -1,4 +1,6 @@
 """API routes for exporters."""
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -19,16 +21,42 @@ from reconly_api.schemas.exporters import (
     ExporterResponse,
     ExporterToggleRequest,
 )
+from reconly_api.schemas.components import ExporterMetadataResponse
 
 router = APIRouter(prefix="/exporters", tags=["exporters"])
 
 COMPONENT_TYPE = "export"
 
 
+def _exporter_metadata_to_response(exporter) -> Optional[ExporterMetadataResponse]:
+    """Convert exporter metadata to API response schema.
+
+    Args:
+        exporter: Exporter instance with get_metadata() method
+
+    Returns:
+        ExporterMetadataResponse or None if metadata not available
+    """
+    try:
+        metadata = exporter.get_metadata()
+        return ExporterMetadataResponse(
+            name=metadata.name,
+            display_name=metadata.display_name,
+            description=metadata.description,
+            icon=metadata.icon,
+            file_extension=metadata.file_extension,
+            mime_type=metadata.mime_type,
+            ui_color=metadata.ui_color,
+        )
+    except (AttributeError, NotImplementedError):
+        # Exporter doesn't have get_metadata() or it's not implemented
+        return None
+
+
 def _build_exporter_response(
     name: str,
     settings_service: SettingsService,
-    enabled_override: bool = None,
+    enabled_override: Optional[bool] = None,
 ) -> ExporterResponse:
     """Build an ExporterResponse for a given exporter name.
 
@@ -66,6 +94,7 @@ def _build_exporter_response(
         is_configured=is_configured,
         can_enable=can_enable,
         is_extension=is_exporter_extension(name),
+        metadata=_exporter_metadata_to_response(exporter),
     )
 
 

@@ -8,9 +8,10 @@ Reconly uses a **fetcher registry pattern** that allows new content sources to b
 
 1. Create a new fetcher class inheriting from `BaseFetcher`
 2. Decorate it with `@register_fetcher('source-type')`
-3. Implement required abstract methods
+3. Define the `metadata` class variable
+4. Implement required abstract methods
 
-The fetcher becomes automatically discoverable without touching `factory.py`.
+The fetcher becomes automatically discoverable and the UI renders it dynamically from metadata.
 
 ## Step-by-Step Guide
 
@@ -24,12 +25,25 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from reconly_core.fetchers.base import BaseFetcher
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 
 @register_fetcher('my-source')  # <-- Register your fetcher
 class MySourceFetcher(BaseFetcher):
     """Fetches content from My Custom Source."""
+
+    # Fetcher metadata (required)
+    metadata = FetcherMetadata(
+        name='my-source',
+        display_name='My Custom Source',
+        description='Fetch content from My Custom Source',
+        icon='mdi:source-repository',  # Iconify format
+        url_schemes=['http', 'https'],
+        supports_incremental=True,
+        supports_validation=True,
+        supports_test_fetch=True,
+    )
 
     def __init__(self, timeout: int = 10):
         """Initialize the fetcher."""
@@ -145,7 +159,71 @@ def get_source_type(self) -> str:
     return 'my-source'
 ```
 
-### 3. Optional: Override can_handle()
+### 3. Define Fetcher Metadata
+
+Every fetcher **must** define a `metadata` class variable of type `FetcherMetadata`. This metadata enables:
+
+- **Dynamic UI rendering** - Frontend displays fetcher names and icons from API
+- **Capability-based logic** - Backend uses metadata for feature detection
+- **Zero-code extensions** - New fetchers work without frontend changes
+
+```python
+from reconly_core.fetchers.metadata import FetcherMetadata
+
+class MySourceFetcher(BaseFetcher):
+    metadata = FetcherMetadata(
+        name='my-source',             # Must match @register_fetcher name
+        display_name='My Custom Source',  # Human-readable name for UI
+        description='Fetch content from My Custom Source',
+        icon='mdi:source-repository',  # Iconify format
+
+        # URL handling
+        url_schemes=['http', 'https'],  # Supported URL schemes
+
+        # OAuth configuration (for authenticated sources)
+        supports_oauth=False,           # Whether OAuth is supported
+        oauth_providers=[],             # e.g., ['gmail', 'outlook']
+
+        # Capabilities
+        supports_incremental=True,      # Supports 'since' parameter
+        supports_validation=True,       # Supports validate() method
+        supports_test_fetch=True,       # Supports test fetch during validation
+    )
+```
+
+#### Metadata Fields Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Internal identifier, must match `@register_fetcher` name |
+| `display_name` | `str` | Human-readable name for UI display |
+| `description` | `str` | Short description for tooltips/help |
+| `icon` | `str \| None` | Iconify icon identifier (e.g., `mdi:rss`) |
+| `url_schemes` | `list[str]` | Supported URL schemes (default: `['http', 'https']`) |
+| `supports_oauth` | `bool` | Whether OAuth authentication is supported |
+| `oauth_providers` | `list[str]` | OAuth provider names (e.g., `['gmail']`) |
+| `supports_incremental` | `bool` | Whether delta/incremental fetching is supported |
+| `supports_validation` | `bool` | Whether URL validation is supported |
+| `supports_test_fetch` | `bool` | Whether test fetching during validation is supported |
+
+#### Using Metadata for Capability-Based Logic
+
+Replace type checks with capability queries:
+
+```python
+# Before (hardcoded)
+if source.source_type == 'imap':
+    handle_oauth_flow()
+
+# After (metadata-driven)
+fetcher = get_fetcher(source.source_type)
+if fetcher.metadata.supports_oauth:
+    handle_oauth_flow()
+```
+
+For more details on the metadata system, see [Component Metadata Architecture](architecture/component-metadata.md).
+
+### 4. Optional: Override can_handle()
 
 Enable auto-detection of your source type from URLs:
 

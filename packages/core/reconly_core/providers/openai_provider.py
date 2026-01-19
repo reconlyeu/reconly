@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
 from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.metadata import ProviderMetadata
 from reconly_core.providers.registry import register_provider
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
@@ -15,6 +16,20 @@ class OpenAIProvider(BaseProvider):
 
     # Human-readable description for UI
     description = "OpenAI GPT models (GPT-4, GPT-4o)"
+
+    # Provider metadata
+    metadata = ProviderMetadata(
+        name='openai',
+        display_name='OpenAI',
+        description='OpenAI GPT models (GPT-4, GPT-4o)',
+        icon='simple-icons:openai',
+        is_local=False,
+        requires_api_key=True,
+        api_key_env_var='OPENAI_API_KEY',
+        api_key_prefix='sk-',
+        timeout_env_var='PROVIDER_TIMEOUT_OPENAI',
+        timeout_default=120,
+    )
 
     # Model pricing (per 1M tokens) - OSS stub with zero values
     # Enterprise edition overrides with actual pricing

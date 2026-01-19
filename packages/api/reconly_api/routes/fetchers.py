@@ -1,4 +1,6 @@
 """API routes for fetchers."""
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -19,13 +21,14 @@ from reconly_api.schemas.fetchers import (
     FetcherResponse,
     FetcherToggleRequest,
 )
+from reconly_api.schemas.components import FetcherMetadataResponse
 
 router = APIRouter(prefix="/fetchers", tags=["fetchers"])
 
 COMPONENT_TYPE = "fetch"
 
 
-def _get_oauth_providers_for_fetcher(name: str) -> list[str] | None:
+def _get_oauth_providers_for_fetcher(name: str) -> Optional[list[str]]:
     """Get the list of OAuth providers supported by a fetcher.
 
     Returns:
@@ -37,10 +40,38 @@ def _get_oauth_providers_for_fetcher(name: str) -> list[str] | None:
     return None
 
 
+def _fetcher_metadata_to_response(fetcher) -> Optional[FetcherMetadataResponse]:
+    """Convert fetcher metadata to API response schema.
+
+    Args:
+        fetcher: Fetcher instance with get_metadata() method
+
+    Returns:
+        FetcherMetadataResponse or None if metadata not available
+    """
+    try:
+        metadata = fetcher.get_metadata()
+        return FetcherMetadataResponse(
+            name=metadata.name,
+            display_name=metadata.display_name,
+            description=metadata.description,
+            icon=metadata.icon,
+            url_schemes=metadata.url_schemes,
+            supports_oauth=metadata.supports_oauth,
+            oauth_providers=metadata.oauth_providers,
+            supports_incremental=metadata.supports_incremental,
+            supports_validation=metadata.supports_validation,
+            supports_test_fetch=metadata.supports_test_fetch,
+        )
+    except (AttributeError, NotImplementedError):
+        # Fetcher doesn't have get_metadata() or it's not implemented
+        return None
+
+
 def _build_fetcher_response(
     name: str,
     settings_service: SettingsService,
-    enabled_override: bool = None,
+    enabled_override: Optional[bool] = None,
 ) -> FetcherResponse:
     """Build a FetcherResponse for a given fetcher name.
 
@@ -73,6 +104,7 @@ def _build_fetcher_response(
         can_enable=can_enable,
         is_extension=is_fetcher_extension(name),
         oauth_providers=_get_oauth_providers_for_fetcher(name),
+        metadata=_fetcher_metadata_to_response(fetcher),
     )
 
 

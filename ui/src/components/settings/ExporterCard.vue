@@ -86,7 +86,7 @@ const statusConfig = computed(() => {
   return configs[status.value];
 });
 
-// Get icon based on exporter name/type
+// Get icon based on exporter name/type (keep icon mapping - lucide icons can't be dynamically loaded)
 const ExporterIcon = computed(() => {
   const iconMap: Record<string, typeof FileJson> = {
     json: FileJson,
@@ -97,48 +97,38 @@ const ExporterIcon = computed(() => {
   return iconMap[props.exporter.name] || FileType;
 });
 
-// Get glow color based on exporter type
+// Fallback color mappings for when ui_color is not available
+const fallbackColorMap: Record<string, { glow: string; iconBg: string; icon: string }> = {
+  json: { glow: 'bg-blue-400', iconBg: 'bg-blue-500/10', icon: 'text-blue-400' },
+  csv: { glow: 'bg-green-400', iconBg: 'bg-green-500/10', icon: 'text-green-400' },
+  obsidian: { glow: 'bg-purple-400', iconBg: 'bg-purple-500/10', icon: 'text-purple-400' },
+  markdown: { glow: 'bg-orange-400', iconBg: 'bg-orange-500/10', icon: 'text-orange-400' },
+};
+
+// Get glow color - use metadata ui_color if available, fallback to hardcoded mapping
 const glowColor = computed(() => {
-  const colorMap: Record<string, string> = {
-    json: 'bg-blue-400',
-    csv: 'bg-green-400',
-    obsidian: 'bg-purple-400',
-    markdown: 'bg-orange-400',
-  };
-  return colorMap[props.exporter.name] || 'bg-accent-primary';
+  // If ui_color is available from metadata, we could use it with CSS custom properties
+  // For now, fallback to the hardcoded mapping since Tailwind classes are static
+  const fallback = fallbackColorMap[props.exporter.name];
+  return fallback?.glow || 'bg-accent-primary';
 });
 
 // Get icon background color
 const iconBgColor = computed(() => {
-  const colorMap: Record<string, string> = {
-    json: 'bg-blue-500/10',
-    csv: 'bg-green-500/10',
-    obsidian: 'bg-purple-500/10',
-    markdown: 'bg-orange-500/10',
-  };
-  return colorMap[props.exporter.name] || 'bg-accent-primary/10';
+  const fallback = fallbackColorMap[props.exporter.name];
+  return fallback?.iconBg || 'bg-accent-primary/10';
 });
 
 // Get icon color
 const iconColor = computed(() => {
-  const colorMap: Record<string, string> = {
-    json: 'text-blue-400',
-    csv: 'text-green-400',
-    obsidian: 'text-purple-400',
-    markdown: 'text-orange-400',
-  };
-  return colorMap[props.exporter.name] || 'text-accent-primary';
+  const fallback = fallbackColorMap[props.exporter.name];
+  return fallback?.icon || 'text-accent-primary';
 });
 
-// Get friendly name for exporter
+// Get friendly name for exporter - use metadata if available, fallback to name capitalization
 const displayName = computed(() => {
-  const nameMap: Record<string, string> = {
-    json: 'JSON',
-    csv: 'CSV',
-    obsidian: 'Obsidian Markdown',
-    markdown: 'Markdown',
-  };
-  return nameMap[props.exporter.name] || props.exporter.name.charAt(0).toUpperCase() + props.exporter.name.slice(1);
+  return props.exporter.metadata?.display_name ||
+    props.exporter.name.charAt(0).toUpperCase() + props.exporter.name.slice(1);
 });
 
 // Tooltip for disabled toggle
