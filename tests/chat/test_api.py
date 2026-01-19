@@ -101,11 +101,8 @@ class TestChatCompletionEndpoint:
         tool_calls_data = [
             {
                 "id": "call_123",
-                "type": "function",
-                "function": {
-                    "name": "create_feed",
-                    "arguments": json.dumps({"name": "News"}),
-                },
+                "name": "create_feed",
+                "parameters": {"name": "News"},
             }
         ]
 
