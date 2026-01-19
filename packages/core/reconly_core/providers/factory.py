@@ -21,6 +21,7 @@ DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 # Import providers to ensure they're registered (side-effect imports)
 from reconly_core.providers.anthropic import AnthropicProvider  # noqa: F401
 from reconly_core.providers.huggingface import HuggingFaceProvider  # noqa: F401
+from reconly_core.providers.lmstudio import LMStudioProvider  # noqa: F401
 from reconly_core.providers.ollama import OllamaProvider  # noqa: F401
 from reconly_core.providers.openai_provider import OpenAIProvider  # noqa: F401
 
@@ -290,6 +291,19 @@ def _instantiate_provider(
             f"provider.{provider_name}.base_url",
             db=db,
             env_var="OLLAMA_BASE_URL",
+            default=None,
+        )
+        try:
+            return provider_class(api_key=None, model=model, base_url=base_url)
+        except TypeError:
+            # Some versions may not accept base_url
+            return provider_class(api_key=None, model=model)
+    elif provider_name == 'lmstudio':
+        # LMStudio doesn't need API key, but may have custom base_url
+        base_url = _get_setting_with_db_fallback(
+            f"provider.{provider_name}.base_url",
+            db=db,
+            env_var="LMSTUDIO_BASE_URL",
             default=None,
         )
         try:

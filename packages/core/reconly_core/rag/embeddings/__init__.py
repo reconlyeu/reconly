@@ -12,6 +12,7 @@ Providers:
     - ollama: Local embedding via Ollama server (default)
     - openai: OpenAI embedding API (text-embedding-3-small/large)
     - huggingface: HuggingFace Inference API
+    - lmstudio: Local embedding via LMStudio's OpenAI-compatible API
 """
 import os
 from typing import Optional, TYPE_CHECKING
@@ -24,6 +25,7 @@ from reconly_core.rag.embeddings.base import (
 from reconly_core.rag.embeddings.ollama import OllamaEmbedding, OLLAMA_EMBEDDING_MODELS
 from reconly_core.rag.embeddings.openai import OpenAIEmbedding, OPENAI_EMBEDDING_MODELS
 from reconly_core.rag.embeddings.huggingface import HuggingFaceEmbedding, HUGGINGFACE_EMBEDDING_MODELS
+from reconly_core.rag.embeddings.lmstudio import LMStudioEmbedding, LMSTUDIO_EMBEDDING_MODELS
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
@@ -34,6 +36,7 @@ _EMBEDDING_PROVIDERS = {
     'ollama': OllamaEmbedding,
     'openai': OpenAIEmbedding,
     'huggingface': HuggingFaceEmbedding,
+    'lmstudio': LMStudioEmbedding,
 }
 
 # Default provider
@@ -167,6 +170,13 @@ def get_embedding_provider(
             timeout=kwargs.get('timeout', 60),
         )
 
+    elif provider == 'lmstudio':
+        return provider_class(
+            model=model,
+            base_url=kwargs.get('base_url'),
+            timeout=kwargs.get('timeout', 120),
+        )
+
     else:
         # Generic initialization
         return provider_class(api_key=api_key, **kwargs)
@@ -233,6 +243,7 @@ def get_embedding_dimension(
         'ollama': (OLLAMA_EMBEDDING_MODELS, 'bge-m3', 1024),
         'openai': (OPENAI_EMBEDDING_MODELS, 'text-embedding-3-small', 1536),
         'huggingface': (HUGGINGFACE_EMBEDDING_MODELS, 'BAAI/bge-m3', 1024),
+        'lmstudio': (LMSTUDIO_EMBEDDING_MODELS, 'nomic-embed-text', 768),
     }
 
     config = provider_configs.get(provider)
@@ -258,4 +269,5 @@ __all__ = [
     'OllamaEmbedding',
     'OpenAIEmbedding',
     'HuggingFaceEmbedding',
+    'LMStudioEmbedding',
 ]
