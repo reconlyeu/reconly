@@ -8,9 +8,10 @@ Reconly uses an **exporter registry pattern** that allows new export formats to 
 
 1. Create a new exporter class inheriting from `BaseExporter`
 2. Decorate it with `@register_exporter('format-name')`
-3. Implement required abstract methods
+3. Define the `metadata` class variable
+4. Implement required abstract methods
 
-The exporter becomes automatically discoverable without touching `factory.py`.
+The exporter becomes automatically discoverable and the UI renders it dynamically from metadata.
 
 ## Step-by-Step Guide
 
@@ -23,12 +24,25 @@ Create a new file in `packages/core/reconly_core/exporters/`:
 from typing import Any, Dict, List
 
 from reconly_core.exporters.base import BaseExporter, ExportResult
+from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import register_exporter
 
 
 @register_exporter('my-format')  # <-- Register your exporter
 class MyFormatExporter(BaseExporter):
     """Export digests in My Custom Format."""
+
+    # Exporter metadata (required)
+    metadata = ExporterMetadata(
+        name='my-format',
+        display_name='My Format',
+        description='Export digests to My Custom Format',
+        icon='mdi:file-document-outline',  # Iconify format
+        file_extension='.txt',
+        mime_type='text/plain',
+        path_setting_key='export_path',
+        ui_color='#3B82F6',
+    )
 
     def export(
         self,
@@ -132,7 +146,68 @@ def get_file_extension(self) -> str:
     return 'json'  # or 'csv', 'md', etc.
 ```
 
-### 3. Optional: Override get_description()
+### 3. Define Exporter Metadata
+
+Every exporter **must** define a `metadata` class variable of type `ExporterMetadata`. This metadata enables:
+
+- **Dynamic UI rendering** - Frontend displays exporter names, icons, and colors from API
+- **File handling** - System uses metadata for file extensions and MIME types
+- **Zero-code extensions** - New exporters work without frontend changes
+
+```python
+from reconly_core.exporters.metadata import ExporterMetadata
+
+class MyFormatExporter(BaseExporter):
+    metadata = ExporterMetadata(
+        name='my-format',             # Must match @register_exporter name
+        display_name='My Format',     # Human-readable name for UI
+        description='Export digests to My Custom Format',
+        icon='mdi:file-document-outline',  # Iconify format
+
+        # File handling
+        file_extension='.txt',        # File extension (with dot)
+        mime_type='text/plain',       # MIME type for HTTP responses
+
+        # Configuration
+        path_setting_key='export_path',  # Setting key for export path
+
+        # UI theming
+        ui_color='#3B82F6',           # Hex color for UI elements
+    )
+```
+
+#### Metadata Fields Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Internal identifier, must match `@register_exporter` name |
+| `display_name` | `str` | Human-readable name for UI display |
+| `description` | `str` | Short description for tooltips/help |
+| `icon` | `str \| None` | Iconify icon identifier (e.g., `mdi:code-json`) |
+| `file_extension` | `str` | File extension including dot (e.g., `.json`, `.md`) |
+| `mime_type` | `str` | MIME type for HTTP responses |
+| `path_setting_key` | `str` | Setting key for export path (default: `'export_path'`) |
+| `ui_color` | `str \| None` | Hex color for UI theming (e.g., `'#7C3AED'`) |
+
+#### Special Export Path Handling
+
+The `path_setting_key` field is used to identify which configuration field contains the export destination. For example:
+
+- Standard exporters use `'export_path'`
+- Obsidian exporter uses `'vault_path'`
+
+This enables the backend to use the correct setting when exporting files:
+
+```python
+# In export logic
+exporter = get_exporter('obsidian')
+path_key = exporter.metadata.path_setting_key  # 'vault_path'
+export_path = settings.get(f'export.obsidian.{path_key}')
+```
+
+For more details on the metadata system, see [Component Metadata Architecture](architecture/component-metadata.md).
+
+### 4. Optional: Override get_description()
 
 Provide a human-readable description:
 
