@@ -1,9 +1,7 @@
 """Tests for ModelInfo and ModelCache."""
-import pytest
-from datetime import datetime, timedelta
 
-from reconly_core.summarizers.capabilities import ModelInfo, ProviderCapabilities
-from reconly_core.summarizers.cache import ModelCache, get_model_cache
+from reconly_core.providers.capabilities import ModelInfo
+from reconly_core.providers.cache import ModelCache, get_model_cache
 
 
 class TestModelInfo:
@@ -64,7 +62,7 @@ class TestModelCache:
             ModelInfo(id='m2', name='Model 2', provider='test'),
         ]
         cache.set('test', models)
-        
+
         result = cache.get('test')
         assert result is not None
         assert len(result) == 2
@@ -82,9 +80,9 @@ class TestModelCache:
         cache = ModelCache()
         cache.set('p1', [ModelInfo(id='m1', name='M1', provider='p1')])
         cache.set('p2', [ModelInfo(id='m2', name='M2', provider='p2')])
-        
+
         cache.invalidate('p1')
-        
+
         assert cache.get('p1') is None
         assert cache.get('p2') is not None
 
@@ -93,19 +91,19 @@ class TestModelCache:
         cache = ModelCache()
         cache.set('p1', [ModelInfo(id='m1', name='M1', provider='p1')])
         cache.set('p2', [ModelInfo(id='m2', name='M2', provider='p2')])
-        
+
         cache.invalidate()
-        
+
         assert cache.get('p1') is None
         assert cache.get('p2') is None
 
     def test_is_expired(self):
         """Test expiration checking."""
         cache = ModelCache(ttl_seconds=3600)
-        
+
         # Not in cache = expired
         assert cache.is_expired('missing') is True
-        
+
         # In cache and fresh = not expired
         cache.set('fresh', [ModelInfo(id='m', name='M', provider='t')])
         assert cache.is_expired('fresh') is False

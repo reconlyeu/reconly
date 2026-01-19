@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { strings } from '@/i18n/en';
-import ProviderStatus from './ProviderStatus.vue';
+import ProviderChain from './ProviderChain.vue';
 import EmailSettings from './EmailSettings.vue';
 import ExportSettings from './ExportSettings.vue';
 import FetcherSettings from './FetcherSettings.vue';
@@ -20,6 +20,7 @@ const switchTab = (tab: SettingsTab) => {
 watch(pendingNavigation, (target) => {
   if (target) {
     activeTab.value = target.tab;
+    consumeNavigation();
   }
 }, { immediate: true });
 
@@ -68,7 +69,7 @@ const tabs = [
 
       <!-- Providers Tab -->
       <div v-if="activeTab === 'providers'">
-        <ProviderStatus />
+        <ProviderChain />
       </div>
 
       <!-- Exports Tab -->

@@ -168,7 +168,7 @@ class TestAgentFullFlow:
         mock_settings.validate = MagicMock()  # Skip validation
 
         with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_get_summarizer, \
+             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
             # Setup mocks - use AsyncMock for async run() method
@@ -314,7 +314,7 @@ class TestAgentErrorHandling:
         mock_settings.validate = MagicMock()
 
         with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_get_summarizer, \
+             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
             # Setup mock to raise an exception during search
@@ -347,7 +347,7 @@ class TestAgentErrorHandling:
         mock_settings.validate = MagicMock()
 
         with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_get_summarizer, \
+             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
             # Setup mock to simulate timeout
@@ -368,7 +368,6 @@ class TestAgentErrorHandling:
 
     def test_partial_results_on_error(self, db_session, agent_source):
         """Test that agent can return partial results if error occurs mid-execution."""
-        from reconly_core.agents.research import ResearchAgent
 
         # This tests the _timeout_result functionality
         partial_result = AgentResult(
@@ -424,7 +423,7 @@ class TestAgentMaxIterations:
             return mock_run(prompt)
 
         with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_get_summarizer, \
+             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
             mock_agent_instance = MagicMock()

@@ -1,7 +1,6 @@
 """Tests for authentication API routes and middleware."""
 import base64
 import pytest
-from unittest.mock import patch
 
 from reconly_api.auth.password import (
     timing_safe_compare,

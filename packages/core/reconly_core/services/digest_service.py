@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from reconly_core.fetchers.website import WebsiteFetcher
 from reconly_core.fetchers.youtube import YouTubeFetcher
 from reconly_core.fetchers.rss import RSSFetcher
-from reconly_core.summarizers import get_summarizer
-from reconly_core.summarizers.base import BaseSummarizer
+from reconly_core.providers import get_summarizer
+from reconly_core.providers.base import BaseProvider
 from reconly_core.tracking import FeedTracker
 from reconly_core.database import DigestDB
 
@@ -77,7 +77,7 @@ class DigestService:
         else:
             return 'website'
 
-    def _get_summarizer(self, options: ProcessOptions) -> BaseSummarizer:
+    def _get_summarizer(self, options: ProcessOptions) -> BaseProvider:
         """
         Get summarizer instance based on options.
 
@@ -192,7 +192,7 @@ class DigestService:
     def _process_website(
         self,
         url: str,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         options: ProcessOptions
     ) -> DigestResult:
         """Process a website URL."""
@@ -231,7 +231,7 @@ class DigestService:
     def _process_youtube(
         self,
         url: str,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         options: ProcessOptions
     ) -> DigestResult:
         """Process a YouTube video or channel URL.
@@ -347,7 +347,7 @@ class DigestService:
     def _process_rss_feed(
         self,
         url: str,
-        summarizer: BaseSummarizer,
+        summarizer: BaseProvider,
         options: ProcessOptions
     ) -> DigestResult:
         """

@@ -17,6 +17,10 @@ os.environ.setdefault(
 # Disable rate limiting during tests by setting a very high limit
 os.environ.setdefault("RATE_LIMIT_PER_MINUTE", "10000")
 
+# Disable auth for tests by setting to empty string (overrides .env file)
+# This must be set BEFORE importing the app since settings are loaded at import time
+os.environ["RECONLY_AUTH_PASSWORD"] = ""
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker

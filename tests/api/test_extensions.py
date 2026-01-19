@@ -2,7 +2,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from reconly_core.extensions.types import ExtensionType, ExtensionMetadata
 from reconly_core.extensions.catalog import Catalog, CatalogEntry
 
 

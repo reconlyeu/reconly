@@ -29,7 +29,7 @@ def _get_rag_service(db: Session):
     """
     from reconly_core.rag import get_embedding_provider
     from reconly_core.rag.rag_service import RAGService
-    from reconly_core.summarizers.factory import get_summarizer
+    from reconly_core.providers.factory import get_summarizer
 
     embedding_provider = get_embedding_provider(db=db)
     summarizer = get_summarizer(db=db, enable_fallback=False)

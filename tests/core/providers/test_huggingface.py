@@ -2,17 +2,17 @@
 import pytest
 from unittest.mock import Mock, patch
 import requests
-from reconly_core.summarizers.huggingface import HuggingFaceSummarizer
-from tests.core.summarizers.base_test_suite import BaseSummarizerTestSuite
+from reconly_core.providers.huggingface import HuggingFaceProvider
+from tests.core.providers.base_test_suite import BaseProviderTestSuite
 
 
-class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
-    """Test suite for HuggingFaceSummarizer (inherits contract tests from BaseSummarizerTestSuite)."""
+class TestHuggingFaceProvider(BaseProviderTestSuite):
+    """Test suite for HuggingFaceProvider (inherits contract tests from BaseProviderTestSuite)."""
 
     @pytest.fixture
     def summarizer(self):
         """Return configured HuggingFace summarizer instance."""
-        return HuggingFaceSummarizer(api_key='test-huggingface-key')
+        return HuggingFaceProvider(api_key='test-huggingface-key')
 
     @pytest.fixture
     def content_data(self):
@@ -30,17 +30,17 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
     def test_initialization_with_env_var(self):
         """WHEN API key is in environment variable
         THEN summarizer initializes successfully."""
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
 
         assert summarizer.api_key == 'test-hf-key'
         # Check that default model is set
-        assert summarizer.model_key == HuggingFaceSummarizer.DEFAULT_MODEL
-        assert summarizer.model == HuggingFaceSummarizer.DEFAULT_MODEL
+        assert summarizer.model_key == HuggingFaceProvider.DEFAULT_MODEL
+        assert summarizer.model == HuggingFaceProvider.DEFAULT_MODEL
 
     def test_initialization_with_explicit_key(self):
         """WHEN API key is passed as parameter
         THEN it takes precedence over environment variable."""
-        summarizer = HuggingFaceSummarizer(api_key='explicit-key')
+        summarizer = HuggingFaceProvider(api_key='explicit-key')
 
         assert summarizer.api_key == 'explicit-key'
 
@@ -49,7 +49,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         """WHEN no API key is provided
         THEN ValueError is raised."""
         with pytest.raises(ValueError) as exc_info:
-            HuggingFaceSummarizer()
+            HuggingFaceProvider()
 
         assert "HuggingFace API key required" in str(exc_info.value)
 
@@ -59,7 +59,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         THEN correct model is selected."""
         # Use a full HuggingFace model path
         test_model = 'Qwen/Qwen2.5-72B-Instruct'
-        summarizer = HuggingFaceSummarizer(model=test_model)
+        summarizer = HuggingFaceProvider(model=test_model)
 
         # With full paths, model_key and model are the same
         assert summarizer.model_key == test_model
@@ -69,7 +69,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
     def test_get_provider_name(self):
         """WHEN get_provider_name is called
         THEN provider name is 'huggingface' (model tracked separately)."""
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         provider_name = summarizer.get_provider_name()
         assert provider_name == 'huggingface'
         # Model is tracked in get_model_info(), not in provider name
@@ -81,12 +81,12 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
     def test_estimate_cost(self):
         """WHEN cost is estimated
         THEN zero cost is returned (free tier)."""
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         cost = summarizer.estimate_cost(1000)
         assert cost == 0.0
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_success(self, mock_post, content_data):
         """WHEN summarization succeeds
         THEN summary is added to content data."""
@@ -99,7 +99,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         }
         mock_post.return_value = mock_response
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         result = summarizer.summarize(content_data, language='en')
 
         assert result['summary'] == 'This is a test summary.'
@@ -108,7 +108,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         assert result['estimated_cost'] == 0.0
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_response_format(self, mock_post, content_data):
         """WHEN API returns response
         THEN generated text is extracted correctly."""
@@ -121,7 +121,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         }
         mock_post.return_value = mock_response
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         result = summarizer.summarize(content_data, language='en')
 
         # Summary should be extracted
@@ -129,8 +129,8 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         assert len(result['summary']) > 0
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
-    @patch('reconly_core.summarizers.huggingface.time.sleep')
+    @patch('reconly_core.providers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.time.sleep')
     def test_summarize_model_loading_retry(self, mock_sleep, mock_post, content_data):
         """WHEN model is loading (503 status)
         THEN request is retried with backoff."""
@@ -148,7 +148,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
 
         mock_post.side_effect = [mock_response_loading, mock_response_success]
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         result = summarizer.summarize(content_data)
 
         assert result['summary'] == 'Summary'
@@ -156,7 +156,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         mock_sleep.assert_called_once()
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_api_error(self, mock_post, content_data):
         """WHEN API returns an error
         THEN exception is raised."""
@@ -165,7 +165,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         mock_response.text = 'Invalid API key'
         mock_post.return_value = mock_response
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
 
         with pytest.raises(Exception) as exc_info:
             summarizer.summarize(content_data)
@@ -173,13 +173,13 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         assert "Failed to generate summary" in str(exc_info.value)
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_timeout(self, mock_post, content_data):
         """WHEN request times out
         THEN exception is raised after retries."""
         mock_post.side_effect = requests.Timeout("Request timeout")
 
-        summarizer = HuggingFaceSummarizer(timeout=5)
+        summarizer = HuggingFaceProvider(timeout=5)
 
         with pytest.raises(Exception) as exc_info:
             summarizer.summarize(content_data)
@@ -190,7 +190,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
     def test_summarize_empty_content(self):
         """WHEN content is empty
         THEN ValueError is raised."""
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
 
         empty_data = {
             'title': 'Empty Article',
@@ -204,7 +204,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         assert "No content to summarize" in str(exc_info.value)
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_with_token_usage(self, mock_post, content_data):
         """WHEN API returns response with token usage
         THEN token counts are extracted correctly."""
@@ -216,7 +216,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         }
         mock_post.return_value = mock_response
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         result = summarizer.summarize(content_data)
 
         assert result['summary'] == 'Summary with tokens'
@@ -224,7 +224,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         assert result['model_info']['output_tokens'] == 75
 
     @patch.dict('os.environ', {'HUGGINGFACE_API_KEY': 'test-key'})
-    @patch('reconly_core.summarizers.huggingface.requests.post')
+    @patch('reconly_core.providers.huggingface.requests.post')
     def test_summarize_truncates_long_content(self, mock_post):
         """WHEN content exceeds maximum length
         THEN content is truncated before sending to API."""
@@ -243,7 +243,7 @@ class TestHuggingFaceSummarizer(BaseSummarizerTestSuite):
         }
         mock_post.return_value = mock_response
 
-        summarizer = HuggingFaceSummarizer()
+        summarizer = HuggingFaceProvider()
         summarizer.summarize(long_data)
 
         # Check that the sent payload uses chat completions format

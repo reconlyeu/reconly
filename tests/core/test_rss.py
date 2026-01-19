@@ -1,5 +1,4 @@
 """Tests for RSS feed fetching."""
-import os
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, patch

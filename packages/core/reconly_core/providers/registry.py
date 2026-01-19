@@ -1,4 +1,4 @@
-"""Provider registry for self-registering summarizers."""
+"""Provider registry for self-registering LLM providers."""
 from __future__ import annotations
 
 import logging
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from reconly_core.config_types import ProviderConfigSchema
     from reconly_core.extensions.types import ExtensionMetadata
-    from reconly_core.summarizers.base import BaseSummarizer
+    from reconly_core.providers.base import BaseProvider
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ProviderRegistryEntry:
     """Entry in the provider registry with extension metadata."""
-    cls: type['BaseSummarizer']
+    cls: type['BaseProvider']
     is_extension: bool = False
     metadata: 'ExtensionMetadata | None' = None
     config_schema: 'ProviderConfigSchema | None' = None
@@ -47,15 +47,15 @@ def register_provider(
 
     Example:
         >>> @register_provider('ollama')
-        >>> class OllamaSummarizer(BaseSummarizer):
+        >>> class OllamaProvider(BaseProvider):
         >>>     ...
     """
-    def decorator(cls: type['BaseSummarizer']) -> type['BaseSummarizer']:
-        from reconly_core.summarizers.base import BaseSummarizer
+    def decorator(cls: type['BaseProvider']) -> type['BaseProvider']:
+        from reconly_core.providers.base import BaseProvider
 
-        if not issubclass(cls, BaseSummarizer):
+        if not issubclass(cls, BaseProvider):
             raise TypeError(
-                f"{cls.__name__} must inherit from BaseSummarizer to be registered as a provider"
+                f"{cls.__name__} must inherit from BaseProvider to be registered as a provider"
             )
 
         if name in _PROVIDER_REGISTRY:
@@ -82,7 +82,7 @@ def register_provider(
 
 
 def _get_provider_config_schema(
-    name: str, cls: type['BaseSummarizer']
+    name: str, cls: type['BaseProvider']
 ) -> 'ProviderConfigSchema | None':
     """Get config schema from provider and register settings.
 
@@ -113,7 +113,7 @@ def _get_provider_config_schema(
         return None
 
 
-def get_provider(name: str) -> type['BaseSummarizer']:
+def get_provider(name: str) -> type['BaseProvider']:
     """
     Get a provider class by name.
 
@@ -128,7 +128,7 @@ def get_provider(name: str) -> type['BaseSummarizer']:
 
     Example:
         >>> OllamaClass = get_provider('ollama')
-        >>> summarizer = OllamaClass(api_key='...')
+        >>> provider = OllamaClass(api_key='...')
     """
     if name not in _PROVIDER_REGISTRY:
         available = list(_PROVIDER_REGISTRY.keys())

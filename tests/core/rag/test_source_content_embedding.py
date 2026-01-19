@@ -267,7 +267,6 @@ class TestSourceContentEmbedding:
         """Test that status is updated to failed on error."""
         # Mock the _embed_with_batching method to raise an error
         # (We need to mock this instead of provider.embed to ensure it happens after chunking)
-        original_embed = embedding_service._embed_with_batching
 
         async def mock_fail(*args, **kwargs):
             raise RuntimeError("Test embedding error")
@@ -592,8 +591,8 @@ class TestEmbedUnembeddedSourceContents:
     ):
         """Test that progress callback is called correctly."""
         # Create source contents
-        sc1 = self.create_source_content(db_session, "item-1")
-        sc2 = self.create_source_content(db_session, "item-2")
+        self.create_source_content(db_session, "item-1")
+        self.create_source_content(db_session, "item-2")
         db_session.commit()
 
         # Track progress

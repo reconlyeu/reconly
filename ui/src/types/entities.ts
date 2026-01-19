@@ -469,7 +469,7 @@ export interface TagBulkDeleteResponse {
 // PROVIDER STATUS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type ProviderStatus = 'available' | 'configured' | 'not_configured';
+export type ProviderStatus = 'available' | 'configured' | 'not_configured' | 'unavailable';
 
 /**
  * Information about an available model from a provider.
@@ -482,20 +482,64 @@ export interface ModelInfo {
   deprecated: boolean;
 }
 
-export interface Provider {
-  name: string;
-  status: ProviderStatus;
-  masked_api_key?: string | null;
-  /** Models can be either ModelInfo objects (new format) or strings (legacy format) */
-  models: ModelInfo[] | string[];
-  is_default: boolean;
+/**
+ * Configuration field type for provider config schema.
+ */
+export type ProviderConfigFieldType = 'string' | 'boolean' | 'integer' | 'path' | 'select';
+
+/**
+ * Configuration field for provider settings.
+ */
+export interface ProviderConfigField {
+  key: string;
+  type: ProviderConfigFieldType;
+  label: string;
+  description: string;
+  default?: unknown;
+  required: boolean;
+  placeholder: string;
+  env_var?: string | null;
+  editable: boolean;
+  secret: boolean;
+  options_from?: string | null;  // e.g., "models" to use models list for select options
 }
 
+/**
+ * Schema describing how to configure a provider.
+ */
+export interface ProviderConfigSchema {
+  fields: ProviderConfigField[];
+  requires_api_key: boolean;
+}
+
+/**
+ * Provider information including status and configuration schema.
+ */
+export interface Provider {
+  name: string;
+  description: string;
+  status: ProviderStatus;
+  is_local: boolean;
+  models: ModelInfo[];
+  config_schema: ProviderConfigSchema;
+  masked_api_key?: string | null;
+  is_extension: boolean;
+}
+
+/**
+ * Response from GET /providers endpoint.
+ */
+export interface ProviderListResponse {
+  providers: Provider[];
+  fallback_chain: string[];
+}
+
+/**
+ * @deprecated Use ProviderListResponse instead. Kept for backwards compatibility.
+ */
 export interface ProviderConfig {
   providers: Provider[];
-  default_provider?: string | null;
-  default_model?: string | null;
-  fallback_order: string[];
+  fallback_chain: string[];
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

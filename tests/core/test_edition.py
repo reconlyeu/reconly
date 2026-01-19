@@ -1,5 +1,4 @@
 """Tests for edition detection and feature flags."""
-import os
 import pytest
 import warnings
 

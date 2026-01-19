@@ -7,9 +7,7 @@ from unittest.mock import Mock, AsyncMock
 
 from reconly_core.rag.embedding_service import (
     EmbeddingService,
-    EMBEDDING_STATUS_PENDING,
     EMBEDDING_STATUS_COMPLETED,
-    EMBEDDING_STATUS_FAILED,
 )
 from reconly_core.rag.chunking import ChunkingService
 from reconly_core.database.models import Digest, DigestChunk, Source
@@ -122,7 +120,7 @@ education, transportation, and many other fields.
 
         # At least one chunk should contain summary text
         summary_text = sample_digest.summary.lower()
-        has_summary_chunk = any(
+        any(
             summary_text[:20] in chunk.text.lower()
             for chunk in chunks
         )

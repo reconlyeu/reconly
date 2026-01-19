@@ -137,7 +137,7 @@ class AgentFetcher(BaseFetcher):
             Dict formatted as a fetcher result with metadata
         """
         from reconly_core.agents import ResearchAgent
-        from reconly_core.summarizers.factory import get_summarizer
+        from reconly_core.providers.factory import get_summarizer
 
         agent_run: Optional["AgentRun"] = None
         agent_run_id: Optional[int] = None
@@ -502,7 +502,7 @@ class AgentFetcher(BaseFetcher):
 
             # Check if summarizer is available
             try:
-                from reconly_core.summarizers.factory import get_summarizer
+                from reconly_core.providers.factory import get_summarizer
                 summarizer = get_summarizer(enable_fallback=True)
                 if not summarizer.is_available():
                     result.add_warning(

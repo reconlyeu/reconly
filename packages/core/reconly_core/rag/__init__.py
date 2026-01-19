@@ -32,7 +32,7 @@ Usage:
     >>>
     >>> # RAG question answering
     >>> from reconly_core.rag import RAGService
-    >>> from reconly_core.summarizers import get_summarizer
+    >>> from reconly_core.providers import get_summarizer
     >>> summarizer = get_summarizer(db=db)
     >>> rag = RAGService(db, provider, summarizer)
     >>> result = await rag.query("What are the latest AI trends?")

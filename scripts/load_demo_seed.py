@@ -37,7 +37,7 @@ sys.path.insert(0, str(_PROJECT_ROOT / "packages" / "api"))
 
 from reconly_core.logging import configure_logging, get_logger
 from reconly_core.database import (
-    Base, Tag, Source, Feed, FeedSource, FeedRun, PromptTemplate, ReportTemplate,
+    Tag, Source, Feed, FeedSource, FeedRun, PromptTemplate, ReportTemplate,
     Digest, DigestTag,
     seed_default_templates,
 )

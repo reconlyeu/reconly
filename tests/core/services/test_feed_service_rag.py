@@ -283,7 +283,7 @@ class TestProcessRagIntegration:
         source = create_source(db_session)
         feed = create_feed(db_session)
         feed_run = create_feed_run(db_session, feed)
-        digest = create_digest(db_session, source, feed_run)
+        create_digest(db_session, source, feed_run)
         db_session.commit()
 
         # Mock the imports to raise ImportError
@@ -298,7 +298,7 @@ class TestProcessRagIntegration:
     def test_process_rag_no_digests_returns_early(self, db_session):
         """Test that _process_rag_for_feed_run returns early when no digests exist."""
         # Setup: Create feed run without any digests
-        source = create_source(db_session)
+        create_source(db_session)
         feed = create_feed(db_session)
         feed_run = create_feed_run(db_session, feed)
         # Note: NOT creating any digests

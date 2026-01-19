@@ -1,17 +1,20 @@
-"""Ollama local LLM summarizer implementation."""
+"""Ollama local LLM provider implementation."""
 import os
 import requests
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
 @register_provider('ollama')
-class OllamaSummarizer(BaseSummarizer):
-    """Summarizes content using local Ollama LLMs."""
+class OllamaProvider(BaseProvider):
+    """LLM provider using local Ollama server."""
+
+    # Human-readable description for UI
+    description = "Local LLM via Ollama server"
 
     # Default timeout for local Ollama models (longer since they run locally)
     DEFAULT_TIMEOUT = 900  # 15 minutes
@@ -103,7 +106,7 @@ class OllamaSummarizer(BaseSummarizer):
         try:
             response = requests.get(f"{self.base_url}/api/tags", timeout=2)
             return response.status_code == 200
-        except:
+        except Exception:
             return False
 
     def validate_config(self) -> List[str]:
@@ -141,22 +144,22 @@ class OllamaSummarizer(BaseSummarizer):
                 ConfigField(
                     key="base_url",
                     type="string",
-                    label="Base URL",
-                    description="Ollama server URL",
+                    label="Server URL",
+                    description="URL of your Ollama server",
                     default="http://localhost:11434",
+                    required=False,
                     env_var="OLLAMA_BASE_URL",
                     editable=True,
                     placeholder="http://localhost:11434",
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model name to use (e.g., llama3.2, mistral)",
-                    default="llama3.2",
-                    env_var="OLLAMA_MODEL",
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="llama3.2",
+                    options_from="models",
                 ),
             ],
             requires_api_key=False,
@@ -175,7 +178,7 @@ class OllamaSummarizer(BaseSummarizer):
                 data = response.json()
                 models = [m['name'] for m in data.get('models', [])]
                 return models
-        except:
+        except Exception:
             pass
 
         return []
@@ -334,3 +337,7 @@ Create a concise summary of approximately 150 words."""
             )
         except Exception as e:
             raise Exception(f"Failed to generate summary with Ollama ({self.model}): {str(e)}")
+
+
+# Backwards compatibility alias
+OllamaSummarizer = OllamaProvider

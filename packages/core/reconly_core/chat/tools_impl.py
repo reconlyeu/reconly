@@ -854,7 +854,7 @@ def query_knowledge_tool() -> ToolDefinition:
         """
         from reconly_core.rag import get_embedding_provider
         from reconly_core.rag.rag_service import RAGService, RAGFilters
-        from reconly_core.summarizers.factory import get_summarizer
+        from reconly_core.providers.factory import get_summarizer
 
         # Get providers
         embedding_provider = get_embedding_provider(db=db)

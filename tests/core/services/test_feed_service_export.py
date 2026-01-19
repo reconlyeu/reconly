@@ -1,7 +1,5 @@
 """Tests for FeedService._export_if_configured() method."""
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from unittest.mock import Mock, patch
 
 from reconly_core.database.models import Feed, FeedRun, Digest
 from reconly_core.services.feed_service import FeedService

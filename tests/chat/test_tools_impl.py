@@ -1,7 +1,6 @@
 """Tests for tool handler implementations."""
 
 import pytest
-from datetime import datetime
 
 from reconly_core.chat.tools_impl import (
     list_feeds_tool,
@@ -11,7 +10,7 @@ from reconly_core.chat.tools_impl import (
     search_digests_tool,
     query_knowledge_tool,
 )
-from reconly_core.database.models import Feed, Source, Digest, Tag
+from reconly_core.database.models import Feed, Source
 
 
 class TestListFeedsTool:
@@ -349,7 +348,7 @@ class TestSearchDigestsTool:
     ):
         """Test filtering by tags."""
         # Create digest with tags
-        digest = digest_factory(with_tags=["python", "tutorial"])
+        digest_factory(with_tags=["python", "tutorial"])
 
         result = await tool.handler(db=db_session, tags=["python"])
 

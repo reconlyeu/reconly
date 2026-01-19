@@ -12,7 +12,6 @@ Skip in CI by marking with @pytest.mark.e2e
 import os
 import subprocess
 import sys
-import tempfile
 import shutil
 from pathlib import Path
 

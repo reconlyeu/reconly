@@ -29,7 +29,8 @@ import type {
   TagSuggestionsResponse,
   TagDeleteResponse,
   TagBulkDeleteResponse,
-  ProviderConfig,
+  Provider,
+  ProviderListResponse,
   ModelInfo,
   AnalyticsSummary,
   TokensByProvider,
@@ -787,30 +788,37 @@ export const analyticsApi = {
 // PROVIDERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export interface ProviderStatus {
-  name: string;
-  status: 'available' | 'configured' | 'not_configured';
-  masked_api_key: string | null;
-  models: string[];
-  is_default: boolean;
-}
-
 export const providersApi = {
-  getConfig: async (): Promise<ProviderConfig> => {
-    const { data } = await apiClient.get<ProviderConfig>('/providers');
+  /**
+   * Get all providers with their status, models, and configuration schema.
+   * Returns the full provider list response including fallback chain.
+   */
+  getAll: async (): Promise<ProviderListResponse> => {
+    const { data } = await apiClient.get<ProviderListResponse>('/providers');
     return data;
   },
 
-  getStatus: async (): Promise<ProviderStatus[]> => {
-    const { data } = await apiClient.get<{ providers: ProviderStatus[] }>('/providers');
+  /**
+   * Get just the providers array (convenience method).
+   */
+  getProviders: async (): Promise<Provider[]> => {
+    const { data } = await apiClient.get<ProviderListResponse>('/providers');
     return data.providers;
   },
 
+  /**
+   * Get models for a specific provider.
+   */
   getModels: async (providerName: string): Promise<ModelInfo[]> => {
     const { data } = await apiClient.get<ModelInfo[]>(`/providers/${providerName}/models`);
     return data;
   },
 
+  /**
+   * Refresh models from provider(s).
+   * If providerName is specified, refreshes only that provider.
+   * Otherwise refreshes all providers.
+   */
   refreshModels: async (providerName?: string): Promise<{ providers?: Record<string, ModelInfo[]>; provider?: string; models?: ModelInfo[] }> => {
     const params = providerName ? { provider_name: providerName } : {};
     const { data } = await apiClient.post('/providers/refresh-models', null, { params });

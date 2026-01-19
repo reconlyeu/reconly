@@ -49,7 +49,7 @@ class TestRAGAPI:
     def test_rag_query_endpoint(self, client, sample_digest_with_chunks):
         """Test RAG query endpoint."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             # Mock embedding provider
             provider = Mock()
@@ -84,7 +84,7 @@ class TestRAGAPI:
     def test_rag_query_with_filters(self, client, sample_digest_with_chunks):
         """Test RAG query with filters."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             provider = Mock()
             provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
@@ -139,7 +139,7 @@ class TestRAGAPI:
     def test_rag_query_custom_max_chunks(self, client, sample_digest_with_chunks):
         """Test RAG query with custom max_chunks."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             provider = Mock()
             provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
@@ -194,7 +194,7 @@ class TestRAGAPI:
     def test_rag_response_structure(self, client, sample_digest_with_chunks):
         """Test that RAG response has correct structure."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             provider = Mock()
             provider.embed_single = AsyncMock(return_value=[0.1] * 1024)
@@ -317,7 +317,7 @@ class TestRAGAPIEdgeCases:
         test_db.commit()
 
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             # Mock embedding provider to fail (triggers FTS fallback)
             provider = Mock()
@@ -473,7 +473,7 @@ class TestRAGAPISourceContent:
     def test_rag_query_with_source_content_chunks(self, client, sample_source_content_data):
         """Test RAG query using source_content chunks."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             # Mock embedding provider
             provider = Mock()
@@ -539,7 +539,7 @@ class TestRAGAPISourceContent:
         test_db.commit()
 
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             # Mock embedding provider
             provider = Mock()
@@ -579,7 +579,7 @@ class TestRAGAPISourceContent:
     def test_rag_query_default_chunk_source(self, client, sample_source_content_data):
         """Test that default chunk_source is source_content."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             # Mock embedding provider
             provider = Mock()
@@ -638,7 +638,7 @@ class TestRAGAPISourceContent:
         test_db.commit()
 
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.factory.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.factory.get_summarizer') as mock_sum:
 
             provider = Mock()
             provider.embed_single = AsyncMock(return_value=[0.1] * 1024)

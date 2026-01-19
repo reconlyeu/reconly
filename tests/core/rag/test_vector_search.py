@@ -1,9 +1,9 @@
 """Tests for VectorSearchService."""
 import pytest
 import numpy as np
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 
-from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult, ChunkSource
+from reconly_core.rag.search.vector import VectorSearchService, VectorSearchResult
 from reconly_core.database.models import Digest, DigestChunk, FeedRun, Source
 
 

@@ -12,7 +12,6 @@ import pytest
 from reconly_core.database.models import (
     Digest,
     DigestSourceItem,
-    Source,
     SourceContent,
     SourceContentChunk,
 )

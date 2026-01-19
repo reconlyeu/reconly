@@ -1,7 +1,7 @@
 """Tests for provider registry."""
 import pytest
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.registry import (
+from reconly_core.providers.registry import (
     register_provider,
     get_provider,
     get_provider_entry,
@@ -11,8 +11,8 @@ from reconly_core.summarizers.registry import (
     is_provider_extension,
     _PROVIDER_REGISTRY
 )
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.capabilities import ProviderCapabilities
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.capabilities import ProviderCapabilities
 from reconly_core.services.settings_registry import SETTINGS_REGISTRY
 
 
@@ -26,7 +26,7 @@ class TestProviderRegistry:
     def test_register_provider_decorator(self):
         """Test that @register_provider decorator registers a provider."""
         @register_provider('test-provider')
-        class TestSummarizer(BaseSummarizer):
+        class TestSummarizer(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -52,7 +52,7 @@ class TestProviderRegistry:
     def test_register_provider_appears_in_list(self):
         """Test that registered provider appears in list_providers()."""
         @register_provider('test-provider')
-        class TestSummarizer(BaseSummarizer):
+        class TestSummarizer(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -88,7 +88,7 @@ class TestProviderRegistry:
     def test_get_provider_error_lists_available(self):
         """Test that error message lists all available providers."""
         @register_provider('provider-a')
-        class ProviderA(BaseSummarizer):
+        class ProviderA(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -109,7 +109,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('provider-b')
-        class ProviderB(BaseSummarizer):
+        class ProviderB(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -139,7 +139,7 @@ class TestProviderRegistry:
     def test_register_provider_override_warns(self, caplog):
         """Test that overriding a provider logs a warning."""
         @register_provider('foo')
-        class ProviderOne(BaseSummarizer):
+        class ProviderOne(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -160,7 +160,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('foo')
-        class ProviderTwo(BaseSummarizer):
+        class ProviderTwo(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -187,18 +187,18 @@ class TestProviderRegistry:
         assert get_provider('foo') == ProviderTwo
 
     def test_register_non_basesummarizer_raises(self):
-        """Test that registering a non-BaseSummarizer class raises TypeError."""
+        """Test that registering a non-BaseProvider class raises TypeError."""
         with pytest.raises(TypeError) as exc_info:
             @register_provider('invalid')
             class NotASummarizer:
                 pass
 
-        assert 'must inherit from BaseSummarizer' in str(exc_info.value)
+        assert 'must inherit from BaseProvider' in str(exc_info.value)
 
     def test_get_provider_by_capability_local(self):
         """Test finding providers by is_local capability."""
         @register_provider('local-provider')
-        class LocalProvider(BaseSummarizer):
+        class LocalProvider(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -219,7 +219,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('cloud-provider')
-        class CloudProvider(BaseSummarizer):
+        class CloudProvider(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -246,7 +246,7 @@ class TestProviderRegistry:
     def test_get_provider_by_capability_no_api_key(self):
         """Test finding providers that don't require API keys."""
         @register_provider('no-key-provider')
-        class NoKeyProvider(BaseSummarizer):
+        class NoKeyProvider(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -267,7 +267,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('needs-key-provider')
-        class NeedsKeyProvider(BaseSummarizer):
+        class NeedsKeyProvider(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -296,7 +296,7 @@ class TestProviderRegistry:
         assert not is_provider_registered('test-provider')
 
         @register_provider('test-provider')
-        class TestProvider(BaseSummarizer):
+        class TestProvider(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -326,7 +326,7 @@ class TestProviderRegistry:
     def test_multiple_providers_registration(self):
         """Test registering multiple providers."""
         @register_provider('provider-1')
-        class Provider1(BaseSummarizer):
+        class Provider1(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -347,7 +347,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('provider-2')
-        class Provider2(BaseSummarizer):
+        class Provider2(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -368,7 +368,7 @@ class TestProviderRegistry:
                 return []
 
         @register_provider('provider-3')
-        class Provider3(BaseSummarizer):
+        class Provider3(BaseProvider):
             def summarize(self, content_data, language='de'):
                 return {}
 
@@ -402,7 +402,7 @@ class TestProviderRegistry:
             del SETTINGS_REGISTRY[key]
 
         @register_provider('test-schema')
-        class TestSchemaProvider(BaseSummarizer):
+        class TestSchemaProvider(BaseProvider):
             def __init__(self, api_key=None):
                 super().__init__(api_key)
 
@@ -484,7 +484,7 @@ class TestProviderRegistry:
             del SETTINGS_REGISTRY[key]
 
         @register_provider('test-no-schema')
-        class TestNoSchemaProvider(BaseSummarizer):
+        class TestNoSchemaProvider(BaseProvider):
             def __init__(self, api_key=None):
                 super().__init__(api_key)
 
@@ -518,7 +518,7 @@ class TestProviderRegistry:
     def test_extension_provider_registration(self):
         """Test that extension providers can be registered with is_extension flag."""
         @register_provider('test-extension', is_extension=True)
-        class TestExtensionProvider(BaseSummarizer):
+        class TestExtensionProvider(BaseProvider):
             def __init__(self, api_key=None):
                 super().__init__(api_key)
 

@@ -2,7 +2,7 @@
 
 import pytest
 import json
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from reconly_core.chat.service import ChatService
 from reconly_core.database.models import ChatConversation
@@ -98,7 +98,6 @@ class TestChatCompletionEndpoint:
         from reconly_core.chat.executor import ToolResult
         from reconly_core.database.models import ChatMessage
 
-        import json
         tool_calls_data = [
             {
                 "id": "call_123",

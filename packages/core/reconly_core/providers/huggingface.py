@@ -1,4 +1,4 @@
-"""HuggingFace Inference API summarizer implementation."""
+"""HuggingFace Inference API LLM provider implementation."""
 import logging
 import os
 import re
@@ -7,16 +7,19 @@ import time
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 logger = logging.getLogger(__name__)
 
 
 @register_provider('huggingface')
-class HuggingFaceSummarizer(BaseSummarizer):
-    """Summarizes content using HuggingFace Inference API."""
+class HuggingFaceProvider(BaseProvider):
+    """LLM provider using HuggingFace Inference API."""
+
+    # Human-readable description for UI
+    description = "HuggingFace Inference API (free tier available)"
 
     # HuggingFace Hub API endpoint for model discovery
     HUB_API_URL = "https://huggingface.co/api/models"
@@ -251,19 +254,19 @@ class HuggingFaceSummarizer(BaseSummarizer):
                     type="string",
                     label="API Key",
                     description="HuggingFace API token",
+                    required=True,
                     env_var="HUGGINGFACE_API_KEY",
                     editable=False,
                     secret=True,
-                    required=True,
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model to use (e.g., meta-llama/Llama-3.3-70B-Instruct)",
-                    default=self.DEFAULT_MODEL,
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="meta-llama/Llama-3.3-70B-Instruct",
+                    options_from="models",
                 ),
             ],
             requires_api_key=True,
@@ -553,3 +556,7 @@ class HuggingFaceSummarizer(BaseSummarizer):
 
         except Exception as e:
             raise Exception(f"Failed to generate summary with {self.model_key}: {str(e)}")
+
+
+# Backwards compatibility alias
+HuggingFaceSummarizer = HuggingFaceProvider

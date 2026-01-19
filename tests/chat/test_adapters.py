@@ -1,6 +1,5 @@
 """Tests for LLM provider adapters."""
 
-import json
 import pytest
 from unittest.mock import Mock
 

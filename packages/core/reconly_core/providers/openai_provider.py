@@ -1,17 +1,28 @@
-"""Anthropic Claude summarizer implementation."""
+"""OpenAI API LLM provider implementation."""
 import os
-from anthropic import Anthropic
+from openai import OpenAI
 from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
-from reconly_core.summarizers.base import BaseSummarizer
-from reconly_core.summarizers.registry import register_provider
-from reconly_core.summarizers.capabilities import ProviderCapabilities, ModelInfo
+from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.registry import register_provider
+from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
 
-@register_provider('anthropic')
-class AnthropicSummarizer(BaseSummarizer):
-    """Summarizes content using Claude AI via Anthropic API."""
+@register_provider('openai')
+class OpenAIProvider(BaseProvider):
+    """LLM provider using OpenAI API (GPT models)."""
+
+    # Human-readable description for UI
+    description = "OpenAI GPT models (GPT-4, GPT-4o)"
+
+    # Model pricing (per 1M tokens) - OSS stub with zero values
+    # Enterprise edition overrides with actual pricing
+    MODEL_PRICING = {
+        'gpt-4': (0.0, 0.0),
+        'gpt-4-turbo': (0.0, 0.0),
+        'gpt-3.5-turbo': (0.0, 0.0),
+    }
 
     # Default timeout for cloud API calls
     DEFAULT_TIMEOUT = 120  # 2 minutes
@@ -19,49 +30,65 @@ class AnthropicSummarizer(BaseSummarizer):
     def __init__(
         self,
         api_key: Optional[str] = None,
+        model: str = 'gpt-4-turbo',
+        base_url: Optional[str] = None,
         timeout: Optional[int] = None,
     ):
         """
-        Initialize the Anthropic summarizer.
+        Initialize the OpenAI summarizer.
 
         Args:
-            api_key: Anthropic API key (if not provided, reads from ANTHROPIC_API_KEY env var)
+            api_key: OpenAI API key (if not provided, reads from OPENAI_API_KEY env var)
+            model: Model to use (default: 'gpt-4-turbo')
+            base_url: Base URL for OpenAI-compatible endpoints (optional)
             timeout: Request timeout in seconds (default: 120s)
-                     Can be configured via PROVIDER_TIMEOUT_ANTHROPIC env var.
+                     Can be configured via PROVIDER_TIMEOUT_OPENAI env var.
         """
         super().__init__(api_key)
-        self.api_key = api_key or os.getenv('ANTHROPIC_API_KEY')
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+
         if not self.api_key:
             raise ValueError(
-                "Anthropic API key required. Set ANTHROPIC_API_KEY environment variable "
+                "OpenAI API key required. Set OPENAI_API_KEY environment variable "
                 "or pass api_key parameter."
             )
+
+        self.model = model
+        self.base_url = base_url or os.getenv('OPENAI_BASE_URL')
 
         # Timeout priority: param > env var > default
         if timeout is not None:
             self.timeout = timeout
         else:
-            env_timeout = os.getenv('PROVIDER_TIMEOUT_ANTHROPIC')
+            env_timeout = os.getenv('PROVIDER_TIMEOUT_OPENAI')
             self.timeout = int(env_timeout) if env_timeout else self.DEFAULT_TIMEOUT
 
-        self.client = Anthropic(api_key=self.api_key, timeout=float(self.timeout))
-        self.model = "claude-opus-4-5-20251101"
+        # Initialize OpenAI client with timeout
+        client_kwargs = {"api_key": self.api_key, "timeout": float(self.timeout)}
+        if self.base_url:
+            client_kwargs["base_url"] = self.base_url
+        self.client = OpenAI(**client_kwargs)
 
     def get_provider_name(self) -> str:
         """Get provider name."""
-        return "anthropic"
+        return 'openai'
 
     def get_model_info(self) -> Dict[str, str]:
         """Get model information."""
-        return {
-            'provider': 'anthropic',
-            'model': self.model,
-            'name': 'Claude Opus 4.5'
+        info = {
+            'provider': 'openai',
+            'model': self.model
         }
+
+        if self.base_url:
+            info['base_url'] = self.base_url
+            info['compatible_endpoint'] = True
+
+        return info
 
     def estimate_cost(self, content_length: int) -> float:
         """
-        Estimate cost for Anthropic API.
+        Estimate cost for OpenAI API based on model pricing.
 
         Note: Cost estimation is stubbed in OSS edition (returns 0.0).
         Enterprise edition overrides this with actual pricing calculations.
@@ -86,7 +113,7 @@ class AnthropicSummarizer(BaseSummarizer):
             supports_async=False,
             requires_api_key=True,
             is_local=False,
-            max_context_tokens=200_000,
+            max_context_tokens=128_000,  # GPT-4-turbo context window
             cost_per_1k_input=0.0,  # OSS stub - Enterprise overrides
             cost_per_1k_output=0.0  # OSS stub - Enterprise overrides
         )
@@ -100,32 +127,38 @@ class AnthropicSummarizer(BaseSummarizer):
         errors = []
 
         if not self.api_key:
-            errors.append("Anthropic API key is required but not set. Set ANTHROPIC_API_KEY environment variable.")
+            errors.append("OpenAI API key is required but not set. Set OPENAI_API_KEY environment variable.")
+
+        if not self.model:
+            errors.append("Model name is required")
+
+        if self.base_url and not self.base_url.startswith('http'):
+            errors.append("Base URL must start with http:// or https://")
 
         return errors
 
     def get_config_schema(self) -> ProviderConfigSchema:
-        """Get the configuration schema for Anthropic provider."""
+        """Get the configuration schema for OpenAI provider."""
         return ProviderConfigSchema(
             fields=[
                 ConfigField(
                     key="api_key",
                     type="string",
                     label="API Key",
-                    description="Anthropic API key",
-                    env_var="ANTHROPIC_API_KEY",
+                    description="OpenAI API key",
+                    required=True,
+                    env_var="OPENAI_API_KEY",
                     editable=False,
                     secret=True,
-                    required=True,
                 ),
                 ConfigField(
                     key="model",
-                    type="string",
-                    label="Model",
-                    description="Model to use (e.g., claude-opus-4-5-20251101)",
-                    default="claude-opus-4-5-20251101",
+                    type="select",
+                    label="Default Model",
+                    description="Model to use for summarization",
+                    required=False,
                     editable=True,
-                    placeholder="claude-opus-4-5-20251101",
+                    options_from="models",
                 ),
             ],
             requires_api_key=True,
@@ -133,42 +166,48 @@ class AnthropicSummarizer(BaseSummarizer):
 
     # Fallback models when API is unavailable
     FALLBACK_MODELS = [
-        ModelInfo(id='claude-sonnet-4-20250514', name='Claude Sonnet 4', provider='anthropic', is_default=True),
-        ModelInfo(id='claude-3-5-sonnet-20241022', name='Claude 3.5 Sonnet', provider='anthropic'),
-        ModelInfo(id='claude-3-5-haiku-20241022', name='Claude 3.5 Haiku', provider='anthropic'),
+        ModelInfo(id='gpt-4o', name='GPT-4o', provider='openai', is_default=True),
+        ModelInfo(id='gpt-4o-mini', name='GPT-4o Mini', provider='openai'),
+        ModelInfo(id='gpt-4-turbo', name='GPT-4 Turbo', provider='openai'),
+        ModelInfo(id='gpt-4', name='GPT-4', provider='openai'),
+        ModelInfo(id='gpt-3.5-turbo', name='GPT-3.5 Turbo', provider='openai'),
     ]
 
     @classmethod
     def list_models(cls, api_key: Optional[str] = None) -> List[ModelInfo]:
         """
-        Fetch available models from Anthropic API.
+        Fetch available models from OpenAI API.
 
         Args:
-            api_key: Optional API key (uses ANTHROPIC_API_KEY env if not provided)
+            api_key: Optional API key (uses OPENAI_API_KEY env if not provided)
 
         Returns:
-            List of ModelInfo for available Anthropic models
+            List of ModelInfo for chat-compatible models
         """
         if not api_key:
-            api_key = os.getenv('ANTHROPIC_API_KEY')
+            api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             return cls.FALLBACK_MODELS.copy()
 
         try:
-            client = Anthropic(api_key=api_key)
-            # Fetch models from API - returns most recent first
-            models_response = client.models.list(limit=100)
+            client = OpenAI(api_key=api_key)
+            models_response = client.models.list()
 
-            models = []
-            for i, m in enumerate(models_response.data):
-                models.append(ModelInfo(
-                    id=m.id,
-                    name=m.display_name,
-                    provider='anthropic',
-                    is_default=(i == 0)  # First model (most recent) is default
-                ))
+            # Filter for chat-compatible models
+            chat_prefixes = ('gpt-4', 'gpt-3.5', 'o1', 'o3')
+            chat_models = []
+            for m in models_response.data:
+                if m.id.startswith(chat_prefixes):
+                    chat_models.append(ModelInfo(
+                        id=m.id,
+                        name=m.id,
+                        provider='openai',
+                        is_default=(m.id == 'gpt-4o')
+                    ))
 
-            return models if models else cls.FALLBACK_MODELS.copy()
+            # Sort by model id (newest first)
+            chat_models.sort(key=lambda x: x.id, reverse=True)
+            return chat_models if chat_models else cls.FALLBACK_MODELS.copy()
         except Exception:
             return cls.FALLBACK_MODELS.copy()
 
@@ -180,7 +219,7 @@ class AnthropicSummarizer(BaseSummarizer):
         user_prompt: Optional[str] = None,
     ) -> Dict[str, str]:
         """
-        Summarize content using Claude AI.
+        Summarize content using OpenAI API.
 
         Args:
             content_data: Dictionary with content information (from fetchers)
@@ -212,21 +251,24 @@ class AnthropicSummarizer(BaseSummarizer):
                 usr_prompt = f"Summarize the following content from a {source_type}.\n\nTitle: {title}\n\nContent:\n{content}\n\nCreate a concise summary of approximately 150 words."
 
         try:
-            # Call Claude API
-            message = self.client.messages.create(
+            # Call OpenAI Chat Completions API
+            response = self.client.chat.completions.create(
                 model=self.model,
-                max_tokens=4096,  # Increased for consolidated digests with detailed formats
-                system=sys_prompt,
                 messages=[
+                    {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": usr_prompt}
-                ]
+                ],
+                max_tokens=4096,  # Increased for consolidated digests
+                temperature=0.7,
+                top_p=0.9
             )
 
-            summary = message.content[0].text
+            summary = response.choices[0].message.content
 
-            # Extract token counts from Anthropic response
-            tokens_in = message.usage.input_tokens if message.usage else 0
-            tokens_out = message.usage.output_tokens if message.usage else 0
+            # Extract token counts
+            usage = response.usage
+            tokens_in = usage.prompt_tokens if usage else 0
+            tokens_out = usage.completion_tokens if usage else 0
 
             # Return original data with summary added
             result = content_data.copy()
@@ -248,4 +290,27 @@ class AnthropicSummarizer(BaseSummarizer):
             return result
 
         except Exception as e:
-            raise Exception(f"Failed to generate summary with Claude: {str(e)}")
+            error_msg = str(e)
+
+            # Provide helpful error messages
+            if 'rate_limit' in error_msg.lower():
+                raise Exception(
+                    f"OpenAI rate limit exceeded: {error_msg}. "
+                    "Wait a moment and try again, or upgrade your API plan."
+                )
+            elif 'authentication' in error_msg.lower() or 'api_key' in error_msg.lower():
+                raise Exception(
+                    f"OpenAI authentication failed: {error_msg}. "
+                    "Check that your OPENAI_API_KEY is valid."
+                )
+            elif 'model' in error_msg.lower() and 'not found' in error_msg.lower():
+                raise Exception(
+                    f"Model '{self.model}' not found: {error_msg}. "
+                    f"Available models: {list(self.MODEL_PRICING.keys())}"
+                )
+            else:
+                raise Exception(f"Failed to generate summary with OpenAI ({self.model}): {error_msg}")
+
+
+# Backwards compatibility alias
+OpenAISummarizer = OpenAIProvider

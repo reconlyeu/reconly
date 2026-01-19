@@ -24,9 +24,10 @@ class TestSettingsAPIV2:
         data = response.json()
 
         # Check provider settings have required fields
+        # Now using llm.fallback_chain which becomes fallback_chain in response
         provider = data["provider"]
-        assert "default_provider" in provider
-        setting = provider["default_provider"]
+        assert "fallback_chain" in provider
+        setting = provider["fallback_chain"]
         assert "value" in setting
         assert "source" in setting
         assert "editable" in setting
@@ -54,7 +55,7 @@ class TestSettingsAPIV2:
             # With no env vars set, source should be default
             # Note: Some settings might still be from env if test env has them
             provider = data["provider"]
-            assert "default_provider" in provider
+            assert "fallback_chain" in provider
 
     def test_get_settings_v2_masks_secrets(self, client):
         """Test secret values are masked."""
@@ -64,7 +65,7 @@ class TestSettingsAPIV2:
             data = response.json()
 
             provider = data["provider"]
-            api_key_setting = provider.get("anthropic_api_key")
+            api_key_setting = provider.get("anthropic.api_key")
             if api_key_setting and api_key_setting["value"]:
                 # Should be masked, not showing full key
                 assert "sk-ant-secret-key-12345" not in str(api_key_setting["value"])
@@ -78,8 +79,8 @@ class TestSettingsAPIV2:
 
         # API keys should not be editable
         provider = data["provider"]
-        if "anthropic_api_key" in provider:
-            assert provider["anthropic_api_key"]["editable"] is False
+        if "anthropic.api_key" in provider:
+            assert provider["anthropic.api_key"]["editable"] is False
 
 
 @pytest.mark.api
@@ -92,21 +93,21 @@ class TestSettingsUpdateV2:
             "/api/v1/settings/v2",
             json={
                 "settings": [
-                    {"key": "llm.default_provider", "value": "anthropic"}
+                    {"key": "email.smtp_host", "value": "mail.example.com"}
                 ]
             }
         )
         assert response.status_code == 200
         data = response.json()
-        assert "llm.default_provider" in data["updated"]
+        assert "email.smtp_host" in data["updated"]
         assert len(data["errors"]) == 0
 
         # Verify the setting was updated
         response = client.get("/api/v1/settings/v2")
         assert response.status_code == 200
         data = response.json()
-        assert data["provider"]["default_provider"]["value"] == "anthropic"
-        assert data["provider"]["default_provider"]["source"] == "database"
+        assert data["email"]["smtp_host"]["value"] == "mail.example.com"
+        assert data["email"]["smtp_host"]["source"] == "database"
 
     def test_update_multiple_settings(self, client):
         """Test updating multiple settings at once."""
@@ -114,7 +115,7 @@ class TestSettingsUpdateV2:
             "/api/v1/settings/v2",
             json={
                 "settings": [
-                    {"key": "llm.default_provider", "value": "openai"},
+                    {"key": "llm.fallback_chain", "value": ["openai", "ollama", "anthropic"]},
                     {"key": "email.smtp_host", "value": "smtp.test.com"},
                     {"key": "export.default_format", "value": "csv"}
                 ]
@@ -168,35 +169,35 @@ class TestSettingsReset:
         # First set a value
         client.put(
             "/api/v1/settings/v2",
-            json={"settings": [{"key": "llm.default_provider", "value": "anthropic"}]}
+            json={"settings": [{"key": "email.smtp_host", "value": "mail.example.com"}]}
         )
 
         # Verify it's set
         response = client.get("/api/v1/settings/v2")
-        assert response.json()["provider"]["default_provider"]["source"] == "database"
+        assert response.json()["email"]["smtp_host"]["source"] == "database"
 
         # Reset it
         response = client.post(
             "/api/v1/settings/reset",
-            json={"keys": ["llm.default_provider"]}
+            json={"keys": ["email.smtp_host"]}
         )
         assert response.status_code == 200
         data = response.json()
-        assert "llm.default_provider" in data["reset"]
+        assert "email.smtp_host" in data["reset"]
 
         # Verify it's no longer from database
         response = client.get("/api/v1/settings/v2")
-        assert response.json()["provider"]["default_provider"]["source"] != "database"
+        assert response.json()["email"]["smtp_host"]["source"] != "database"
 
     def test_reset_nonexistent_returns_not_found(self, client):
         """Test resetting a setting with no DB value returns not_found."""
         response = client.post(
             "/api/v1/settings/reset",
-            json={"keys": ["llm.default_provider"]}
+            json={"keys": ["email.smtp_host"]}
         )
         assert response.status_code == 200
         data = response.json()
-        assert "llm.default_provider" in data["not_found"]
+        assert "email.smtp_host" in data["not_found"]
 
     def test_reset_multiple_settings(self, client):
         """Test resetting multiple settings."""
@@ -205,7 +206,7 @@ class TestSettingsReset:
             "/api/v1/settings/v2",
             json={
                 "settings": [
-                    {"key": "llm.default_provider", "value": "anthropic"},
+                    {"key": "llm.fallback_chain", "value": ["anthropic", "ollama"]},
                     {"key": "email.smtp_host", "value": "test.com"}
                 ]
             }
@@ -214,7 +215,7 @@ class TestSettingsReset:
         # Reset both
         response = client.post(
             "/api/v1/settings/reset",
-            json={"keys": ["llm.default_provider", "email.smtp_host"]}
+            json={"keys": ["llm.fallback_chain", "email.smtp_host"]}
         )
         assert response.status_code == 200
         data = response.json()

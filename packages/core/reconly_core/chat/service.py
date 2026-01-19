@@ -231,7 +231,7 @@ class ChatService:
         """Get the default provider from app settings or environment.
 
         Priority:
-        1. App setting 'llm.default_provider' from database (if chat-supported)
+        1. First provider in llm.fallback_chain that supports chat
         2. Environment variable DEFAULT_CHAT_PROVIDER (if chat-supported)
         3. First available chat provider with API key
         4. Fallback to 'ollama'
@@ -242,29 +242,24 @@ class ChatService:
         Returns:
             Provider name (e.g., 'ollama', 'anthropic', 'openai').
         """
-        import json
         import logging
+        from reconly_core.services.settings_service import SettingsService
 
         logger = logging.getLogger(__name__)
 
-        # Check app settings first
-        from reconly_core.database.models import AppSetting
-
+        # Check fallback chain from settings (position 0 = default provider)
         try:
-            setting = self.db.query(AppSetting).filter(
-                AppSetting.key == "llm.default_provider"
-            ).first()
-
-            if setting and setting.value:
-                # Value is JSON-encoded
-                provider = json.loads(setting.value)
-                if provider:
+            settings_service = SettingsService(self.db)
+            chain = settings_service.get("llm.fallback_chain")
+            if chain and isinstance(chain, list):
+                # Find first provider in chain that supports chat
+                for provider in chain:
                     if provider in self._adapters:
                         return provider
                     else:
-                        logger.warning(
-                            f"Configured provider '{provider}' is not supported for chat. "
-                            f"Chat supports: {list(self._adapters.keys())}. Trying fallback."
+                        logger.debug(
+                            f"Provider '{provider}' from fallback chain is not supported for chat. "
+                            f"Chat supports: {list(self._adapters.keys())}. Trying next."
                         )
         except Exception:
             pass  # Fall through to env var
@@ -286,7 +281,8 @@ class ChatService:
     def _get_default_model(self, provider: str) -> str:
         """Get the default model from app settings for the given provider.
 
-        Uses SettingsService which provides fallback chain: DB → env → default.
+        Uses SettingsService which provides fallback chain: DB -> env -> default.
+        Looks up provider-specific model setting: provider.{name}.model
 
         Args:
             provider: Provider name to get default model for.
@@ -298,9 +294,14 @@ class ChatService:
 
         try:
             settings_service = SettingsService(self.db)
-            model = settings_service.get("llm.default_model")
+            # Use provider-specific model key
+            model_key = f"provider.{provider}.model"
+            model = settings_service.get(model_key)
             if model:
                 return model
+        except KeyError:
+            # Provider model setting not registered (possibly for extensions)
+            pass
         except Exception:
             pass
 

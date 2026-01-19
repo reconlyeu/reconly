@@ -6,7 +6,7 @@ excessive API calls during model discovery.
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from reconly_core.summarizers.capabilities import ModelInfo
+from reconly_core.providers.capabilities import ModelInfo
 
 
 class ModelCache:
