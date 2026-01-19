@@ -82,6 +82,14 @@ const selectedProvider = computed(() => {
   return providersMap.value.get(selectedProviderName.value) || null;
 });
 
+// Get configured model for a provider from settings
+const getConfiguredModel = (providerName: string): string | null => {
+  if (!settings.value?.provider) return null;
+  // Settings key format: provider.{name}.model -> stored as {name}.model after prefix strip
+  const modelSetting = settings.value.provider[`${providerName}.model`];
+  return (modelSetting?.value as string) || null;
+};
+
 // Initialize local chain from settings or API response
 const initializeChain = () => {
   // First try to get from settings
@@ -300,6 +308,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
           :key="provider.name"
           :provider="provider"
           :position="index + 1"
+          :configured-model="getConfiguredModel(provider.name)"
           :is-selected="selectedProviderName === provider.name"
           :is-dragging="draggedIndex === index"
           :is-drag-over="dragOverIndex === index"

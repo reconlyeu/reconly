@@ -12,12 +12,14 @@ import type { Provider, ProviderStatus } from '@/types/entities';
 interface Props {
   provider: Provider;
   position: number;
+  configuredModel?: string | null;
   isSelected: boolean;
   isDragging?: boolean;
   isDragOver?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  configuredModel: null,
   isDragging: false,
   isDragOver: false,
 });
@@ -59,8 +61,13 @@ const displayName = computed(() => {
   return props.provider.name.charAt(0).toUpperCase() + props.provider.name.slice(1);
 });
 
-// Get current model (first model or default)
+// Get current model - prefer configured model, then provider default
 const currentModel = computed(() => {
+  // If a model is configured in settings, use that
+  if (props.configuredModel) {
+    return props.configuredModel;
+  }
+  // Otherwise use the provider's default model
   if (!props.provider.models || props.provider.models.length === 0) {
     return null;
   }
