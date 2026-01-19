@@ -1,7 +1,7 @@
 """Chat providers for LLM interaction with tool calling and streaming support.
 
 This module provides a unified interface for interacting with different LLM
-providers (OpenAI, Anthropic, Ollama) for chat conversations with tool calling.
+providers (OpenAI, Anthropic, Ollama, LMStudio) for chat conversations with tool calling.
 
 Key Components:
     BaseChatProvider: Abstract base class defining the provider interface
@@ -11,6 +11,7 @@ Key Components:
     OpenAIChatProvider: OpenAI GPT models with native tool calling
     AnthropicChatProvider: Anthropic Claude models with native tool use
     OllamaChatProvider: Local Ollama models with prompt-based tools
+    LMStudioChatProvider: Local LMStudio models with native tool calling
 
     create_provider: Factory function to create providers by name
     get_default_provider: Auto-detect and create the best available provider
@@ -63,12 +64,14 @@ Error Handling:
     ...     print(f"Provider error: {e}")
 
 Environment Variables:
-    DEFAULT_CHAT_PROVIDER: Preferred provider (openai, anthropic, ollama)
+    DEFAULT_CHAT_PROVIDER: Preferred provider (openai, anthropic, ollama, lmstudio)
     OPENAI_API_KEY: OpenAI API key
     OPENAI_BASE_URL: Custom OpenAI-compatible endpoint
     ANTHROPIC_API_KEY: Anthropic API key
     OLLAMA_BASE_URL: Ollama server URL (default: http://localhost:11434)
     OLLAMA_MODEL: Default Ollama model (default: llama3.2)
+    LMSTUDIO_BASE_URL: LMStudio server URL (default: http://localhost:1234/v1)
+    LMSTUDIO_MODEL: Default LMStudio model (auto-detected if not set)
 """
 
 # Base classes and types
@@ -88,6 +91,7 @@ from reconly_core.chat.providers.base import (
 from reconly_core.chat.providers.openai_provider import OpenAIChatProvider
 from reconly_core.chat.providers.anthropic_provider import AnthropicChatProvider
 from reconly_core.chat.providers.ollama_provider import OllamaChatProvider
+from reconly_core.chat.providers.lmstudio_provider import LMStudioChatProvider
 
 # Factory functions
 from reconly_core.chat.providers.factory import (
@@ -121,6 +125,7 @@ __all__ = [
     "OpenAIChatProvider",
     "AnthropicChatProvider",
     "OllamaChatProvider",
+    "LMStudioChatProvider",
     # Factory functions
     "create_provider",
     "get_default_provider",

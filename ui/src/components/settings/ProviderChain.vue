@@ -24,6 +24,7 @@ import {
   Database,
   Server,
   Cloud,
+  RefreshCw,
 } from 'lucide-vue-next';
 import type { Provider } from '@/types/entities';
 
@@ -249,6 +250,20 @@ const saveMutation = useMutation({
   },
 });
 
+// Refresh mutation - re-fetch provider status and models
+const refreshMutation = useMutation({
+  mutationFn: async () => {
+    return providersApi.refreshModels();
+  },
+  onSuccess: () => {
+    toast.success('Provider status refreshed');
+    queryClient.invalidateQueries({ queryKey: ['providers'] });
+  },
+  onError: (err: any) => {
+    toast.error(err.detail || 'Failed to refresh providers');
+  },
+});
+
 // Close dropdown when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
@@ -278,6 +293,21 @@ const handleKeyDown = (event: KeyboardEvent) => {
             <p class="text-sm text-text-muted">Drag to reorder. First available provider will be used.</p>
           </div>
           <div class="flex items-center gap-2">
+            <!-- Refresh Button -->
+            <button
+              type="button"
+              :disabled="refreshMutation.isPending.value"
+              @click="refreshMutation.mutate()"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Refresh provider status and models"
+            >
+              <RefreshCw
+                :size="14"
+                :class="{ 'animate-spin': refreshMutation.isPending.value }"
+              />
+              <span class="sr-only sm:not-sr-only">Refresh</span>
+            </button>
+
             <!-- Save Button -->
             <button
               v-if="hasChanges"

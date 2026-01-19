@@ -9,10 +9,11 @@ configuration, environment variables, or automatic detection. It handles:
 - Configuration validation
 
 Environment Variables:
-    DEFAULT_CHAT_PROVIDER: Preferred provider (openai, anthropic, ollama)
+    DEFAULT_CHAT_PROVIDER: Preferred provider (openai, anthropic, ollama, lmstudio)
     OPENAI_API_KEY: Enables OpenAI provider
     ANTHROPIC_API_KEY: Enables Anthropic provider
     OLLAMA_BASE_URL: Configures Ollama server location
+    LMSTUDIO_BASE_URL: Configures LMStudio server location
 
 Example:
     >>> from reconly_core.chat.providers import create_provider, get_default_provider
@@ -46,7 +47,8 @@ logger = logging.getLogger(__name__)
 
 
 # Provider priority order for auto-detection
-DEFAULT_PROVIDER_PRIORITY = ["anthropic", "openai", "ollama"]
+# Cloud providers first (by capability), then local providers (by native tool support)
+DEFAULT_PROVIDER_PRIORITY = ["anthropic", "openai", "lmstudio", "ollama"]
 
 
 class ProviderFactoryError(ChatProviderError):
@@ -108,10 +110,17 @@ def create_provider(
             kwargs["model"] = model
         return OllamaChatProvider(**kwargs)
 
+    elif provider_name == "lmstudio":
+        from reconly_core.chat.providers.lmstudio_provider import LMStudioChatProvider
+
+        if model:
+            kwargs["model"] = model
+        return LMStudioChatProvider(**kwargs)
+
     else:
         raise ProviderFactoryError(
             f"Unknown provider: {provider_name}. "
-            f"Supported providers: openai, anthropic, ollama",
+            f"Supported providers: openai, anthropic, ollama, lmstudio",
             provider=provider_name,
         )
 
@@ -127,7 +136,7 @@ def get_available_providers() -> list[str]:
 
     Example:
         >>> available = get_available_providers()
-        >>> print(available)  # ['anthropic', 'ollama']
+        >>> print(available)  # ['anthropic', 'ollama', 'lmstudio']
     """
     available = []
 
@@ -138,6 +147,17 @@ def get_available_providers() -> list[str]:
     # Check OpenAI
     if os.getenv("OPENAI_API_KEY"):
         available.append("openai")
+
+    # Check LMStudio (available if server is running)
+    try:
+        import httpx
+
+        base_url = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+        response = httpx.get(f"{base_url}/models", timeout=2.0)
+        if response.status_code == 200:
+            available.append("lmstudio")
+    except Exception:
+        pass
 
     # Check Ollama (always potentially available if server is running)
     try:
@@ -210,6 +230,7 @@ def get_default_provider(
         "No chat providers are available. Configure one of:\n"
         "  - ANTHROPIC_API_KEY for Anthropic Claude\n"
         "  - OPENAI_API_KEY for OpenAI GPT\n"
+        "  - LMStudio server at LMSTUDIO_BASE_URL (default: http://localhost:1234/v1)\n"
         "  - Ollama server at OLLAMA_BASE_URL (default: http://localhost:11434)"
     )
 
@@ -346,6 +367,36 @@ def get_provider_info() -> dict[str, dict[str, Any]]:
         "is_local": True,
     }
     info["ollama"] = ollama_info
+
+    # LMStudio
+    lmstudio_base_url = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+    lmstudio_available = False
+    lmstudio_models = []
+
+    try:
+        import httpx
+
+        response = httpx.get(f"{lmstudio_base_url}/models", timeout=2.0)
+        if response.status_code == 200:
+            lmstudio_available = True
+            data = response.json()
+            # OpenAI-compatible format: {"data": [{"id": "model-name", ...}]}
+            lmstudio_models = [m["id"] for m in data.get("data", [])]
+    except Exception:
+        pass
+
+    lmstudio_info = {
+        "available": lmstudio_available,
+        "configured": True,  # LMStudio doesn't need explicit config
+        "has_api_key": False,  # LMStudio doesn't use API keys
+        "base_url": lmstudio_base_url,
+        "default_model": os.getenv("LMSTUDIO_MODEL") or (lmstudio_models[0] if lmstudio_models else None),
+        "models": lmstudio_models,
+        "supports_tools": True,  # Native OpenAI-compatible tool calling
+        "supports_streaming": True,
+        "is_local": True,
+    }
+    info["lmstudio"] = lmstudio_info
 
     return info
 
