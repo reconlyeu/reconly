@@ -40,7 +40,25 @@ const { data: settings, isLoading } = useQuery({
 
 // Local form state
 const localConfig = ref<Record<string, unknown>>({});
-const hasChanges = ref(false);
+
+// Compute whether there are actual differences from stored settings
+const hasChanges = computed(() => {
+  for (const field of configFields.value) {
+    const storedValue = getStoredValue(field.key);
+    const currentValue = localConfig.value[field.key];
+
+    // If stored value is null/undefined but we have a current value, it's a change
+    if ((storedValue === null || storedValue === undefined) && currentValue !== null && currentValue !== undefined && currentValue !== '') {
+      return true;
+    }
+
+    // If values differ, it's a change
+    if (storedValue !== currentValue) {
+      return true;
+    }
+  }
+  return false;
+});
 
 // Get config fields from provider, filtering out non-editable fields
 const configFields = computed(() => {
@@ -124,7 +142,6 @@ const updateLocalFromSettings = () => {
   }
 
   localConfig.value = newConfig;
-  hasChanges.value = false;
 };
 
 // Watch settings and update local config
@@ -140,7 +157,6 @@ watch(() => props.provider.name, () => {
 // Handle field value change
 const handleFieldChange = (fieldKey: string, value: unknown) => {
   localConfig.value[fieldKey] = value;
-  hasChanges.value = true;
 };
 
 // Handle integer field change
@@ -148,7 +164,6 @@ const handleIntegerChange = (fieldKey: string, event: Event) => {
   const target = event.target as HTMLInputElement;
   const value = parseInt(target.value, 10);
   localConfig.value[fieldKey] = isNaN(value) ? 0 : value;
-  hasChanges.value = true;
 };
 
 // Validate required fields
@@ -181,7 +196,6 @@ const saveMutation = useMutation({
   },
   onSuccess: () => {
     toast.success(`${displayName.value} settings saved`);
-    hasChanges.value = false;
     queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
     queryClient.invalidateQueries({ queryKey: ['provider-status'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
