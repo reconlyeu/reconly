@@ -75,13 +75,13 @@ const envConfiguredFields = computed(() => {
 
 // Build setting key for a field
 const getSettingKey = (fieldKey: string): string => {
-  return `llm.${props.provider.name}.${fieldKey}`;
+  return `provider.${props.provider.name}.${fieldKey}`;
 };
 
 // Get stored value for a field from settings
 const getStoredValue = (fieldKey: string): unknown => {
   if (!settings.value?.provider) return null;
-  // Settings API returns keys with provider prefix: llm.ollama.model -> ollama.model
+  // Settings API returns keys with provider prefix: provider.ollama.model -> ollama.model
   const qualifiedKey = `${props.provider.name}.${fieldKey}`;
   return settings.value.provider[qualifiedKey]?.value ?? null;
 };
