@@ -45,7 +45,7 @@ const handleToggle = (enabled: boolean) => {
   emit('toggle', props.exporter.name, enabled);
 };
 
-// Status configuration following ProviderStatusCard pattern
+// Status configuration following ProviderChainItem pattern
 type StatusType = 'active' | 'misconfigured' | 'disabled' | 'not_configured';
 
 const status = computed<StatusType>(() => {
