@@ -434,11 +434,21 @@ def _get_setting_with_db_fallback(
         try:
             from reconly_core.services.settings_service import SettingsService
             service = SettingsService(db)
-            value = service.get(key)
+            # Use get_raw() for provider settings since they may be dynamically
+            # registered and not always in SETTINGS_REGISTRY at lookup time.
+            # This prevents KeyError from being silently swallowed.
+            if key.startswith("provider."):
+                value = service.get_raw(key)
+            else:
+                value = service.get(key)
             if value is not None:
                 return value
-        except Exception:
-            pass  # Fall through to env var
+        except KeyError:
+            # Key not in registry - log and fall through
+            logger.debug("setting_not_in_registry", key=key)
+        except Exception as e:
+            # Other errors - log and fall through to env var
+            logger.debug("setting_lookup_failed", key=key, error=str(e))
 
     # Priority 2: Environment variable
     if env_var:
