@@ -1,6 +1,6 @@
 """Tests for embedding providers."""
 import pytest
-from unittest.mock import patch, Mock, AsyncMock
+from unittest.mock import patch
 import requests
 
 from reconly_core.rag.embeddings import (

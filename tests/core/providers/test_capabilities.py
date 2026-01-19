@@ -1,5 +1,4 @@
 """Tests for provider capabilities."""
-import pytest
 from reconly_core.providers.capabilities import ProviderCapabilities
 
 

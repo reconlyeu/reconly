@@ -904,10 +904,9 @@ class FeedService:
             )
             return {"success": True, "items_count": 0}
 
-        # Extract metadata if present (last item with _fetch_metadata key)
-        fetch_metadata = None
+        # Remove metadata if present (last item with _fetch_metadata key)
         if emails and isinstance(emails[-1], dict) and emails[-1].get("_fetch_metadata"):
-            fetch_metadata = emails.pop()
+            emails.pop()
 
         logger.info(
             "imap_fetch_complete",

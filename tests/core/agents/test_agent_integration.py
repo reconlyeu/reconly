@@ -368,7 +368,6 @@ class TestAgentErrorHandling:
 
     def test_partial_results_on_error(self, db_session, agent_source):
         """Test that agent can return partial results if error occurs mid-execution."""
-        from reconly_core.agents.research import ResearchAgent
 
         # This tests the _timeout_result functionality
         partial_result = AgentResult(

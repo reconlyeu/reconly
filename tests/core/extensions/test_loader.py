@@ -1,18 +1,15 @@
 """Tests for extension loader functionality."""
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from reconly_core.extensions.loader import (
     parse_version,
     validate_extension_compatibility,
     extract_extension_metadata,
-    get_reconly_version,
     ExtensionLoader,
     ENTRY_POINT_GROUPS,
 )
 from reconly_core.extensions.types import (
     ExtensionType,
-    ExtensionMetadata,
     LoadedExtension,
 )
 from reconly_core.exporters.base import BaseExporter, ExportResult

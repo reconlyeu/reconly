@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from reconly_core.services.settings_service import SettingsService, migrate_provider_settings
 from reconly_core.services.settings_registry import SETTINGS_REGISTRY
-from reconly_core.database.models import AppSetting
 
 
 class TestSettingsServiceGet:
@@ -407,7 +406,7 @@ class TestMigrateProviderSettings:
         service.set_raw("llm.default_provider", "anthropic")
 
         # Run migration
-        result = migrate_provider_settings(db_session)
+        migrate_provider_settings(db_session)
 
         # Anthropic should be moved to first
         chain = service.get("llm.fallback_chain")

@@ -1,5 +1,4 @@
 """Tests for settings registry functions, especially auto-registration."""
-import pytest
 from reconly_core.services.settings_registry import (
     SETTINGS_REGISTRY,
     SettingDef,

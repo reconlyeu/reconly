@@ -3,7 +3,6 @@ Tests for Digest CRUD operations.
 """
 import pytest
 from reconly_core.database.crud import DigestDB
-from reconly_core.database.models import Digest
 
 
 @pytest.mark.database

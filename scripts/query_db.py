@@ -40,7 +40,7 @@ for result in search_results:
     print(f"  - {result.title}")
 
 # Stats
-print(f"\nStats:")
+print("\nStats:")
 print(f"  Total digests: {len(digests)}")
 print(f"  YouTube videos: {len(youtube_digests)}")
 print(f"  RSS articles: {len([d for d in digests if d.source_type == 'rss'])}")

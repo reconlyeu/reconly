@@ -1,7 +1,7 @@
 """Tests for summarizer factory."""
 import pytest
 from unittest.mock import Mock, patch
-from reconly_core.resilience import ErrorCategory, RetryConfig, classify_error
+from reconly_core.resilience import RetryConfig, classify_error
 from reconly_core.providers.factory import (
     get_summarizer,
     SummarizerWithFallback,

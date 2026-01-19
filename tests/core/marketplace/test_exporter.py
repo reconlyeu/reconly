@@ -1,6 +1,6 @@
 """Tests for feed bundle exporter."""
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from reconly_core.marketplace.exporter import FeedBundleExporter
 from reconly_core.marketplace.bundle import FeedBundle

@@ -2,7 +2,6 @@
 import json
 import pytest
 import time
-from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 
 from reconly_core.extensions.catalog import (
@@ -498,7 +497,7 @@ class TestFindLocalCatalog:
     def test_explicit_path_not_exists(self, tmp_path):
         """Test returns None for missing explicit path."""
         fetcher = CatalogFetcher(local_path=str(tmp_path / "missing.json"))
-        found = fetcher._find_local_catalog()
+        fetcher._find_local_catalog()
 
         # Should continue searching, may find in cwd or return None
         # depending on test environment

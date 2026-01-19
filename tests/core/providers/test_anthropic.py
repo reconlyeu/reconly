@@ -233,7 +233,7 @@ class TestAnthropicProvider(BaseProviderTestSuite):
             'source_type': 'youtube'
         }
 
-        result = summarizer.summarize(youtube_data, language='de')
+        summarizer.summarize(youtube_data, language='de')
         call_args = mock_client.messages.create.call_args
         prompt = call_args[1]['messages'][0]['content']
         # Fallback prompt uses raw source_type
@@ -247,7 +247,7 @@ class TestAnthropicProvider(BaseProviderTestSuite):
             'source_type': 'rss'
         }
 
-        result = summarizer.summarize(rss_data, language='de')
+        summarizer.summarize(rss_data, language='de')
         call_args = mock_client.messages.create.call_args
         prompt = call_args[1]['messages'][0]['content']
         # Fallback prompt uses raw source_type

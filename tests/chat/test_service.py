@@ -2,13 +2,11 @@
 
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 
 from reconly_core.chat.service import (
     ChatService,
-    ChatResponse,
     ConversationNotFoundError,
-    ProviderError,
 )
 from reconly_core.chat.tools import ToolRegistry, ToolDefinition
 from reconly_core.database.models import ChatConversation, ChatMessage

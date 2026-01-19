@@ -1,5 +1,4 @@
 """Tests for ContentFilter class."""
-import pytest
 from reconly_core.services.content_filter import ContentFilter
 
 

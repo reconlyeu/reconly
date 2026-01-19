@@ -2,7 +2,6 @@
 import json
 from datetime import datetime
 
-import pytest
 
 from reconly_core.rag.citations import (
     Citation,

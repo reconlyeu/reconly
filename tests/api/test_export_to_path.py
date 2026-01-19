@@ -1,5 +1,4 @@
 """Tests for Export-to-Path API endpoint."""
-import os
 import pytest
 import tempfile
 from pathlib import Path

@@ -404,7 +404,7 @@ class TestAgentFetcherIntegration:
             mock_agent_class.return_value = mock_agent
 
             # Run
-            result = await agent_fetcher._run_agent("Test topic", {})
+            await agent_fetcher._run_agent("Test topic", {})
 
             # Verify
             mock_agent_class.assert_called_once_with(

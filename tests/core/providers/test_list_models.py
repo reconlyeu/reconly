@@ -4,7 +4,6 @@ These tests verify the structure and behavior of list_models(), not specific mod
 This makes tests resilient to model updates - when new models are released, no test
 changes are needed.
 """
-import pytest
 from unittest.mock import patch, MagicMock
 
 from reconly_core.providers.capabilities import ModelInfo
@@ -250,6 +249,6 @@ class TestHuggingFaceListModels:
         for m in models:
             # HuggingFace model IDs should contain org/model format
             # or be a valid identifier
-            assert m.id, f"Model ID should not be empty"
+            assert m.id, "Model ID should not be empty"
             # Most models have org/model format, but some might be just identifiers
             assert '/' in m.id or len(m.id) > 0, f"Model {m.id} should be a valid identifier"

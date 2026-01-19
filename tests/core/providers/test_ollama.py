@@ -1,6 +1,6 @@
 """Tests for Ollama summarizer."""
 import pytest
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 import requests
 
 from reconly_core.providers.ollama import OllamaProvider
