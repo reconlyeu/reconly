@@ -1,5 +1,5 @@
 """Provider-related schemas for API responses."""
-from typing import Any, List, Literal, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconly_api.schemas.common import ConfigFieldResponse

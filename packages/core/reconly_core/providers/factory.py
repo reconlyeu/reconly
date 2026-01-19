@@ -18,11 +18,11 @@ logger = structlog.get_logger(__name__)
 # Default fallback chain when no setting is configured
 DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 
-# Import providers to ensure they're registered
-from reconly_core.providers.anthropic import AnthropicProvider
-from reconly_core.providers.huggingface import HuggingFaceProvider
-from reconly_core.providers.ollama import OllamaProvider
-from reconly_core.providers.openai_provider import OpenAIProvider
+# Import providers to ensure they're registered (side-effect imports)
+from reconly_core.providers.anthropic import AnthropicProvider  # noqa: F401
+from reconly_core.providers.huggingface import HuggingFaceProvider  # noqa: F401
+from reconly_core.providers.ollama import OllamaProvider  # noqa: F401
+from reconly_core.providers.openai_provider import OpenAIProvider  # noqa: F401
 
 
 class SummarizerWithFallback:
