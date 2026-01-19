@@ -306,8 +306,93 @@ RECONLY_AUTH_PASSWORD=my-secret-password
 | `docker/oss/.env` | Docker-specific configuration |
 | `ui/.env` | UI build-time configuration |
 
+## LLM Chat Configuration
+
+The chat feature allows conversational interaction with Reconly through LLM tool calling.
+
+### Provider Selection
+
+```bash
+# Default chat provider (ollama, openai, anthropic, lmstudio)
+DEFAULT_CHAT_PROVIDER=ollama
+```
+
+If not set, uses the first available provider from the fallback chain.
+
+### Recommended Models
+
+#### Ollama (Local, Free)
+
+Best for privacy and development. No API costs.
+
+| Model | Best For | Notes |
+|-------|----------|-------|
+| **llama3.2** | General use | Best balance of speed and quality |
+| **mistral** | Fast responses | Good for simple tasks |
+| **qwen2.5** | Tool calling | Strong structured output |
+| **codellama** | Technical questions | Better for code and technical content |
+
+```bash
+DEFAULT_CHAT_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+**Setup:**
+
+```bash
+ollama pull llama3.2
+ollama serve
+```
+
+#### OpenAI (Cloud, Paid)
+
+Best for production use.
+
+| Model | Best For | Speed | Cost |
+|-------|----------|-------|------|
+| **gpt-4o** | Production | Fast | Medium |
+| **gpt-4-turbo** | Quality | Medium | High |
+| **gpt-3.5-turbo** | Budget | Very Fast | Low |
+
+```bash
+DEFAULT_CHAT_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+#### Anthropic Claude (Cloud, Paid)
+
+Best for complex reasoning and long conversations.
+
+| Model | Best For | Context | Speed |
+|-------|----------|---------|-------|
+| **claude-sonnet-4-20250514** | General use | 200K | Fast |
+| **claude-3-5-haiku-20241022** | Budget | 200K | Very Fast |
+| **claude-opus-4-5** | Quality | 200K | Slow |
+
+```bash
+DEFAULT_CHAT_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Per-Conversation Settings
+
+Override defaults when creating conversations:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/conversations \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Research Discussion",
+    "model_provider": "anthropic",
+    "model_name": "claude-sonnet-4-20250514"
+  }'
+```
+
+For full chat documentation, see [Chat Tools Reference](architecture/chat-tools.md).
+
 ## See Also
 
 - [Setup Guide](setup.md) - Getting started
 - [Deployment Guide](deployment.md) - Production deployment
 - [Adding Providers](ADDING_PROVIDERS.md) - Custom LLM providers
+- [Chat Tools Reference](architecture/chat-tools.md) - Available chat tools and model recommendations
