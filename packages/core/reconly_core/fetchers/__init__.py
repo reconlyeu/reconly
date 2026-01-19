@@ -13,6 +13,7 @@ from reconly_core.fetchers.base import (
     ConfigField,
     FetcherConfigSchema,
 )
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import (
     is_fetcher_extension,
     list_extension_fetchers,
@@ -30,6 +31,7 @@ __all__ = [
     'FetchedItem',
     'ConfigField',
     'FetcherConfigSchema',
+    'FetcherMetadata',
     # Extension-related
     'is_fetcher_extension',
     'list_extension_fetchers',

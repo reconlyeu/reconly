@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
 from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.metadata import ProviderMetadata
 from reconly_core.providers.registry import register_provider
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
@@ -20,6 +21,19 @@ class HuggingFaceProvider(BaseProvider):
 
     # Human-readable description for UI
     description = "HuggingFace Inference API (free tier available)"
+
+    # Provider metadata
+    metadata = ProviderMetadata(
+        name='huggingface',
+        display_name='HuggingFace',
+        description='HuggingFace Inference API models',
+        icon='simple-icons:huggingface',
+        is_local=False,
+        requires_api_key=True,
+        api_key_env_var='HUGGINGFACE_API_KEY',
+        timeout_env_var='PROVIDER_TIMEOUT_HUGGINGFACE',
+        timeout_default=120,
+    )
 
     # HuggingFace Hub API endpoint for model discovery
     HUB_API_URL = "https://huggingface.co/api/models"

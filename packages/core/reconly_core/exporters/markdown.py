@@ -17,6 +17,7 @@ from reconly_core.exporters.base import (
     ExportResult,
     ExportToPathResult,
 )
+from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import register_exporter
 from reconly_core.exporters.yaml_utils import yaml_escape
 
@@ -29,6 +30,17 @@ class MarkdownExporter(BaseExporter):
     designed for use with Obsidian and other note-taking apps.
     All digests are combined into a single Markdown file.
     """
+
+    metadata = ExporterMetadata(
+        name='obsidian',
+        display_name='Obsidian',
+        description='Export digests to Obsidian vault with frontmatter',
+        icon='simple-icons:obsidian',
+        file_extension='.md',
+        mime_type='text/markdown',
+        path_setting_key='vault_path',  # Different setting key for Obsidian
+        ui_color='#7C3AED',  # Obsidian purple
+    )
 
     def export(
         self,

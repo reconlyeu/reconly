@@ -7,6 +7,7 @@ from reconly_core.exporters.factory import (
     get_available_formats,
 )
 from reconly_core.exporters.base import BaseExporter, ExportResult
+from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import (
     is_exporter_extension,
     list_extension_exporters,
@@ -21,6 +22,7 @@ __all__ = [
     'get_available_formats',
     'BaseExporter',
     'ExportResult',
+    'ExporterMetadata',
     # Extension-related
     'is_exporter_extension',
     'list_extension_exporters',

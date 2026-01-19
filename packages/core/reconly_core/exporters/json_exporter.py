@@ -11,6 +11,7 @@ from reconly_core.exporters.base import (
     ExportResult,
     ExportToPathResult,
 )
+from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import register_exporter
 
 
@@ -21,6 +22,17 @@ class JSONExporter(BaseExporter):
     Exports digests to a JSON array format with pretty printing.
     Supports direct export to filesystem.
     """
+
+    metadata = ExporterMetadata(
+        name='json',
+        display_name='JSON',
+        description='Export digests as JSON files',
+        icon='mdi:code-json',
+        file_extension='.json',
+        mime_type='application/json',
+        path_setting_key='export_path',
+        ui_color='#F7DF1E',  # JSON yellow
+    )
 
     def export(
         self,

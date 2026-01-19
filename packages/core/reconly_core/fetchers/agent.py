@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from reconly_core.config_types import ConfigField
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 if TYPE_CHECKING:
@@ -48,6 +49,17 @@ class AgentFetcher(BaseFetcher):
         >>> print(results[0]['title'])  # Agent-generated title
         >>> print(results[0]['content'])  # Research findings in markdown
     """
+
+    metadata = FetcherMetadata(
+        name='agent',
+        display_name='AI Agent',
+        description='AI-powered content research and gathering',
+        icon='mdi:robot',
+        url_schemes=['agent'],
+        supports_incremental=False,
+        supports_validation=False,
+        supports_test_fetch=False,
+    )
 
     def fetch(
         self,

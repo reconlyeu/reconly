@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from dateutil import parser as date_parser
 
 from reconly_core.fetchers.base import BaseFetcher, ValidationResult
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 
@@ -29,6 +30,17 @@ def get_first_run_max_age_days() -> int:
 @register_fetcher('rss')
 class RSSFetcher(BaseFetcher):
     """Fetches and parses RSS/Atom feeds."""
+
+    metadata = FetcherMetadata(
+        name='rss',
+        display_name='RSS Feed',
+        description='Fetch content from RSS/Atom feeds',
+        icon='mdi:rss',
+        url_schemes=['http', 'https'],
+        supports_incremental=True,
+        supports_validation=True,
+        supports_test_fetch=True,
+    )
 
     def __init__(self):
         pass

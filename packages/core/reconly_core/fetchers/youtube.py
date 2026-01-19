@@ -14,6 +14,7 @@ import requests
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from reconly_core.fetchers.base import BaseFetcher, ValidationResult
+from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,17 @@ YOUTUBE_CHANNEL_RSS_URL = "https://www.youtube.com/feeds/videos.xml?channel_id={
 @register_fetcher('youtube')
 class YouTubeFetcher(BaseFetcher):
     """Fetches transcripts from YouTube videos and channels."""
+
+    metadata = FetcherMetadata(
+        name='youtube',
+        display_name='YouTube',
+        description='Fetch videos from YouTube channels or playlists',
+        icon='mdi:youtube',
+        url_schemes=['http', 'https'],
+        supports_incremental=True,
+        supports_validation=True,
+        supports_test_fetch=True,
+    )
 
     def __init__(self):
         pass

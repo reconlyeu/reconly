@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
 from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.metadata import ProviderMetadata
 from reconly_core.providers.registry import register_provider
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
@@ -15,6 +16,20 @@ class AnthropicProvider(BaseProvider):
 
     # Human-readable description for UI
     description = "Anthropic Claude models (Claude 4, Sonnet, Haiku)"
+
+    # Provider metadata
+    metadata = ProviderMetadata(
+        name='anthropic',
+        display_name='Anthropic',
+        description='Anthropic Claude models (Claude 3, Claude 3.5)',
+        icon='simple-icons:anthropic',
+        is_local=False,
+        requires_api_key=True,
+        api_key_env_var='ANTHROPIC_API_KEY',
+        api_key_prefix='sk-ant-',
+        timeout_env_var='PROVIDER_TIMEOUT_ANTHROPIC',
+        timeout_default=120,
+    )
 
     # Default timeout for cloud API calls
     DEFAULT_TIMEOUT = 120  # 2 minutes

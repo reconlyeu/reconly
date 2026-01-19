@@ -3,6 +3,7 @@ from typing import List, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from reconly_api.schemas.common import ConfigFieldResponse
+from reconly_api.schemas.components import ProviderMetadataResponse
 
 
 class ProviderConfigSchemaResponse(BaseModel):
@@ -41,6 +42,9 @@ class ProviderResponse(BaseModel):
         default=None, description="Masked API key if configured (e.g., 'sk-...xxxx')"
     )
     is_extension: bool = Field(default=False, description="Whether this is an external extension")
+    metadata: Optional[ProviderMetadataResponse] = Field(
+        default=None, description="Provider metadata including display name, icon, etc."
+    )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -70,7 +74,15 @@ class ProviderResponse(BaseModel):
                 "requires_api_key": False
             },
             "masked_api_key": None,
-            "is_extension": False
+            "is_extension": False,
+            "metadata": {
+                "name": "ollama",
+                "display_name": "Ollama",
+                "description": "Local LLM via Ollama server",
+                "icon": "mdi:robot",
+                "is_local": True,
+                "requires_api_key": False
+            }
         }
     })
 

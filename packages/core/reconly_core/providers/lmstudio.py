@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from reconly_core.config_types import ConfigField, ProviderConfigSchema
 from reconly_core.providers.base import BaseProvider
+from reconly_core.providers.metadata import ProviderMetadata
 from reconly_core.providers.registry import register_provider
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
 
@@ -24,6 +25,21 @@ class LMStudioProvider(BaseProvider):
 
     # Human-readable description for UI
     description = "Local LLM via LMStudio server"
+
+    # Provider metadata
+    metadata = ProviderMetadata(
+        name='lmstudio',
+        display_name='LM Studio',
+        description='Local LLM via LM Studio server',
+        icon='mdi:monitor',
+        is_local=True,
+        requires_api_key=False,
+        base_url_env_var='LMSTUDIO_BASE_URL',
+        base_url_default='http://localhost:1234/v1',
+        timeout_env_var='PROVIDER_TIMEOUT_LMSTUDIO',
+        timeout_default=300,
+        availability_endpoint='/models',
+    )
 
     # Default timeout for local LMStudio models (longer since they run locally)
     DEFAULT_TIMEOUT = 300  # 5 minutes

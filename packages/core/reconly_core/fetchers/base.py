@@ -6,10 +6,13 @@ Fetchers retrieve content from various sources (RSS feeds, YouTube, websites, et
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
 from urllib.parse import urlparse
 
 from reconly_core.config_types import ConfigField, ComponentConfigSchema
+
+if TYPE_CHECKING:
+    from reconly_core.fetchers.metadata import FetcherMetadata
 
 
 # Re-export ConfigField for backwards compatibility
@@ -159,13 +162,41 @@ class BaseFetcher(ABC):
     Subclasses must implement all abstract methods to provide source-specific
     fetching functionality.
 
+    Class Attributes:
+        metadata: FetcherMetadata instance with fetcher configuration metadata.
+                  Subclasses must define this class variable.
+
     Example:
         >>> @register_fetcher('rss')
         >>> class RSSFetcher(BaseFetcher):
+        >>>     metadata = FetcherMetadata(
+        >>>         name='rss',
+        >>>         display_name='RSS Feed',
+        >>>         description='Fetch content from RSS/Atom feeds',
+        >>>     )
         >>>     def fetch(self, url, since=None, max_items=None):
         >>>         # Fetch logic here
         >>>         return [{'url': ..., 'title': ..., 'content': ...}]
     """
+
+    # Fetcher metadata (subclasses must override)
+    metadata: ClassVar["FetcherMetadata"]
+
+    @classmethod
+    def get_metadata(cls) -> "FetcherMetadata":
+        """Get the fetcher metadata.
+
+        Returns:
+            FetcherMetadata instance with configuration and display information.
+
+        Raises:
+            NotImplementedError: If subclass hasn't defined metadata class variable.
+        """
+        if not hasattr(cls, 'metadata') or cls.metadata is None:
+            raise NotImplementedError(
+                f"{cls.__name__} must define a 'metadata' class variable"
+            )
+        return cls.metadata
 
     @abstractmethod
     def fetch(

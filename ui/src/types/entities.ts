@@ -466,6 +466,49 @@ export interface TagBulkDeleteResponse {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// COMPONENT METADATA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Base metadata interface for all component types (providers, fetchers, exporters).
+ */
+export interface ComponentMetadata {
+  name: string;
+  display_name: string;
+  description: string;
+  icon: string | null;
+}
+
+/**
+ * Metadata for LLM providers.
+ */
+export interface ProviderMetadata extends ComponentMetadata {
+  is_local: boolean;
+  requires_api_key: boolean;
+}
+
+/**
+ * Metadata for content fetchers.
+ */
+export interface FetcherMetadata extends ComponentMetadata {
+  url_schemes: string[];
+  supports_oauth: boolean;
+  oauth_providers: string[];
+  supports_incremental: boolean;
+  supports_validation: boolean;
+  supports_test_fetch: boolean;
+}
+
+/**
+ * Metadata for digest exporters.
+ */
+export interface ExporterMetadata extends ComponentMetadata {
+  file_extension: string;
+  mime_type: string;
+  ui_color: string | null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // PROVIDER STATUS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -524,6 +567,7 @@ export interface Provider {
   config_schema: ProviderConfigSchema;
   masked_api_key?: string | null;
   is_extension: boolean;
+  metadata?: ProviderMetadata | null;
 }
 
 /**
@@ -681,6 +725,8 @@ export interface Exporter {
   can_enable: boolean;
   // Extension flag
   is_extension: boolean;
+  // Component metadata
+  metadata?: ExporterMetadata | null;
 }
 
 export interface ExporterListResponse {
@@ -722,6 +768,8 @@ export interface Fetcher {
   is_configured: boolean;
   can_enable: boolean;
   is_extension: boolean;
+  // Component metadata
+  metadata?: FetcherMetadata | null;
 }
 
 export interface FetcherListResponse {

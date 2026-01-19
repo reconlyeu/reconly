@@ -1,6 +1,5 @@
 """Provider status and configuration API routes."""
 import logging
-import os
 from typing import List, Optional
 
 import httpx
@@ -15,6 +14,7 @@ from reconly_api.schemas.providers import (
     ModelInfoResponse,
     ProviderStatus,
 )
+from reconly_api.schemas.components import ProviderMetadataResponse
 from reconly_api.routes.component_utils import convert_config_fields
 from reconly_core.services.settings_service import SettingsService
 from reconly_core.providers.capabilities import ModelInfo
@@ -32,24 +32,45 @@ logger = logging.getLogger(__name__)
 # Default fallback chain (local-first)
 DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
 
-# Local provider URLs are configurable via environment variables
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-LMSTUDIO_BASE_URL = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-
 
 def _mask_api_key(api_key: Optional[str], provider_name: str) -> Optional[str]:
-    """Mask an API key for display, showing only last 4 characters."""
+    """Mask an API key for display using provider metadata.
+
+    Uses the provider's metadata.mask_api_key() method which preserves the
+    configured API key prefix (e.g., 'sk-' for OpenAI, 'sk-ant-' for Anthropic).
+
+    Falls back to a hardcoded prefix map for providers without metadata.
+
+    Args:
+        api_key: The API key to mask
+        provider_name: Name of the provider
+
+    Returns:
+        Masked API key string (e.g., 'sk-***xyz') or None if no key
+    """
     if not api_key:
         return None
 
-    # Different providers use different key prefixes
+    # Try to use provider metadata for masking
+    if is_provider_registered(provider_name):
+        try:
+            entry = get_provider_entry(provider_name)
+            metadata = entry.cls.get_metadata()
+            return metadata.mask_api_key(api_key)
+        except (AttributeError, NotImplementedError):
+            pass
+
+    # Fallback: hardcoded prefix map for providers without metadata
     prefix_map = {
         'openai': 'sk-',
-        'anthropic': 'sk-',
+        'anthropic': 'sk-ant-',
         'huggingface': 'hf_',
     }
     prefix = prefix_map.get(provider_name, '')
-    return f"{prefix}...{api_key[-4:]}"
+
+    # Show prefix + masked middle + last 3 chars (matching metadata behavior)
+    suffix = api_key[-3:] if len(api_key) > 3 else ""
+    return f"{prefix}***{suffix}"
 
 
 def _config_schema_to_response(schema) -> ProviderConfigSchemaResponse:
@@ -98,6 +119,30 @@ def _model_info_to_response(model: ModelInfo) -> ModelInfoResponse:
     )
 
 
+def _provider_metadata_to_response(provider_cls) -> Optional[ProviderMetadataResponse]:
+    """Convert provider metadata to API response schema.
+
+    Args:
+        provider_cls: Provider class with get_metadata() method
+
+    Returns:
+        ProviderMetadataResponse or None if metadata not available
+    """
+    try:
+        metadata = provider_cls.get_metadata()
+        return ProviderMetadataResponse(
+            name=metadata.name,
+            display_name=metadata.display_name,
+            description=metadata.description,
+            icon=metadata.icon,
+            is_local=metadata.is_local,
+            requires_api_key=metadata.requires_api_key,
+        )
+    except (AttributeError, NotImplementedError):
+        # Provider doesn't have get_metadata() or it's not implemented
+        return None
+
+
 def get_provider_models_cached(provider_name: str, api_key: Optional[str] = None) -> List[ModelInfo]:
     """Get models for provider with caching."""
     cache = get_model_cache()
@@ -120,24 +165,53 @@ def get_provider_models_cached(provider_name: str, api_key: Optional[str] = None
 
 
 async def _check_local_provider_availability(provider_name: str) -> bool:
-    """Check if a local provider is available (server reachable)."""
-    if provider_name == 'ollama':
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2.0)
-                return response.status_code == 200
-        except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
-            logger.debug(f"Ollama check failed: {e}")
+    """Check if a local provider is available (server reachable).
+
+    Uses provider metadata for configuration:
+    - metadata.is_local: Whether to perform availability check
+    - metadata.get_base_url(): Base URL for the provider
+    - metadata.availability_endpoint: Endpoint to check (e.g., '/api/tags')
+
+    Args:
+        provider_name: Name of the provider to check
+
+    Returns:
+        True if provider is reachable, False otherwise
+    """
+    if not is_provider_registered(provider_name):
+        return False
+
+    try:
+        entry = get_provider_entry(provider_name)
+        metadata = entry.cls.get_metadata()
+
+        # Only check local providers with availability endpoints
+        if not metadata.is_local or not metadata.availability_endpoint:
             return False
-    elif provider_name == 'lmstudio':
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(f"{LMSTUDIO_BASE_URL}/models", timeout=2.0)
-                return response.status_code == 200
-        except (httpx.ConnectError, httpx.TimeoutException, Exception) as e:
-            logger.debug(f"LMStudio check failed: {e}")
+
+        # Build full URL from base_url + availability_endpoint
+        base_url = metadata.get_base_url()
+        if not base_url:
             return False
-    return False
+
+        # Remove trailing /v1 if present for endpoint construction
+        # (LMStudio uses /v1 as base but /v1/models as endpoint)
+        check_url = f"{base_url.rstrip('/')}{metadata.availability_endpoint}"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(check_url, timeout=2.0)
+            return response.status_code == 200
+
+    except (AttributeError, NotImplementedError):
+        # Provider doesn't have metadata - use legacy behavior
+        logger.debug(f"Provider {provider_name} has no metadata for availability check")
+        return False
+    except (httpx.ConnectError, httpx.TimeoutException) as e:
+        logger.debug(f"{provider_name} availability check failed: {e}")
+        return False
+    except Exception as e:
+        logger.debug(f"{provider_name} availability check error: {e}")
+        return False
 
 
 def _determine_provider_status(
@@ -178,12 +252,19 @@ async def get_provider_config(db: Session = Depends(get_db)):
     if not fallback_chain:
         fallback_chain = DEFAULT_FALLBACK_CHAIN.copy()
 
-    # Pre-check local provider availability
+    # Pre-check local provider availability using metadata
     local_availability = {}
     for provider_name in list_providers():
         entry = get_provider_entry(provider_name)
-        capabilities = entry.cls.get_capabilities()
-        if capabilities.is_local:
+        # Try metadata first, fall back to capabilities
+        try:
+            metadata = entry.cls.get_metadata()
+            is_local = metadata.is_local
+        except (AttributeError, NotImplementedError):
+            capabilities = entry.cls.get_capabilities()
+            is_local = capabilities.is_local
+
+        if is_local:
             local_availability[provider_name] = await _check_local_provider_availability(provider_name)
 
     # Iterate over all registered providers
@@ -226,6 +307,7 @@ async def get_provider_config(db: Session = Depends(get_db)):
                 config_schema=_config_schema_to_response(config_schema),
                 masked_api_key=_mask_api_key(api_key, provider_name),
                 is_extension=entry.is_extension,
+                metadata=_provider_metadata_to_response(provider_cls),
             )
             providers_list.append(provider_response)
 

@@ -8,12 +8,15 @@ Edition Notes:
     - Token tracking (tokens_in, tokens_out) is available in both editions
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, List, Union
+from typing import ClassVar, Dict, Optional, List, TYPE_CHECKING, Union
 
 from reconly_core.config_types import ProviderConfigSchema
 from reconly_core.resilience.config import RetryConfig
 from reconly_core.resilience.errors import ErrorCategory, classify_error
 from reconly_core.providers.capabilities import ProviderCapabilities, ModelInfo
+
+if TYPE_CHECKING:
+    from reconly_core.providers.metadata import ProviderMetadata
 
 
 class BaseProvider(ABC):
@@ -30,10 +33,31 @@ class BaseProvider(ABC):
     Class Attributes:
         description: Human-readable description of this provider for UI display.
                      Subclasses should override this with a provider-specific description.
+        metadata: ProviderMetadata instance with full provider configuration metadata.
+                  Subclasses must define this class variable.
     """
 
     # Human-readable description of this provider
     description: str = "LLM provider"
+
+    # Provider metadata (subclasses must override)
+    metadata: ClassVar["ProviderMetadata"]
+
+    @classmethod
+    def get_metadata(cls) -> "ProviderMetadata":
+        """Get the provider metadata.
+
+        Returns:
+            ProviderMetadata instance with configuration and display information.
+
+        Raises:
+            NotImplementedError: If subclass hasn't defined metadata class variable.
+        """
+        if not hasattr(cls, 'metadata') or cls.metadata is None:
+            raise NotImplementedError(
+                f"{cls.__name__} must define a 'metadata' class variable"
+            )
+        return cls.metadata
 
     def __init__(self, api_key: Optional[str] = None):
         """
