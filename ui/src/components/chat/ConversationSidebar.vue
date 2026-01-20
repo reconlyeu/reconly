@@ -45,7 +45,7 @@ const {
 const { data: llmSettings } = useQuery({
   queryKey: ['settings', 'provider'],
   queryFn: () => settingsApi.get('provider'),
-  staleTime: 60000, // Cache for 1 minute
+  staleTime: 5000, // Short cache - provider display should update quickly after settings change
 });
 
 // Display provider and model info
