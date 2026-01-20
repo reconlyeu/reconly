@@ -33,8 +33,8 @@ const toast = useToast();
 
 // Settings query for this exporter's config
 const { data: settings, isLoading } = useQuery({
-  queryKey: ['settings-v2', 'export'],
-  queryFn: () => settingsApi.getV2('export'),
+  queryKey: ['settings', 'export'],
+  queryFn: () => settingsApi.get('export'),
   staleTime: 30000,
 });
 
@@ -142,12 +142,12 @@ const saveMutation = useMutation({
       value: localConfig.value[field.key],
     }));
 
-    return settingsApi.updateV2({ settings: settingsToUpdate });
+    return settingsApi.update({ settings: settingsToUpdate });
   },
   onSuccess: () => {
     toast.success(`${props.exporter.name.charAt(0).toUpperCase() + props.exporter.name.slice(1)} settings saved`);
     hasChanges.value = false;
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate exporters to refresh is_configured state
     queryClient.invalidateQueries({ queryKey: ['exporters'] });
   },
@@ -166,7 +166,7 @@ const resetMutation = useMutation({
   },
   onSuccess: () => {
     toast.success('Settings reset to defaults');
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate exporters to refresh is_configured state
     queryClient.invalidateQueries({ queryKey: ['exporters'] });
   },

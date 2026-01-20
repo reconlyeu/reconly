@@ -33,8 +33,8 @@ const toast = useToast();
 
 // Settings query for fetcher config (fetch category)
 const { data: settings, isLoading } = useQuery({
-  queryKey: ['settings-v2', 'fetch'],
-  queryFn: () => settingsApi.getV2('fetch'),
+  queryKey: ['settings', 'fetch'],
+  queryFn: () => settingsApi.get('fetch'),
   staleTime: 30000,
 });
 
@@ -153,12 +153,12 @@ const saveMutation = useMutation({
       value: localConfig.value[field.key],
     }));
 
-    return settingsApi.updateV2({ settings: settingsToUpdate });
+    return settingsApi.update({ settings: settingsToUpdate });
   },
   onSuccess: () => {
     toast.success(`${displayName.value} settings saved`);
     hasChanges.value = false;
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate fetchers to refresh is_configured state
     queryClient.invalidateQueries({ queryKey: ['fetchers'] });
   },
@@ -177,7 +177,7 @@ const resetMutation = useMutation({
   },
   onSuccess: () => {
     toast.success('Settings reset to defaults');
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate fetchers to refresh is_configured state
     queryClient.invalidateQueries({ queryKey: ['fetchers'] });
   },

@@ -5,17 +5,17 @@ import { settingsApi, apiClient } from '@/services/api';
 import SettingField from './SettingField.vue';
 import { useToast } from '@/composables/useToast';
 import { Loader2, Save, RotateCcw, Mail, Send } from 'lucide-vue-next';
-import type { SettingsV2, SettingValue } from '@/types/entities';
+import type { SettingValue } from '@/types/entities';
 
 const queryClient = useQueryClient();
 const toast = useToast();
 const testEmail = ref('');
 const testing = ref(false);
 
-// Settings V2 query for email category
+// Settings query for email category
 const { data: settings, isLoading } = useQuery({
-  queryKey: ['settings-v2', 'email'],
-  queryFn: () => settingsApi.getV2('email'),
+  queryKey: ['settings', 'email'],
+  queryFn: () => settingsApi.get('email'),
   staleTime: 30000,
 });
 
@@ -69,7 +69,7 @@ const handleUpdate = (key: string, value: unknown) => {
 // Save mutation
 const saveMutation = useMutation({
   mutationFn: async () => {
-    return settingsApi.updateV2({
+    return settingsApi.update({
       settings: [
         { key: 'email.smtp_host', value: localSettings.value.smtp_host },
         { key: 'email.smtp_port', value: localSettings.value.smtp_port },
@@ -81,7 +81,7 @@ const saveMutation = useMutation({
   onSuccess: () => {
     toast.success('Email settings saved');
     hasChanges.value = false;
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
     toast.error(err.detail || 'Failed to save settings');
@@ -97,7 +97,7 @@ const resetMutation = useMutation({
   },
   onSuccess: () => {
     toast.success('Email settings reset to defaults');
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
     toast.error(err.detail || 'Failed to reset settings');

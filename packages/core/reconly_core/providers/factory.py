@@ -576,6 +576,118 @@ def _get_fallback_chain(db: Optional["Session"] = None) -> List[str]:
     return valid_chain if valid_chain else _get_default_fallback_chain()
 
 
+def resolve_default_provider(
+    fallback_chain: Optional[List[str]] = None,
+    db: Optional["Session"] = None,
+) -> Dict[str, Any]:
+    """Resolve the first available provider from the fallback chain.
+
+    Checks each provider in the fallback chain for actual availability:
+    - Local providers (Ollama, LMStudio): Pings the server
+    - Cloud providers (OpenAI, Anthropic, HuggingFace): Checks for API key
+
+    This is the single source of truth for determining which provider
+    will actually be used - for both display (UI) and execution (feed/chat).
+
+    Args:
+        fallback_chain: Optional explicit chain. If None, reads from settings.
+        db: Optional database session for reading settings.
+
+    Returns:
+        Dict with:
+            - provider: str - The resolved provider name
+            - model: str | None - The default model for this provider
+            - available: bool - Whether provider is available
+            - fallback_used: bool - Whether we fell back from first choice
+            - unavailable_providers: list[str] - Providers that were unavailable
+
+    Example:
+        >>> result = resolve_default_provider()
+        >>> print(f"Using {result['provider']} with model {result['model']}")
+    """
+    import httpx
+
+    # Get fallback chain from settings if not provided
+    if fallback_chain is None:
+        fallback_chain = _get_fallback_chain(db)
+
+    unavailable = []
+
+    for provider_name in fallback_chain:
+        # Check provider availability
+        is_available = False
+
+        if provider_name in ("ollama",):
+            # Local provider - ping the server
+            try:
+                base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+                response = httpx.get(f"{base_url}/api/tags", timeout=2.0)
+                is_available = response.status_code == 200
+            except Exception:
+                pass
+
+        elif provider_name in ("lmstudio",):
+            # Local provider - ping the server
+            try:
+                base_url = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+                response = httpx.get(f"{base_url}/models", timeout=2.0)
+                is_available = response.status_code == 200
+            except Exception:
+                pass
+
+        elif provider_name in ("openai",):
+            # Cloud provider - check for API key
+            is_available = bool(os.getenv("OPENAI_API_KEY"))
+
+        elif provider_name in ("anthropic",):
+            # Cloud provider - check for API key
+            is_available = bool(os.getenv("ANTHROPIC_API_KEY"))
+
+        elif provider_name in ("huggingface",):
+            # Cloud provider - check for API key
+            is_available = bool(os.getenv("HUGGINGFACE_API_KEY"))
+
+        else:
+            # Unknown provider - try to instantiate and check
+            try:
+                instance = _instantiate_provider(provider_name, db=db)
+                is_available = instance.is_available()
+            except Exception:
+                pass
+
+        if is_available:
+            # Found an available provider - get its default model
+            model = None
+            try:
+                model = _get_setting_with_db_fallback(
+                    f"provider.{provider_name}.model",
+                    db=db,
+                    env_var=None,
+                    default=None,
+                )
+            except Exception:
+                pass
+
+            return {
+                "provider": provider_name,
+                "model": model,
+                "available": True,
+                "fallback_used": provider_name != fallback_chain[0],
+                "unavailable_providers": unavailable,
+            }
+        else:
+            unavailable.append(provider_name)
+
+    # No providers available
+    return {
+        "provider": fallback_chain[0] if fallback_chain else "ollama",
+        "model": None,
+        "available": False,
+        "fallback_used": False,
+        "unavailable_providers": unavailable,
+    }
+
+
 def list_available_models() -> Dict[str, List[str]]:
     """
     List all available models by provider.

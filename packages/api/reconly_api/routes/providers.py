@@ -13,6 +13,7 @@ from reconly_api.schemas.providers import (
     ProviderConfigSchemaResponse,
     ModelInfoResponse,
     ProviderStatus,
+    ResolvedProviderResponse,
 )
 from reconly_api.schemas.components import ProviderMetadataResponse
 from reconly_api.routes.component_utils import convert_config_fields
@@ -360,3 +361,20 @@ async def refresh_models(provider_name: Optional[str] = None):
             models = get_provider_models_cached(name, api_key=api_key)
             result[name] = [m.to_dict() for m in models]
         return {"providers": result}
+
+
+@router.get("/default", response_model=ResolvedProviderResponse)
+async def get_default_provider(db: Session = Depends(get_db)):
+    """Get the resolved default provider (first available from fallback chain).
+
+    Checks each provider in the fallback chain for actual availability:
+    - Local providers (Ollama, LMStudio): Pings the server
+    - Cloud providers (OpenAI, Anthropic): Checks for API key
+
+    Returns the first available provider with its default model.
+    This is what will actually be used for chat/summarization.
+    """
+    from reconly_core.providers.factory import resolve_default_provider
+
+    result = resolve_default_provider(db=db)
+    return ResolvedProviderResponse(**result)

@@ -283,6 +283,15 @@ class ChatService:
         # Default fallback
         return "ollama"
 
+    def _resolve_provider(self) -> dict:
+        """Resolve the default provider using the central resolve_default_provider().
+
+        Returns:
+            Dict with provider, model, available, fallback_used, unavailable_providers
+        """
+        from reconly_core.providers.factory import resolve_default_provider
+        return resolve_default_provider(db=self.db)
+
     def _get_default_model(self, provider: str) -> str:
         """Get the default model from app settings for the given provider.
 
@@ -1267,9 +1276,29 @@ class ChatService:
         conversation = await self.get_conversation(conversation_id)
 
         # Determine provider and model
-        # Priority: conversation setting > app setting > env var > default
-        provider = conversation.model_provider or self._get_default_provider()
-        model = conversation.model_name or self._get_default_model(provider)
+        # Priority: conversation setting > resolved default from fallback chain
+        if conversation.model_provider:
+            provider = conversation.model_provider
+            model = conversation.model_name or self._get_default_model(provider)
+        else:
+            # Use central resolve_default_provider() to get first available
+            resolved = self._resolve_provider()
+            if not resolved["available"]:
+                unavailable = ", ".join(resolved["unavailable_providers"]) or "none configured"
+                raise ProviderError(
+                    f"No providers available. Checked: {unavailable}\n\n"
+                    "Please ensure at least one provider is available:\n"
+                    "  - For local providers (Ollama, LMStudio), check the server is running\n"
+                    "  - For cloud providers, check your API key is configured"
+                )
+            provider = resolved["provider"]
+            model = conversation.model_name or resolved["model"] or self._get_default_model(provider)
+
+            if resolved["fallback_used"]:
+                logger.info(
+                    f"Using fallback provider '{provider}' "
+                    f"(primary was unavailable: {resolved['unavailable_providers']})"
+                )
 
         # Get adapter and tools
         adapter = self._get_adapter(provider)
@@ -1341,9 +1370,28 @@ class ChatService:
         conversation = await self.get_conversation(conversation_id)
 
         # Determine provider and model
-        # Priority: conversation setting > app setting > env var > default
-        provider = conversation.model_provider or self._get_default_provider()
-        model = conversation.model_name or self._get_default_model(provider)
+        # Priority: conversation setting > resolved default from fallback chain
+        if conversation.model_provider:
+            provider = conversation.model_provider
+            model = conversation.model_name or self._get_default_model(provider)
+        else:
+            # Use central resolve_default_provider() to get first available
+            resolved = self._resolve_provider()
+            if not resolved["available"]:
+                unavailable = ", ".join(resolved["unavailable_providers"]) or "none configured"
+                yield StreamChunk(
+                    type="error",
+                    content=f"No providers available. Checked: {unavailable}"
+                )
+                return
+            provider = resolved["provider"]
+            model = conversation.model_name or resolved["model"] or self._get_default_model(provider)
+
+            if resolved["fallback_used"]:
+                logger.info(
+                    f"Using fallback provider '{provider}' "
+                    f"(primary was unavailable: {resolved['unavailable_providers']})"
+                )
 
         # Get adapter and tools
         adapter = self._get_adapter(provider)
@@ -1359,17 +1407,106 @@ class ChatService:
         # Prepare context
         messages = await self._prepare_context(conversation_id, user_message)
         messages = self._format_messages_for_provider(provider, messages, adapter, tools)
+        formatted_tools = adapter.format_tools(tools) if tools else None
 
         # Process with streaming
         # Note: Currently implements pseudo-streaming by yielding after each step
         # True streaming would require provider-specific streaming implementations
-        formatted_tools = adapter.format_tools(tools) if tools else None
 
         total_tokens_in = 0
         total_tokens_out = 0
         iteration = 0
         full_content = ""
 
+        while iteration < MAX_TOOL_ITERATIONS:
+            iteration += 1
+
+            # Call LLM
+            try:
+                response = await self._call_llm(provider, model, messages, formatted_tools)
+            except Exception as e:
+                yield StreamChunk(type="error", content=str(e))
+                return
+
+            total_tokens_in += response["usage"].get("input_tokens", 0)
+            total_tokens_out += response["usage"].get("output_tokens", 0)
+
+            tool_calls = response.get("tool_calls", [])
+            content = response.get("content", "")
+
+            # Yield text content
+            if content:
+                yield StreamChunk(type="text", content=content)
+                full_content += content
+
+            # If no tool calls, we're done
+            if not tool_calls:
+                break
+
+            # Execute tool calls
+            for call in tool_calls:
+                # Yield tool call notification
+                yield StreamChunk(
+                    type="tool_call",
+                    tool_call={
+                        "id": call.call_id,
+                        "name": call.tool_name,
+                        "parameters": call.parameters,
+                    },
+                )
+
+                # Execute tool
+                result = await self.executor.execute(
+                    call,
+                    context=context or {"db": self.db},
+                )
+
+                # Yield tool result
+                yield StreamChunk(
+                    type="tool_result",
+                    tool_result={
+                        "call_id": call.call_id,
+                        "tool_name": call.tool_name,
+                        "success": result.success,
+                        "result": result.result if result.success else None,
+                        "error": result.error if not result.success else None,
+                    },
+                )
+
+                # Save to database
+                self._save_message(
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=content,
+                    tool_calls=[{
+                        "id": call.call_id,
+                        "name": call.tool_name,
+                        "parameters": call.parameters,
+                }],
+            )
+
+            result_content = (
+                json.dumps(result.result, ensure_ascii=False)
+                if result.success
+                else f"Error: {result.error}"
+            )
+            self._save_message(
+                conversation_id=conversation_id,
+                role="tool_result",
+                content=result_content,
+                tool_call_id=call.call_id,
+            )
+
+            self._append_tool_result_to_messages(
+                messages=messages,
+                provider=provider,
+                adapter=adapter,
+                call=call,
+                result=result,
+                raw_response=response.get("raw_response"),
+            )
+
+        # Continue with remaining iterations
         while iteration < MAX_TOOL_ITERATIONS:
             iteration += 1
 
