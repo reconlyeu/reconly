@@ -43,8 +43,8 @@ const {
 
 // Fetch default LLM settings
 const { data: llmSettings } = useQuery({
-  queryKey: ['settings-v2', 'llm'],
-  queryFn: () => settingsApi.getV2({ groups: ['provider'] }),
+  queryKey: ['settings-v2', 'provider'],
+  queryFn: () => settingsApi.getV2('provider'),
   staleTime: 60000, // Cache for 1 minute
 });
 
@@ -55,11 +55,20 @@ const poweredByText = computed(() => {
   let model = activeConversation.value?.model_name;
 
   // Fall back to default settings if not set on conversation
-  if (!provider && llmSettings.value?.provider?.default_provider?.value) {
-    provider = String(llmSettings.value.provider.default_provider.value);
+  // Default provider is now fallback_chain[0] (not a separate setting)
+  if (!provider) {
+    const fallbackChain = llmSettings.value?.provider?.fallback_chain?.value;
+    if (Array.isArray(fallbackChain) && fallbackChain.length > 0) {
+      provider = String(fallbackChain[0]);
+    }
   }
-  if (!model && llmSettings.value?.provider?.default_model?.value) {
-    model = String(llmSettings.value.provider.default_model.value);
+  // Default model is provider-specific: provider.{name}.model
+  // In V2 API, the key becomes {name}.model (category prefix removed)
+  if (!model && provider) {
+    const providerModel = llmSettings.value?.provider?.[`${provider}.model`]?.value;
+    if (providerModel) {
+      model = String(providerModel);
+    }
   }
 
   if (provider && model) {

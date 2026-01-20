@@ -29,8 +29,11 @@ from reconly_core.providers.registry import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Default fallback chain (local-first)
-DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
+
+def _get_default_fallback_chain() -> list[str]:
+    """Get default fallback chain from settings registry (single source of truth)."""
+    from reconly_core.services.settings_registry import SETTINGS_REGISTRY
+    return SETTINGS_REGISTRY["llm.fallback_chain"].default.copy()
 
 
 def _mask_api_key(api_key: Optional[str], provider_name: str) -> Optional[str]:
@@ -250,7 +253,7 @@ async def get_provider_config(db: Session = Depends(get_db)):
     # Get fallback chain from settings (unfiltered - UI shows status)
     fallback_chain = settings_service.get("llm.fallback_chain")
     if not fallback_chain:
-        fallback_chain = DEFAULT_FALLBACK_CHAIN.copy()
+        fallback_chain = _get_default_fallback_chain()
 
     # Pre-check local provider availability using metadata
     local_availability = {}

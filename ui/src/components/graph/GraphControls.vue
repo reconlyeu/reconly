@@ -13,7 +13,7 @@ import { ref, computed } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { feedsApi, tagsApi } from '@/services/api';
 import { strings } from '@/i18n/en';
-import type { GraphLayoutType, GraphViewMode } from '@/types/entities';
+import type { GraphLayoutType, GraphViewMode, GraphEdgeType } from '@/types/entities';
 import {
   LayoutGrid,
   GitBranch,
@@ -41,6 +41,7 @@ interface Props {
   fromDate: string;
   toDate: string;
   tagFilter: string[];
+  relationshipTypes: GraphEdgeType[];
   nodeCount: number;
   edgeCount: number;
 }
@@ -55,6 +56,7 @@ interface Emits {
   (e: 'update:fromDate', value: string): void;
   (e: 'update:toDate', value: string): void;
   (e: 'update:tagFilter', value: string[]): void;
+  (e: 'update:relationshipTypes', value: GraphEdgeType[]): void;
   (e: 'zoom-in'): void;
   (e: 'zoom-out'): void;
   (e: 'fit-to-screen'): void;
@@ -94,6 +96,21 @@ const viewModeOptions: { value: GraphViewMode; label: string; icon: typeof Box }
   { value: '3d', label: '3D', icon: Box },
 ];
 
+const relationshipTypeOptions: { value: GraphEdgeType; label: string }[] = [
+  { value: 'semantic', label: strings.knowledgeGraph.edgeTypes.semantic },
+  { value: 'tag', label: strings.knowledgeGraph.edgeTypes.tag },
+  { value: 'source', label: strings.knowledgeGraph.edgeTypes.source },
+];
+
+// Default relationship types (semantic only for cleaner visualization)
+const defaultRelationshipTypes: GraphEdgeType[] = ['semantic'];
+
+// Check if relationship types differ from default
+const relationshipTypesChanged = computed(() => {
+  if (props.relationshipTypes.length !== defaultRelationshipTypes.length) return true;
+  return !defaultRelationshipTypes.every(t => props.relationshipTypes.includes(t));
+});
+
 const hasActiveFilters = computed(() => {
   return (
     props.feedFilter !== null ||
@@ -101,7 +118,8 @@ const hasActiveFilters = computed(() => {
     props.toDate !== '' ||
     props.tagFilter.length > 0 ||
     props.minSimilarity !== 0.5 ||
-    !props.includeTags
+    !props.includeTags ||
+    relationshipTypesChanged.value
   );
 });
 
@@ -116,6 +134,20 @@ const handleTagToggle = (tagName: string) => {
   emit('update:tagFilter', currentTags);
 };
 
+const handleRelationshipTypeToggle = (type: GraphEdgeType) => {
+  const currentTypes = [...props.relationshipTypes];
+  const index = currentTypes.indexOf(type);
+  if (index === -1) {
+    currentTypes.push(type);
+  } else {
+    // Don't allow deselecting all types - keep at least one
+    if (currentTypes.length > 1) {
+      currentTypes.splice(index, 1);
+    }
+  }
+  emit('update:relationshipTypes', currentTypes);
+};
+
 const clearAllFilters = () => {
   emit('update:feedFilter', null);
   emit('update:fromDate', '');
@@ -123,12 +155,13 @@ const clearAllFilters = () => {
   emit('update:tagFilter', []);
   emit('update:minSimilarity', 0.5);
   emit('update:includeTags', true);
+  emit('update:relationshipTypes', [...defaultRelationshipTypes]);
   emit('clear-filters');
 };
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div class="relative flex flex-col gap-3">
     <!-- Top Controls Row -->
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <!-- View Mode Toggle (2D/3D) - placed first so it doesn't jump when layout options disappear -->
@@ -261,10 +294,10 @@ const clearAllFilters = () => {
       </button>
     </div>
 
-    <!-- Filter Panel -->
+    <!-- Filter Panel (overlay) -->
     <div
       v-if="showFilters"
-      class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-bg-surface rounded-lg border border-border-subtle"
+      class="absolute left-0 right-0 top-full z-20 mt-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-bg-surface rounded-lg border border-border-subtle shadow-lg"
     >
       <!-- Feed Filter -->
       <div class="space-y-2">
@@ -334,15 +367,24 @@ const clearAllFilters = () => {
         />
       </div>
 
-      <!-- Include Tags Toggle -->
-      <div class="flex items-center gap-2">
-        <input
-          type="checkbox"
-          :checked="props.includeTags"
-          @change="emit('update:includeTags', ($event.target as HTMLInputElement).checked)"
-          class="w-4 h-4 rounded border-border-subtle bg-bg-elevated text-accent-primary focus:ring-accent-primary focus:ring-offset-bg-base"
-        />
-        <label class="text-sm font-medium text-text-secondary">{{ strings.knowledgeGraph.controls.includeTags }}</label>
+      <!-- Relationship Types -->
+      <div class="space-y-2 md:col-span-2">
+        <label class="text-sm font-medium text-text-secondary">{{ strings.knowledgeGraph.filters.relationshipTypes }}</label>
+        <div class="flex flex-wrap gap-3">
+          <label
+            v-for="option in relationshipTypeOptions"
+            :key="option.value"
+            class="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="checkbox"
+              :checked="props.relationshipTypes.includes(option.value)"
+              @change="handleRelationshipTypeToggle(option.value)"
+              class="w-4 h-4 rounded border-border-subtle bg-bg-elevated text-accent-primary focus:ring-accent-primary focus:ring-offset-bg-base"
+            />
+            <span class="text-sm text-text-secondary">{{ option.label }}</span>
+          </label>
+        </div>
       </div>
 
       <!-- Tag Filter -->

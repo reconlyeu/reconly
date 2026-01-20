@@ -418,6 +418,25 @@ class TestChatServiceProviderSelection:
         with pytest.raises(ValueError, match="Unsupported provider"):
             service._get_adapter("unknown_provider")
 
+    def test_get_adapter_lmstudio(self, service):
+        """Test getting LMStudio adapter (alias to OpenAI)."""
+        adapter = service._get_adapter("lmstudio")
+        # LMStudio uses OpenAI's adapter
+        assert adapter.provider_name == "openai"
+
+    def test_get_adapter_case_insensitive(self, service):
+        """Test that ChatService handles case-insensitive provider names."""
+        # ChatService lowercases provider names before lookup
+        adapter_lower = service._get_adapter("openai")
+        adapter_upper = service._get_adapter("OPENAI")
+        adapter_mixed = service._get_adapter("OpenAI")
+
+        # All should return the same type
+        assert type(adapter_lower) == type(adapter_upper) == type(adapter_mixed)
+        assert adapter_lower.provider_name == "openai"
+        assert adapter_upper.provider_name == "openai"
+        assert adapter_mixed.provider_name == "openai"
+
     def test_get_provider_client_with_factory(self, db_session):
         """Test using custom provider factory."""
         mock_client = Mock()

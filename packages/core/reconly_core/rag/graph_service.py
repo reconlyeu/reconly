@@ -670,8 +670,8 @@ class GraphService:
                     }
                 )
 
-                # Add feed node as cluster anchor
-                if digest_feed_id and include_tags:
+                # Add feed node as cluster anchor (only if source relationships requested)
+                if digest_feed_id and "source" in rel_types:
                     feed_node_id = f"f_{digest_feed_id}"
                     if feed_node_id not in nodes:
                         nodes[feed_node_id] = GraphNode(
@@ -688,8 +688,8 @@ class GraphService:
                         score=0.5,  # Lower score so it doesn't dominate
                     ))
 
-                # Add tag nodes if requested
-                if include_tags:
+                # Add tag nodes (only if tag relationships requested)
+                if "tag" in rel_types:
                     for dt in digest.tags:
                         tag_node_id = f"t_{dt.tag.name}"
                         if tag_node_id not in nodes:
@@ -771,8 +771,8 @@ class GraphService:
                     }
                 )
 
-                # Add feed node as cluster anchor
-                if digest_feed_id and include_tags:
+                # Add feed node as cluster anchor (only if source relationships requested)
+                if digest_feed_id and "source" in rel_types:
                     feed_node_id = f"f_{digest_feed_id}"
                     if feed_node_id not in nodes:
                         nodes[feed_node_id] = GraphNode(
@@ -788,6 +788,27 @@ class GraphService:
                         type="source",
                         score=0.5,
                     ))
+
+                # Add tag nodes (only if tag relationships requested)
+                if "tag" in rel_types:
+                    for dt in digest.tags:
+                        tag_node_id = f"t_{dt.tag.name}"
+                        if tag_node_id not in nodes:
+                            tag_count = self.db.query(DigestTag).filter(
+                                DigestTag.tag_id == dt.tag_id
+                            ).count()
+                            nodes[tag_node_id] = GraphNode(
+                                id=tag_node_id,
+                                type="tag",
+                                label=dt.tag.name,
+                                data={"tag_id": dt.tag_id, "count": tag_count}
+                            )
+                        edges.append(GraphEdge(
+                            source=node_id,
+                            target=tag_node_id,
+                            type="tag",
+                            score=1.0,
+                        ))
 
             # Get relationships between these digests
             digest_ids = [d.id for d in digests]

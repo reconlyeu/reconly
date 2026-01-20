@@ -27,6 +27,7 @@ from reconly_core.chat.adapters.base import (
     ToolCallRequest,
     ToolCallResult,
 )
+from reconly_core.chat.adapters.registry import register_adapter
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ SIMPLE_JSON_PATTERN = re.compile(
 )
 
 
+@register_adapter("ollama")
 class OllamaAdapter(BaseToolAdapter):
     """Adapter for Ollama using prompt-based tool calling.
 

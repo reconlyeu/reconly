@@ -37,9 +37,9 @@ async def get_graph_nodes(
         True,
         description="Whether to include tag nodes in the graph"
     ),
-    relationship_types: list[str] | None = Query(
+    relationship_types: str | None = Query(
         None,
-        description="Filter by relationship types (semantic, tag, source)"
+        description="Filter by relationship types (comma-separated, e.g. 'semantic,tag')"
     ),
     limit: int = Query(
         100,
@@ -118,10 +118,11 @@ async def get_graph_nodes(
             min_similarity=min_similarity,
         )
 
-        # Validate relationship types
+        # Parse and validate relationship types
         valid_types = ["semantic", "tag", "source"]
-        if relationship_types:
-            invalid = [t for t in relationship_types if t not in valid_types]
+        rel_types_list = [t.strip() for t in relationship_types.split(',')] if relationship_types else None
+        if rel_types_list:
+            invalid = [t for t in rel_types_list if t not in valid_types]
             if invalid:
                 raise HTTPException(
                     status_code=400,
@@ -137,7 +138,7 @@ async def get_graph_nodes(
             depth=depth,
             min_similarity=min_similarity,
             include_tags=include_tags,
-            relationship_types=relationship_types,
+            relationship_types=rel_types_list,
             limit=limit,
             feed_id=feed_id,
             from_date=from_date,

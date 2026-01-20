@@ -15,9 +15,6 @@ if TYPE_CHECKING:
 
 logger = structlog.get_logger(__name__)
 
-# Default fallback chain when no setting is configured
-DEFAULT_FALLBACK_CHAIN = ["ollama", "huggingface", "openai", "anthropic"]
-
 # Import providers to ensure they're registered (side-effect imports)
 from reconly_core.providers.anthropic import AnthropicProvider  # noqa: F401
 from reconly_core.providers.huggingface import HuggingFaceProvider  # noqa: F401
@@ -529,6 +526,12 @@ def get_summarizer(
         return primary
 
 
+def _get_default_fallback_chain() -> List[str]:
+    """Get default fallback chain from settings registry (single source of truth)."""
+    from reconly_core.services.settings_registry import SETTINGS_REGISTRY
+    return SETTINGS_REGISTRY["llm.fallback_chain"].default.copy()
+
+
 def _get_fallback_chain(db: Optional["Session"] = None) -> List[str]:
     """
     Get the fallback chain from settings.
@@ -547,7 +550,7 @@ def _get_fallback_chain(db: Optional["Session"] = None) -> List[str]:
     )
 
     if chain is None:
-        return DEFAULT_FALLBACK_CHAIN.copy()
+        return _get_default_fallback_chain()
 
     # Handle string values (from env or misconfigured DB)
     if isinstance(chain, str):
@@ -570,7 +573,7 @@ def _get_fallback_chain(db: Optional["Session"] = None) -> List[str]:
                 message="Provider not registered, removing from chain",
             )
 
-    return valid_chain if valid_chain else DEFAULT_FALLBACK_CHAIN.copy()
+    return valid_chain if valid_chain else _get_default_fallback_chain()
 
 
 def list_available_models() -> Dict[str, List[str]]:

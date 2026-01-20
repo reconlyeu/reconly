@@ -7,8 +7,8 @@ from reconly_core.providers.factory import (
     SummarizerWithFallback,
     list_available_models,
     _get_fallback_chain,
+    _get_default_fallback_chain,
     _instantiate_provider,
-    DEFAULT_FALLBACK_CHAIN,
 )
 from reconly_core.providers.anthropic import AnthropicProvider
 from reconly_core.providers.huggingface import HuggingFaceProvider
@@ -361,7 +361,7 @@ class TestFallbackChain:
         THEN default fallback chain is returned."""
         chain = _get_fallback_chain(db=None)
 
-        assert chain == DEFAULT_FALLBACK_CHAIN
+        assert chain == _get_default_fallback_chain()
         assert 'ollama' in chain
         assert 'huggingface' in chain
         assert 'openai' in chain
@@ -404,7 +404,7 @@ class TestFallbackChain:
             chain = _get_fallback_chain(db=None)
 
             # Should return default chain since all providers were invalid
-            assert chain == DEFAULT_FALLBACK_CHAIN
+            assert chain == _get_default_fallback_chain()
 
 
 class TestInstantiateProvider:
