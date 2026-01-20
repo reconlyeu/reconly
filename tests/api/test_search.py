@@ -259,7 +259,7 @@ class TestSearchAPIEdgeCases:
 
     def test_search_provider_failure(self, client):
         """Test search when embedding provider fails."""
-        with patch('reconly_core.rag.embeddings.get_embedding_provider') as mock_provider:
+        with patch('reconly_core.rag.get_embedding_provider') as mock_provider:
             provider = Mock()
             provider.embed_single = AsyncMock(side_effect=RuntimeError("Provider error"))
             provider.get_dimension = Mock(return_value=1024)
