@@ -6,9 +6,13 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from dateutil import parser as date_parser
 
-from reconly_core.fetchers.base import BaseFetcher, ValidationResult
+from reconly_core.config_types import ConfigField
+from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
+from reconly_core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # Default age limit for first run (when no tracking data exists)
@@ -49,7 +53,8 @@ class RSSFetcher(BaseFetcher):
         self,
         feed_url: str,
         since: Optional[datetime] = None,
-        max_items: Optional[int] = None
+        max_items: Optional[int] = None,
+        fetch_full_content: bool = False,
     ) -> List[Dict[str, str]]:
         """
         Fetch articles from an RSS/Atom feed.
@@ -60,12 +65,15 @@ class RSSFetcher(BaseFetcher):
                    If None (first run), defaults to RSS_FIRST_RUN_MAX_AGE_DAYS ago.
             max_items: Maximum number of articles to return (optional).
                        Applied after date filtering, newest first.
+            fetch_full_content: If True, follow article links to scrape full content.
+                               Full content is stored in 'full_content' field.
 
         Returns:
             List of article dictionaries, each containing:
             - url: Article URL
             - title: Article title
-            - content: Article description/content
+            - content: Article description/content (RSS summary)
+            - full_content: Full article content (if fetch_full_content=True and successful)
             - published: Publication datetime (ISO format string)
             - author: Author name (if available)
             - source_type: 'rss'
@@ -115,6 +123,12 @@ class RSSFetcher(BaseFetcher):
                     'feed_url': feed_url,
                     'feed_title': feed.feed.get('title', 'Unknown Feed')
                 }
+
+                # Optionally fetch full article content by following the link
+                if fetch_full_content and article_url:
+                    full_content = self._fetch_full_article_content(article_url)
+                    if full_content:
+                        article['full_content'] = full_content
 
                 articles.append(article)
 
@@ -192,6 +206,52 @@ class RSSFetcher(BaseFetcher):
 
         return None
 
+    def _fetch_full_article_content(self, url: str) -> Optional[str]:
+        """
+        Fetch full article content by scraping the article URL.
+
+        Uses WebsiteFetcher to scrape the article page. On failure,
+        logs a warning and returns None (graceful fallback to RSS summary).
+
+        Args:
+            url: The article URL to fetch
+
+        Returns:
+            Full article content as string, or None if fetching failed
+        """
+        try:
+            # Import here to avoid circular dependency
+            from reconly_core.fetchers.website import WebsiteFetcher
+
+            fetcher = WebsiteFetcher(timeout=10)
+            result = fetcher.fetch(url)
+
+            # WebsiteFetcher returns a list with a single dict
+            if result:
+                content = result[0].get('content', '')
+                if content:
+                    logger.debug(
+                        "full_content_fetched",
+                        url=url,
+                        content_length=len(content),
+                    )
+                    return content
+
+            logger.warning(
+                "full_content_empty",
+                url=url,
+                reason="WebsiteFetcher returned no content",
+            )
+            return None
+
+        except Exception as e:
+            logger.warning(
+                "full_content_fetch_failed",
+                url=url,
+                error=str(e),
+            )
+            return None
+
     def get_source_type(self) -> str:
         """Get the source type identifier."""
         return 'rss'
@@ -203,6 +263,25 @@ class RSSFetcher(BaseFetcher):
     def get_description(self) -> str:
         """Get a human-readable description of this fetcher."""
         return 'RSS/Atom feed fetcher'
+
+    def get_config_schema(self) -> FetcherConfigSchema:
+        """Get the configuration schema for this fetcher.
+
+        Returns:
+            FetcherConfigSchema with RSS configuration fields
+        """
+        return FetcherConfigSchema(
+            fields=[
+                ConfigField(
+                    key="fetch_full_content",
+                    type="boolean",
+                    label="Fetch Full Article Content",
+                    description="Follow article links to scrape full content instead of using RSS summary. Adds latency but improves RAG quality.",
+                    default=False,
+                    required=False,
+                ),
+            ]
+        )
 
     @staticmethod
     def is_rss_url(url: str) -> bool:

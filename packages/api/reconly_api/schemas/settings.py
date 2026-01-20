@@ -27,8 +27,14 @@ class SettingsResponse(BaseModel):
     export: dict[str, SettingValue] = Field(
         default_factory=dict, description="Export settings"
     )
+    fetch: dict[str, SettingValue] = Field(
+        default_factory=dict, description="Fetcher settings (RSS, YouTube, etc.)"
+    )
     embedding: dict[str, SettingValue] = Field(
         default_factory=dict, description="RAG embedding settings"
+    )
+    rag: dict[str, SettingValue] = Field(
+        default_factory=dict, description="RAG system settings"
     )
     agent: dict[str, SettingValue] = Field(
         default_factory=dict, description="Agent research settings"
