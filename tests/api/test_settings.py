@@ -5,21 +5,21 @@ import os
 
 
 @pytest.mark.api
-class TestSettingsAPIV2:
-    """Test suite for /api/v1/settings/v2 endpoints."""
+class TestSettingsAPI:
+    """Test suite for /api/v1/settings endpoints."""
 
-    def test_get_settings_v2_returns_all_categories(self, client):
-        """Test GET /v2 returns all setting categories."""
-        response = client.get("/api/v1/settings/v2")
+    def test_get_settings_returns_all_categories(self, client):
+        """Test GET /settings returns all setting categories."""
+        response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
         assert "provider" in data
         assert "email" in data
         assert "export" in data
 
-    def test_get_settings_v2_includes_source_indicators(self, client):
+    def test_get_settings_includes_source_indicators(self, client):
         """Test settings include source indicators."""
-        response = client.get("/api/v1/settings/v2")
+        response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
 
@@ -33,9 +33,9 @@ class TestSettingsAPIV2:
         assert "editable" in setting
         assert setting["source"] in ["database", "environment", "default"]
 
-    def test_get_settings_v2_filter_by_category(self, client):
+    def test_get_settings_filter_by_category(self, client):
         """Test filtering by category."""
-        response = client.get("/api/v1/settings/v2?category=email")
+        response = client.get("/api/v1/settings?category=email")
         assert response.status_code == 200
         data = response.json()
 
@@ -45,10 +45,10 @@ class TestSettingsAPIV2:
         assert len(data["provider"]) == 0
         assert len(data["export"]) == 0
 
-    def test_get_settings_v2_shows_default_source(self, client):
+    def test_get_settings_shows_default_source(self, client):
         """Test settings show 'default' source when no override exists."""
         with patch.dict(os.environ, {}, clear=True):
-            response = client.get("/api/v1/settings/v2")
+            response = client.get("/api/v1/settings")
             assert response.status_code == 200
             data = response.json()
 
@@ -57,10 +57,10 @@ class TestSettingsAPIV2:
             provider = data["provider"]
             assert "fallback_chain" in provider
 
-    def test_get_settings_v2_masks_secrets(self, client):
+    def test_get_settings_masks_secrets(self, client):
         """Test secret values are masked."""
         with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "sk-ant-secret-key-12345"}):
-            response = client.get("/api/v1/settings/v2")
+            response = client.get("/api/v1/settings")
             assert response.status_code == 200
             data = response.json()
 
@@ -71,9 +71,9 @@ class TestSettingsAPIV2:
                 assert "sk-ant-secret-key-12345" not in str(api_key_setting["value"])
                 assert "..." in str(api_key_setting["value"]) or "••" in str(api_key_setting["value"])
 
-    def test_get_settings_v2_non_editable_marked(self, client):
+    def test_get_settings_non_editable_marked(self, client):
         """Test non-editable settings are marked correctly."""
-        response = client.get("/api/v1/settings/v2")
+        response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
 
@@ -84,13 +84,13 @@ class TestSettingsAPIV2:
 
 
 @pytest.mark.api
-class TestSettingsUpdateV2:
-    """Test suite for PUT /api/v1/settings/v2 endpoint."""
+class TestSettingsUpdate:
+    """Test suite for PUT /api/v1/settings endpoint."""
 
     def test_update_editable_setting(self, client):
         """Test updating an editable setting."""
         response = client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={
                 "settings": [
                     {"key": "email.smtp_host", "value": "mail.example.com"}
@@ -103,7 +103,7 @@ class TestSettingsUpdateV2:
         assert len(data["errors"]) == 0
 
         # Verify the setting was updated
-        response = client.get("/api/v1/settings/v2")
+        response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
         assert data["email"]["smtp_host"]["value"] == "mail.example.com"
@@ -112,7 +112,7 @@ class TestSettingsUpdateV2:
     def test_update_multiple_settings(self, client):
         """Test updating multiple settings at once."""
         response = client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={
                 "settings": [
                     {"key": "llm.fallback_chain", "value": ["openai", "ollama", "anthropic"]},
@@ -130,7 +130,7 @@ class TestSettingsUpdateV2:
         """Test updating a non-editable setting returns error."""
         # provider.anthropic.api_key uses new unified pattern with editable=False
         response = client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={
                 "settings": [
                     {"key": "provider.anthropic.api_key", "value": "sk-test"}
@@ -146,7 +146,7 @@ class TestSettingsUpdateV2:
     def test_update_unknown_setting_fails(self, client):
         """Test updating an unknown setting returns error."""
         response = client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={
                 "settings": [
                     {"key": "unknown.setting", "value": "test"}
@@ -168,12 +168,12 @@ class TestSettingsReset:
         """Test resetting a setting removes DB value."""
         # First set a value
         client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={"settings": [{"key": "email.smtp_host", "value": "mail.example.com"}]}
         )
 
         # Verify it's set
-        response = client.get("/api/v1/settings/v2")
+        response = client.get("/api/v1/settings")
         assert response.json()["email"]["smtp_host"]["source"] == "database"
 
         # Reset it
@@ -186,7 +186,7 @@ class TestSettingsReset:
         assert "email.smtp_host" in data["reset"]
 
         # Verify it's no longer from database
-        response = client.get("/api/v1/settings/v2")
+        response = client.get("/api/v1/settings")
         assert response.json()["email"]["smtp_host"]["source"] != "database"
 
     def test_reset_nonexistent_returns_not_found(self, client):
@@ -203,7 +203,7 @@ class TestSettingsReset:
         """Test resetting multiple settings."""
         # Set multiple values
         client.put(
-            "/api/v1/settings/v2",
+            "/api/v1/settings",
             json={
                 "settings": [
                     {"key": "llm.fallback_chain", "value": ["anthropic", "ollama"]},
@@ -220,39 +220,3 @@ class TestSettingsReset:
         assert response.status_code == 200
         data = response.json()
         assert len(data["reset"]) == 2
-
-
-@pytest.mark.api
-class TestLegacySettingsEndpoints:
-    """Test suite for legacy settings endpoints."""
-
-    def test_get_settings_legacy(self, client):
-        """Test legacy GET /settings endpoint still works."""
-        response = client.get("/api/v1/settings")
-        assert response.status_code == 200
-        data = response.json()
-        assert "smtp" in data
-        assert "exports" in data
-
-    def test_update_settings_legacy(self, client):
-        """Test legacy PUT /settings persists editable settings."""
-        response = client.put(
-            "/api/v1/settings",
-            json={
-                "smtp": {
-                    "smtp_host": "smtp.legacy.test",
-                    "smtp_port": 465,
-                    "smtp_from_email": "test@legacy.com",
-                    "smtp_from_name": "Legacy Test"
-                }
-            }
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data["updated"]) > 0
-
-        # Verify via v2 endpoint
-        response = client.get("/api/v1/settings/v2")
-        email = response.json()["email"]
-        assert email["smtp_host"]["value"] == "smtp.legacy.test"
-        assert email["smtp_port"]["value"] == 465

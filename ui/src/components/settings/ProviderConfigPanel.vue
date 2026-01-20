@@ -19,6 +19,7 @@ import {
   RotateCcw,
   FolderOpen,
   Lock,
+  Info,
 } from 'lucide-vue-next';
 import type { Provider, ProviderConfigField } from '@/types/entities';
 
@@ -33,8 +34,8 @@ const toast = useToast();
 
 // Settings query for provider config
 const { data: settings, isLoading } = useQuery({
-  queryKey: ['settings-v2', 'provider'],
-  queryFn: () => settingsApi.getV2('provider'),
+  queryKey: ['settings', 'provider'],
+  queryFn: () => settingsApi.get('provider'),
   staleTime: 30000,
 });
 
@@ -192,11 +193,11 @@ const saveMutation = useMutation({
       value: localConfig.value[field.key],
     }));
 
-    return settingsApi.updateV2({ settings: settingsToUpdate });
+    return settingsApi.update({ settings: settingsToUpdate });
   },
   onSuccess: () => {
     toast.success(`${displayName.value} settings saved`);
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['provider-status'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
@@ -215,7 +216,7 @@ const resetMutation = useMutation({
   },
   onSuccess: () => {
     toast.success('Settings reset to defaults');
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['provider-status'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },

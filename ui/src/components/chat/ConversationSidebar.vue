@@ -43,8 +43,8 @@ const {
 
 // Fetch default LLM settings
 const { data: llmSettings } = useQuery({
-  queryKey: ['settings-v2', 'provider'],
-  queryFn: () => settingsApi.getV2('provider'),
+  queryKey: ['settings', 'provider'],
+  queryFn: () => settingsApi.get('provider'),
   staleTime: 60000, // Cache for 1 minute
 });
 
@@ -62,8 +62,7 @@ const poweredByText = computed(() => {
       provider = String(fallbackChain[0]);
     }
   }
-  // Default model is provider-specific: provider.{name}.model
-  // In V2 API, the key becomes {name}.model (category prefix removed)
+  // Default model is provider-specific, stored as {name}.model in settings
   if (!model && provider) {
     const providerModel = llmSettings.value?.provider?.[`${provider}.model`]?.value;
     if (providerModel) {

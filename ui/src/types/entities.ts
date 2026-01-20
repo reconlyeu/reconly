@@ -634,30 +634,6 @@ export interface UsageOverTime {
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export interface EmailSettings {
-  smtp_host: string;
-  smtp_port: number;
-  username: string;
-  password: string;
-  from_address: string;
-}
-
-export interface ExportSettings {
-  obsidian: {
-    vault_path: string;
-    folder: string;
-  };
-}
-
-export interface Settings {
-  email?: EmailSettings;
-  exports?: ExportSettings;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Settings V2 (with source indicators)
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type SettingSource = 'database' | 'environment' | 'default';
 
 export interface SettingValue {
@@ -666,7 +642,12 @@ export interface SettingValue {
   editable: boolean;
 }
 
-export interface SettingsV2 {
+/**
+ * Settings organized by category with source indicators.
+ * Each setting includes its current value, source (database/environment/default),
+ * and whether it can be edited via the UI.
+ */
+export interface Settings {
   provider: Record<string, SettingValue>;
   email: Record<string, SettingValue>;
   export: Record<string, SettingValue>;

@@ -38,10 +38,10 @@ const toast = useToast();
 // Fetch exporters list
 const { data: exporters } = useExportersList();
 
-// Settings V2 query for export category
+// Settings query for export category
 const { data: settings, isLoading } = useQuery({
-  queryKey: ['settings-v2', 'export'],
-  queryFn: () => settingsApi.getV2('export'),
+  queryKey: ['settings', 'export'],
+  queryFn: () => settingsApi.get('export'),
   staleTime: 30000,
 });
 
@@ -141,7 +141,7 @@ const handleMetadataToggle = () => {
 // Save mutation for basic settings
 const saveMutation = useMutation({
   mutationFn: async () => {
-    return settingsApi.updateV2({
+    return settingsApi.update({
       settings: [
         { key: 'export.default_format', value: localSettings.value.default_format },
         { key: 'export.include_metadata', value: localSettings.value.include_metadata },
@@ -151,7 +151,7 @@ const saveMutation = useMutation({
   onSuccess: () => {
     toast.success('Export settings saved');
     hasChanges.value = false;
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
     toast.error(err.detail || 'Failed to save settings');
@@ -167,7 +167,7 @@ const resetMutation = useMutation({
   },
   onSuccess: () => {
     toast.success('Export settings reset to defaults');
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
     toast.error(err.detail || 'Failed to reset settings');

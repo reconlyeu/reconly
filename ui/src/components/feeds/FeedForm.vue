@@ -54,8 +54,8 @@ const { exporters: allDirectExportExporters } = useDirectExportCapableExporters(
 
 // Fetch export settings to check global paths
 const { data: exportSettings } = useQuery({
-  queryKey: ['settings-v2', 'export'],
-  queryFn: () => settingsApi.getV2('export'),
+  queryKey: ['settings', 'export'],
+  queryFn: () => settingsApi.get('export'),
   staleTime: 30000,
   enabled: computed(() => props.isOpen),
 });

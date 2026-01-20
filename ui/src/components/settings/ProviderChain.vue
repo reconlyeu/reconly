@@ -41,15 +41,15 @@ const { data: providerResponse, isLoading: providersLoading, isError, error } = 
 
 // Settings query for fallback chain
 const { data: settings, isLoading: settingsLoading } = useQuery({
-  queryKey: ['settings-v2', 'provider'],
-  queryFn: () => settingsApi.getV2('provider'),
+  queryKey: ['settings', 'provider'],
+  queryFn: () => settingsApi.get('provider'),
   staleTime: 30000,
 });
 
 // Embedding settings query
 const { data: embeddingSettings, isLoading: embeddingLoading } = useQuery({
-  queryKey: ['settings-v2', 'embedding'],
-  queryFn: () => settingsApi.getV2('embedding'),
+  queryKey: ['settings', 'embedding'],
+  queryFn: () => settingsApi.get('embedding'),
   staleTime: 30000,
 });
 
@@ -233,7 +233,7 @@ const handleDrop = (event: DragEvent, dropIndex: number) => {
 // Save mutation
 const saveMutation = useMutation({
   mutationFn: async () => {
-    return settingsApi.updateV2({
+    return settingsApi.update({
       settings: [
         { key: 'llm.fallback_chain', value: localChain.value },
       ],
@@ -242,7 +242,7 @@ const saveMutation = useMutation({
   onSuccess: () => {
     toast.success('Fallback chain saved');
     hasChanges.value = false;
-    queryClient.invalidateQueries({ queryKey: ['settings-v2'] });
+    queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
   onError: (err: any) => {

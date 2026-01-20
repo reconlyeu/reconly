@@ -37,9 +37,6 @@ import type {
   TokensByFeed,
   UsageOverTime,
   Settings,
-  EmailSettings,
-  ExportSettings,
-  SettingsV2,
   SettingsUpdateRequest,
   SettingsResetRequest,
   SettingsResetResponse,
@@ -831,26 +828,31 @@ export const providersApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const settingsApi = {
-  get: async (): Promise<Settings> => {
-    const { data } = await apiClient.get<Settings>('/settings');
+  /**
+   * Get settings with source indicators (database, environment, default).
+   * @param category - Optional category filter ('provider', 'email', 'export', 'fetch', 'embedding')
+   */
+  get: async (category?: string): Promise<Settings> => {
+    const params = category ? { category } : {};
+    const { data } = await apiClient.get<Settings>('/settings', { params });
     return data;
   },
 
-  update: async (settings: Partial<Settings>): Promise<Settings> => {
-    const { data } = await apiClient.put<Settings>('/settings', settings);
+  /**
+   * Update settings values in the database.
+   */
+  update: async (request: SettingsUpdateRequest): Promise<{
+    updated: string[];
+    errors: Array<{ key: string; error: string }>;
+    message: string;
+  }> => {
+    const { data } = await apiClient.put('/settings', request);
     return data;
   },
 
-  updateEmail: async (email: EmailSettings): Promise<Settings> => {
-    const { data } = await apiClient.put<Settings>('/settings/email', email);
-    return data;
-  },
-
-  updateExports: async (exports: ExportSettings): Promise<Settings> => {
-    const { data } = await apiClient.put<Settings>('/settings/exports', exports);
-    return data;
-  },
-
+  /**
+   * Send a test email to verify SMTP configuration.
+   */
   testEmail: async (): Promise<{ success: boolean; message: string }> => {
     const { data } = await apiClient.post<{ success: boolean; message: string }>(
       '/settings/test-email'
@@ -858,22 +860,9 @@ export const settingsApi = {
     return data;
   },
 
-  // V2 Settings API (with source indicators)
-  getV2: async (category?: string): Promise<SettingsV2> => {
-    const params = category ? { category } : {};
-    const { data } = await apiClient.get<SettingsV2>('/settings/v2', { params });
-    return data;
-  },
-
-  updateV2: async (request: SettingsUpdateRequest): Promise<{
-    updated: string[];
-    errors: Array<{ key: string; error: string }>;
-    message: string;
-  }> => {
-    const { data } = await apiClient.put('/settings/v2', request);
-    return data;
-  },
-
+  /**
+   * Reset settings to their default values.
+   */
   reset: async (request: SettingsResetRequest): Promise<SettingsResetResponse> => {
     const { data } = await apiClient.post<SettingsResetResponse>('/settings/reset', request);
     return data;

@@ -228,12 +228,12 @@ Settings can be modified at runtime via the UI or API without restarting the app
 
 ```bash
 # Get all settings with source info
-curl http://localhost:8000/api/v1/settings/v2
+curl http://localhost:8000/api/v1/settings
 
 # Update editable settings
-curl -X PUT http://localhost:8000/api/v1/settings/v2 \
+curl -X PUT http://localhost:8000/api/v1/settings \
   -H "Content-Type: application/json" \
-  -d '{"llm.default_provider": "openai"}'
+  -d '{"settings": [{"key": "llm.default_provider", "value": "openai"}]}'
 
 # Reset a setting to default
 curl -X POST http://localhost:8000/api/v1/settings/reset \

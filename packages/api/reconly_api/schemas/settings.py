@@ -1,10 +1,10 @@
 """Settings schemas for API."""
-from typing import Optional, Any, Literal
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from typing import Any, Literal
+from pydantic import BaseModel, EmailStr, Field
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# New settings infrastructure schemas (Phase 1)
+# Settings schemas
 # ─────────────────────────────────────────────────────────────────────────────
 
 class SettingValue(BaseModel):
@@ -16,7 +16,7 @@ class SettingValue(BaseModel):
     editable: bool = Field(..., description="Whether user can modify this setting")
 
 
-class SettingsResponseV2(BaseModel):
+class SettingsResponse(BaseModel):
     """Settings organized by category with source indicators."""
     provider: dict[str, SettingValue] = Field(
         default_factory=dict, description="LLM provider settings"
@@ -60,57 +60,6 @@ class SettingsResetResponse(BaseModel):
     """Response from reset operation."""
     reset: list[str] = Field(..., description="Keys that were reset")
     not_found: list[str] = Field(default_factory=list, description="Keys that had no DB override")
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Legacy settings schemas (kept for backwards compatibility)
-# ─────────────────────────────────────────────────────────────────────────────
-
-class SMTPSettings(BaseModel):
-    """SMTP email configuration."""
-    smtp_host: str = Field(..., description="SMTP server hostname")
-    smtp_port: int = Field(..., ge=1, le=65535, description="SMTP server port")
-    smtp_user: Optional[str] = Field(None, description="SMTP username")
-    smtp_password: Optional[str] = Field(None, description="SMTP password (will be masked in responses)")
-    smtp_from_email: EmailStr = Field(..., description="From email address")
-    smtp_from_name: str = Field("Reconly", description="From name")
-
-
-class ExportSettings(BaseModel):
-    """Export configuration."""
-    obsidian_vault_path: Optional[str] = Field(None, description="Path to Obsidian vault")
-    default_export_format: str = Field("json", description="Default export format (json/csv/obsidian)")
-
-
-class SettingsResponse(BaseModel):
-    """Complete settings response."""
-    smtp: SMTPSettings
-    exports: ExportSettings
-    demo_mode: bool = Field(False, description="Whether the application is running in demo mode")
-
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "smtp": {
-                "smtp_host": "smtp.gmail.com",
-                "smtp_port": 587,
-                "smtp_user": "user@example.com",
-                "smtp_password": "***",
-                "smtp_from_email": "reconly@example.com",
-                "smtp_from_name": "Reconly"
-            },
-            "exports": {
-                "obsidian_vault_path": "/path/to/vault",
-                "default_export_format": "json"
-            },
-            "demo_mode": False
-        }
-    })
-
-
-class SettingsUpdate(BaseModel):
-    """Settings update request."""
-    smtp: Optional[SMTPSettings] = None
-    exports: Optional[ExportSettings] = None
 
 
 class TestEmailRequest(BaseModel):

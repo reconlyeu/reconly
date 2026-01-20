@@ -6,103 +6,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from reconly_api.config import settings
 from reconly_api.dependencies import get_db
 from reconly_api.schemas.settings import (
-    SettingsResponse, SettingsUpdate, SMTPSettings, ExportSettings,
+    SettingsResponse, SettingValue, SettingsUpdateRequest,
+    SettingsResetRequest, SettingsResetResponse,
     TestEmailRequest, TestEmailResponse,
-    SettingsResponseV2, SettingValue, SettingsUpdateRequest,
-    SettingsResetRequest, SettingsResetResponse
 )
 from reconly_core.services.settings_service import SettingsService
-from reconly_core.edition import is_demo_mode
 
 router = APIRouter()
-
-
-def mask_password(password: Optional[str]) -> Optional[str]:
-    """Mask password for display."""
-    if not password:
-        return None
-    return "***" if len(password) > 0 else None
-
-
-@router.get("", response_model=SettingsResponse)
-async def get_settings():
-    """
-    Get current settings.
-
-    Returns settings from environment variables with sensitive fields masked.
-    """
-    return SettingsResponse(
-        smtp=SMTPSettings(
-            smtp_host=settings.smtp_host,
-            smtp_port=settings.smtp_port,
-            smtp_user=settings.smtp_user,
-            smtp_password=mask_password(settings.smtp_password),
-            smtp_from_email=settings.smtp_from_email,
-            smtp_from_name=settings.smtp_from_name,
-        ),
-        exports=ExportSettings(
-            obsidian_vault_path=None,  # Not yet configured
-            default_export_format="json",
-        ),
-        demo_mode=is_demo_mode(),
-    )
-
-
-@router.put("", response_model=dict)
-async def update_settings(
-    settings_update: SettingsUpdate,
-    db: Session = Depends(get_db)
-):
-    """
-    Update settings (legacy endpoint).
-
-    Persists editable settings to the database. Non-editable settings
-    (secrets) must still be configured via environment variables.
-    """
-    service = SettingsService(db)
-    updated = []
-    errors = []
-
-    # Map legacy schema fields to new setting keys
-    if settings_update.smtp:
-        field_mapping = {
-            "smtp_host": "email.smtp_host",
-            "smtp_port": "email.smtp_port",
-            "smtp_from_email": "email.from_address",
-            "smtp_from_name": "email.from_name",
-        }
-        for field, key in field_mapping.items():
-            value = getattr(settings_update.smtp, field, None)
-            if value is not None:
-                try:
-                    service.set(key, value)
-                    updated.append(key)
-                except ValueError as e:
-                    errors.append({"key": key, "error": str(e)})
-
-    if settings_update.exports:
-        field_mapping = {
-            "default_export_format": "export.default_format",
-            "obsidian_vault_path": "export.obsidian_vault_path",
-        }
-        for field, key in field_mapping.items():
-            value = getattr(settings_update.exports, field, None)
-            if value is not None:
-                try:
-                    service.set(key, value)
-                    updated.append(key)
-                except ValueError as e:
-                    errors.append({"key": key, "error": str(e)})
-
-    return {
-        "message": f"Updated {len(updated)} settings",
-        "updated": updated,
-        "errors": errors,
-        "note": "Non-editable settings (SMTP user/password, API keys) must be configured via environment variables."
-    }
 
 
 @router.post("/test-email", response_model=TestEmailResponse)
@@ -188,12 +100,8 @@ async def test_email(
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# V2 Settings Endpoints (with source indicators)
-# ─────────────────────────────────────────────────────────────────────────────
-
-@router.get("/v2", response_model=SettingsResponseV2)
-async def get_settings_v2(
+@router.get("", response_model=SettingsResponse)
+async def get_settings(
     category: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
@@ -221,7 +129,7 @@ async def get_settings_v2(
         # Return with only the requested category
         result = {"provider": {}, "email": {}, "export": {}}
         result[category] = category_settings
-        return SettingsResponseV2(**result)
+        return SettingsResponse(**result)
 
     # Get all settings by category
     all_settings = service.get_by_category()
@@ -234,11 +142,11 @@ async def get_settings_v2(
             for key, data in cat_settings.items()
         }
 
-    return SettingsResponseV2(**result)
+    return SettingsResponse(**result)
 
 
-@router.put("/v2", response_model=dict)
-async def update_settings_v2(
+@router.put("", response_model=dict)
+async def update_settings(
     request: SettingsUpdateRequest,
     db: Session = Depends(get_db)
 ):
