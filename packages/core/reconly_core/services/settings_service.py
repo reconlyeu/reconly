@@ -337,18 +337,20 @@ def migrate_provider_settings(db: Session) -> dict[str, Any]:
     old_model = service.get_raw("llm.default_model")
 
     # Get current fallback chain from registry-aware getter (has default)
+    # Use settings registry as single source of truth for default value
+    default_chain = SETTINGS_REGISTRY["llm.fallback_chain"].default
     try:
         chain = service.get("llm.fallback_chain")
     except KeyError:
         # If somehow not in registry, use default
-        chain = ["ollama", "huggingface", "openai", "anthropic"]
+        chain = default_chain.copy()
 
     if chain is None:
-        chain = ["ollama", "huggingface", "openai", "anthropic"]
+        chain = default_chain.copy()
 
     # Ensure chain is a list
     if not isinstance(chain, list):
-        chain = ["ollama", "huggingface", "openai", "anthropic"]
+        chain = default_chain.copy()
 
     # Migration 1: Ensure old default provider is first in chain
     if old_provider:

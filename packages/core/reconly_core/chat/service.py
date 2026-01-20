@@ -42,7 +42,7 @@ from reconly_core.chat.adapters.base import (
     ToolCallRequest,
     ToolCallResult,
 )
-from reconly_core.chat.adapters import OpenAIAdapter, AnthropicAdapter, OllamaAdapter
+from reconly_core.chat.adapters import get_adapter, list_adapters
 
 logger = logging.getLogger(__name__)
 
@@ -188,13 +188,6 @@ class ChatService:
         self.max_context_tokens = max_context_tokens
         self.provider_factory = provider_factory
 
-        # Adapter instances for each provider
-        self._adapters: dict[str, BaseToolAdapter] = {
-            "openai": OpenAIAdapter(),
-            "anthropic": AnthropicAdapter(),
-            "ollama": OllamaAdapter(),
-        }
-
         # Initialize chunking service for token counting
         self._chunking_service = None
 
@@ -210,8 +203,10 @@ class ChatService:
     def _get_adapter(self, provider: str) -> BaseToolAdapter:
         """Get the appropriate adapter for a provider.
 
+        Uses the adapter registry which supports aliases (e.g., lmstudio -> openai).
+
         Args:
-            provider: Provider name (openai, anthropic, ollama).
+            provider: Provider name or alias (openai, anthropic, ollama, lmstudio).
 
         Returns:
             The adapter for the provider.
@@ -219,13 +214,14 @@ class ChatService:
         Raises:
             ValueError: If provider is not supported.
         """
-        adapter = self._adapters.get(provider.lower())
-        if adapter is None:
+        try:
+            return get_adapter(provider.lower())
+        except ValueError:
+            available = list_adapters()
             raise ValueError(
                 f"Unsupported provider: {provider}. "
-                f"Supported: {list(self._adapters.keys())}"
+                f"Available adapters: {available}"
             )
-        return adapter
 
     def _get_default_provider(self) -> str:
         """Get the default provider from app settings or environment.
@@ -233,19 +229,26 @@ class ChatService:
         Priority:
         1. First provider in llm.fallback_chain that supports chat
         2. Environment variable DEFAULT_CHAT_PROVIDER (if chat-supported)
-        3. First available chat provider with API key
+        3. First available chat provider with API key/URL configured
         4. Fallback to 'ollama'
 
-        Note: Chat only supports ollama, openai, anthropic. HuggingFace is
-        only supported for summarization, not chat.
+        Note: Chat supports providers with registered adapters (ollama, openai,
+        anthropic) and aliases (lmstudio). HuggingFace is only supported for
+        summarization, not chat.
 
         Returns:
-            Provider name (e.g., 'ollama', 'anthropic', 'openai').
+            Provider name (e.g., 'ollama', 'anthropic', 'openai', 'lmstudio').
         """
         import logging
         from reconly_core.services.settings_service import SettingsService
+        from reconly_core.chat.adapters.registry import is_adapter_registered
 
         logger = logging.getLogger(__name__)
+
+        # Get list of chat-supported providers (adapters + aliases)
+        chat_providers = set(list_adapters())
+        # Also include known aliases for the check
+        chat_providers.add("lmstudio")
 
         # Check fallback chain from settings (position 0 = default provider)
         try:
@@ -254,26 +257,28 @@ class ChatService:
             if chain and isinstance(chain, list):
                 # Find first provider in chain that supports chat
                 for provider in chain:
-                    if provider in self._adapters:
+                    if is_adapter_registered(provider):
                         return provider
                     else:
                         logger.debug(
                             f"Provider '{provider}' from fallback chain is not supported for chat. "
-                            f"Chat supports: {list(self._adapters.keys())}. Trying next."
+                            f"Chat supports: {sorted(chat_providers)}. Trying next."
                         )
         except Exception:
             pass  # Fall through to env var
 
         # Check environment variable
         env_provider = os.getenv("DEFAULT_CHAT_PROVIDER", "").lower()
-        if env_provider and env_provider in self._adapters:
+        if env_provider and is_adapter_registered(env_provider):
             return env_provider
 
-        # Auto-detect: prefer providers with API keys configured
+        # Auto-detect: prefer providers with API keys/URLs configured
         if os.getenv("ANTHROPIC_API_KEY"):
             return "anthropic"
         if os.getenv("OPENAI_API_KEY"):
             return "openai"
+        if os.getenv("LMSTUDIO_BASE_URL"):
+            return "lmstudio"
 
         # Default fallback
         return "ollama"
@@ -349,6 +354,14 @@ class ChatService:
 
             base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
             return {"base_url": base_url, "client": httpx.Client(base_url=base_url, timeout=DEFAULT_OLLAMA_TIMEOUT)}
+
+        elif provider_lower == "lmstudio":
+            # LMStudio uses OpenAI-compatible API
+            from openai import OpenAI
+
+            base_url = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
+            # LMStudio doesn't require an API key, but OpenAI client needs one
+            return OpenAI(base_url=base_url, api_key="lm-studio")
 
         else:
             raise ProviderError(f"Unsupported provider: {provider}")
@@ -787,14 +800,15 @@ class ChatService:
                 messages.append(adapter.format_assistant_tool_use(raw_response))
             messages.append(adapter.format_tool_results_message([tool_call_result]))
 
-        elif provider_lower == "openai":
-            openai_adapter = self._adapters["openai"]
+        elif provider_lower == "openai" or provider_lower == "lmstudio":
+            # LMStudio uses OpenAI format via adapter alias
+            openai_adapter = get_adapter("openai")
             messages.append(openai_adapter.format_assistant_tool_call([call]))
             messages.append(adapter.format_tool_result(tool_call_result))
 
         else:
             # Ollama - add as text
-            ollama_adapter = self._adapters["ollama"]
+            ollama_adapter = get_adapter("ollama")
             result_text = ollama_adapter.format_tool_result_as_message(tool_call_result)
             messages.append({"role": "user", "content": result_text})
 
@@ -821,7 +835,8 @@ class ChatService:
 
         if provider_lower == "anthropic":
             return await self._call_anthropic(client, model, messages, tools)
-        elif provider_lower == "openai":
+        elif provider_lower == "openai" or provider_lower == "lmstudio":
+            # LMStudio uses OpenAI-compatible API
             return await self._call_openai(client, model, messages, tools)
         elif provider_lower == "ollama":
             return await self._call_ollama(client, model, messages)
@@ -894,7 +909,7 @@ class ChatService:
             raise ProviderError(f"Anthropic API error: {e}")
 
         # Parse response
-        adapter = self._adapters["anthropic"]
+        adapter = get_adapter("anthropic")
         content = adapter.get_text_content(response)
         tool_calls = adapter.parse_tool_calls(response)
 
@@ -974,7 +989,7 @@ class ChatService:
             raise ProviderError(f"OpenAI API error: {e}")
 
         # Parse response
-        adapter = self._adapters["openai"]
+        adapter = get_adapter("openai")
         message = response.choices[0].message
         content = message.content or ""
         tool_calls = adapter.parse_tool_calls(response)
@@ -1063,7 +1078,7 @@ class ChatService:
             raise ProviderError(f"Ollama API error: {e}")
 
         # Parse response
-        adapter = self._adapters["ollama"]
+        adapter = get_adapter("ollama")
         content = data.get("message", {}).get("content", "")
         tool_calls = adapter.parse_tool_calls(content)
 

@@ -38,10 +38,12 @@ from reconly_core.chat.adapters.base import (
     ToolCallRequest,
     ToolCallResult,
 )
+from reconly_core.chat.adapters.registry import register_adapter
 
 logger = logging.getLogger(__name__)
 
 
+@register_adapter("anthropic")
 class AnthropicAdapter(BaseToolAdapter):
     """Adapter for Anthropic's tool use API.
 

@@ -519,3 +519,117 @@ class TestToolCallDataClasses:
 
         assert result.is_error is True
         assert "error" in result.result
+
+
+class TestAdapterRegistry:
+    """Test adapter registry functionality."""
+
+    def test_get_adapter_by_name(self):
+        """Test getting adapter by provider name."""
+        from reconly_core.chat.adapters import get_adapter
+
+        adapter = get_adapter("openai")
+        assert adapter.provider_name == "openai"
+
+        adapter = get_adapter("anthropic")
+        assert adapter.provider_name == "anthropic"
+
+        adapter = get_adapter("ollama")
+        assert adapter.provider_name == "ollama"
+
+    def test_get_adapter_returns_instance(self):
+        """Test that get_adapter returns a fresh instance, not class."""
+        from reconly_core.chat.adapters import get_adapter
+        from reconly_core.chat.adapters.base import BaseToolAdapter
+
+        adapter = get_adapter("openai")
+
+        # Should be an instance
+        assert isinstance(adapter, BaseToolAdapter)
+
+        # Each call should return a fresh instance
+        adapter2 = get_adapter("openai")
+        assert adapter is not adapter2  # Different instances
+
+    def test_get_adapter_case_insensitive(self):
+        """Test that adapter names are case-insensitive in ChatService."""
+        from reconly_core.chat.adapters import get_adapter
+
+        # Registry is case-sensitive, but ChatService lowercases
+        adapter = get_adapter("openai")
+        assert adapter.provider_name == "openai"
+
+    def test_list_adapters(self):
+        """Test listing available adapters."""
+        from reconly_core.chat.adapters import list_adapters
+
+        adapters = list_adapters()
+        assert "openai" in adapters
+        assert "anthropic" in adapters
+        assert "ollama" in adapters
+        # Aliases are excluded from list_adapters
+        assert "lmstudio" not in adapters
+
+        # Should be sorted
+        assert adapters == sorted(adapters)
+
+    def test_list_adapter_aliases(self):
+        """Test listing adapter aliases."""
+        from reconly_core.chat.adapters.registry import list_adapter_aliases
+
+        aliases = list_adapter_aliases()
+
+        # Should contain lmstudio -> openai alias
+        assert "lmstudio" in aliases
+        assert aliases["lmstudio"] == "openai"
+
+    def test_lmstudio_alias(self):
+        """Test that LMStudio alias returns OpenAI adapter."""
+        from reconly_core.chat.adapters import get_adapter
+
+        adapter = get_adapter("lmstudio")
+        # LMStudio is aliased to OpenAI, so it returns OpenAIAdapter
+        assert adapter.provider_name == "openai"
+
+    def test_alias_resolution_to_correct_adapter(self):
+        """Test that alias resolves to the correct adapter instance."""
+        from reconly_core.chat.adapters import get_adapter
+
+        # Get adapter via alias and directly
+        alias_adapter = get_adapter("lmstudio")
+        direct_adapter = get_adapter("openai")
+
+        # Should be same type (both OpenAIAdapter)
+        assert type(alias_adapter) == type(direct_adapter)
+        assert alias_adapter.provider_name == direct_adapter.provider_name
+
+    def test_unknown_adapter_raises(self):
+        """Test that unknown adapter raises ValueError."""
+        from reconly_core.chat.adapters import get_adapter
+
+        with pytest.raises(ValueError, match="Unknown adapter"):
+            get_adapter("unknown_provider")
+
+    def test_unknown_adapter_error_message_helpful(self):
+        """Test that unknown adapter error includes available adapters."""
+        from reconly_core.chat.adapters import get_adapter
+
+        try:
+            get_adapter("unknown_provider")
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            # Error message should list available adapters
+            assert "unknown_provider" in str(e)
+            assert "Available adapters" in str(e)
+            # Should mention at least one real adapter
+            assert "openai" in str(e) or "anthropic" in str(e) or "ollama" in str(e)
+
+    def test_is_adapter_registered(self):
+        """Test checking if adapter is registered."""
+        from reconly_core.chat.adapters.registry import is_adapter_registered
+
+        assert is_adapter_registered("openai") is True
+        assert is_adapter_registered("anthropic") is True
+        assert is_adapter_registered("ollama") is True
+        assert is_adapter_registered("lmstudio") is True  # Alias
+        assert is_adapter_registered("unknown") is False

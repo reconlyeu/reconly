@@ -42,10 +42,12 @@ from reconly_core.chat.adapters.base import (
     ToolCallRequest,
     ToolCallResult,
 )
+from reconly_core.chat.adapters.registry import register_adapter
 
 logger = logging.getLogger(__name__)
 
 
+@register_adapter("openai")
 class OpenAIAdapter(BaseToolAdapter):
     """Adapter for OpenAI's function calling API.
 

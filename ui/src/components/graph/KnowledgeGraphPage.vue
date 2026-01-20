@@ -11,7 +11,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { graphApi } from '@/services/api';
 import { strings } from '@/i18n/en';
 import { useToast } from '@/composables/useToast';
-import type { GraphNode, GraphLayoutType, GraphViewMode, GraphFilters } from '@/types/entities';
+import type { GraphNode, GraphLayoutType, GraphViewMode, GraphFilters, GraphEdgeType } from '@/types/entities';
 import GraphCanvas from './GraphCanvas.vue';
 import GraphCanvas3D from './GraphCanvas3D.vue';
 import GraphControls from './GraphControls.vue';
@@ -30,6 +30,7 @@ const feedFilter = ref<number | null>(null);
 const fromDate = ref('');
 const toDate = ref('');
 const tagFilter = ref<string[]>([]);
+const relationshipTypes = ref<GraphEdgeType[]>(['semantic']); // Default to semantic only for cleaner visualization
 
 const selectedNode = ref<GraphNode | null>(null);
 const sidebarOpen = ref(false);
@@ -42,11 +43,12 @@ const toast = useToast();
 const filters = computed<GraphFilters>(() => ({
   depth: depth.value,
   min_similarity: minSimilarity.value,
-  include_tags: includeTags.value,
+  include_tags: true, // Always true - relationship_types controls what's shown
   feed_id: feedFilter.value || undefined,
   from_date: fromDate.value || undefined,
   to_date: toDate.value || undefined,
   tags: tagFilter.value.length > 0 ? tagFilter.value : undefined,
+  relationship_types: relationshipTypes.value.length > 0 ? relationshipTypes.value : undefined,
   limit: 100,
 }));
 
@@ -177,43 +179,46 @@ function handleExportJson(): void {
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
+  <div class="graph-page flex flex-col overflow-hidden">
     <!-- Header -->
-    <div class="mb-4">
-      <h1 class="text-2xl font-bold text-text-primary">{{ strings.knowledgeGraph.title }}</h1>
-      <p class="mt-1 text-sm text-text-secondary">
+    <div class="flex-shrink-0 mb-2">
+      <h1 class="text-xl font-bold text-text-primary">{{ strings.knowledgeGraph.title }}</h1>
+      <p class="text-sm text-text-secondary">
         {{ strings.knowledgeGraph.subtitle }}
       </p>
     </div>
 
-    <!-- Controls -->
-    <GraphControls
-      v-model:layout="layout"
-      v-model:view-mode="viewMode"
-      v-model:min-similarity="minSimilarity"
-      v-model:include-tags="includeTags"
-      v-model:depth="depth"
-      v-model:feed-filter="feedFilter"
-      v-model:from-date="fromDate"
-      v-model:to-date="toDate"
-      v-model:tag-filter="tagFilter"
-      :node-count="nodeCount"
-      :edge-count="edgeCount"
-      @zoom-in="handleZoomIn"
-      @zoom-out="handleZoomOut"
-      @fit-to-screen="handleFitToScreen"
-      @reset-view="handleResetView"
-      @export-png="handleExportPng"
-      @export-json="handleExportJson"
-      @clear-filters="refetch"
-      class="mb-4"
-    />
+    <!-- Controls + Graph wrapper -->
+    <div class="flex-1 flex flex-col min-h-0 relative">
+      <!-- Controls (flex-shrink-0 to prevent shrinking) -->
+      <GraphControls
+        v-model:layout="layout"
+        v-model:view-mode="viewMode"
+        v-model:min-similarity="minSimilarity"
+        v-model:include-tags="includeTags"
+        v-model:depth="depth"
+        v-model:feed-filter="feedFilter"
+        v-model:from-date="fromDate"
+        v-model:to-date="toDate"
+        v-model:tag-filter="tagFilter"
+        v-model:relationship-types="relationshipTypes"
+        :node-count="nodeCount"
+        :edge-count="edgeCount"
+        @zoom-in="handleZoomIn"
+        @zoom-out="handleZoomOut"
+        @fit-to-screen="handleFitToScreen"
+        @reset-view="handleResetView"
+        @export-png="handleExportPng"
+        @export-json="handleExportJson"
+        @clear-filters="refetch"
+        class="flex-shrink-0 mb-2"
+      />
 
-    <!-- Graph Container -->
-    <div
-      class="flex-1 relative rounded-xl border border-border-subtle overflow-hidden"
-      :class="sidebarOpen ? 'mr-80' : ''"
-    >
+      <!-- Graph Container -->
+      <div
+        class="flex-1 relative rounded-xl border border-border-subtle overflow-hidden min-h-0"
+        :class="sidebarOpen ? 'mr-80' : ''"
+      >
       <!-- Loading State -->
       <div
         v-if="isLoading"
@@ -268,6 +273,7 @@ function handleExportJson(): void {
         @node-expand="handleNodeExpand"
         class="w-full h-full"
       />
+      </div>
     </div>
 
     <!-- Node Detail Sidebar -->
@@ -282,8 +288,8 @@ function handleExportJson(): void {
 </template>
 
 <style scoped>
-/* Ensure the page takes full height */
-.h-full {
-  min-height: calc(100vh - 8rem);
+/* Ensure the page fills available viewport height */
+.graph-page {
+  height: calc(100vh - 7rem);
 }
 </style>

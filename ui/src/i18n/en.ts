@@ -282,6 +282,7 @@ export const strings = {
       tags: 'Tags',
       allFeeds: 'All Feeds',
       clearFilters: 'Clear Filters',
+      relationshipTypes: 'Relationship Types',
     },
     // Sidebar
     sidebar: {

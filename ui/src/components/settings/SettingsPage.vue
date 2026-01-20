@@ -8,7 +8,7 @@ import FetcherSettings from './FetcherSettings.vue';
 import ExtensionsSection from './ExtensionsSection.vue';
 import { useSettingsNavigation, type SettingsTab } from '@/composables/useSettingsNavigation';
 
-const activeTab = ref<SettingsTab>('fetchers');
+const activeTab = ref<SettingsTab>('providers');
 const { pendingNavigation, consumeNavigation } = useSettingsNavigation();
 
 // Switch tab (simple, no URL manipulation)
@@ -25,8 +25,8 @@ watch(pendingNavigation, (target) => {
 }, { immediate: true });
 
 const tabs = [
-  { key: 'fetchers' as const, label: strings.settings.tabs.fetchers },
   { key: 'providers' as const, label: strings.settings.tabs.providers },
+  { key: 'fetchers' as const, label: strings.settings.tabs.fetchers },
   { key: 'exports' as const, label: strings.settings.tabs.exports },
   { key: 'extensions' as const, label: strings.settings.tabs.extensions },
   { key: 'email' as const, label: strings.settings.tabs.email },
