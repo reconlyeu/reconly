@@ -87,6 +87,28 @@ class ProviderResponse(BaseModel):
     })
 
 
+class ResolvedProviderResponse(BaseModel):
+    """Schema for resolved default provider response."""
+    provider: str = Field(..., description="The resolved provider name (first available)")
+    model: Optional[str] = Field(None, description="The default model for this provider")
+    available: bool = Field(..., description="Whether the provider is available")
+    fallback_used: bool = Field(..., description="Whether we fell back from first choice")
+    unavailable_providers: List[str] = Field(
+        default_factory=list,
+        description="Providers that were checked but unavailable"
+    )
+
+    model_config = ConfigDict(json_schema_extra={
+        "example": {
+            "provider": "ollama",
+            "model": "llama3.2",
+            "available": True,
+            "fallback_used": True,
+            "unavailable_providers": ["lmstudio"]
+        }
+    })
+
+
 class ProviderListResponse(BaseModel):
     """Schema for provider configuration response."""
     providers: List[ProviderResponse] = Field(..., description="Available providers")

@@ -14,7 +14,7 @@ import { computed, onMounted } from 'vue';
 import { Plus, MessageSquare, Trash2, Loader2 } from 'lucide-vue-next';
 import { useQuery } from '@tanstack/vue-query';
 import { useChat } from '@/composables/useChat';
-import { settingsApi } from '@/services/api';
+import { providersApi } from '@/services/api';
 import { strings } from '@/i18n/en';
 
 interface Props {
@@ -41,10 +41,10 @@ const {
   activeConversation,
 } = useChat();
 
-// Fetch default LLM settings
-const { data: llmSettings } = useQuery({
-  queryKey: ['settings', 'provider'],
-  queryFn: () => settingsApi.get('provider'),
+// Fetch resolved default provider (first available from fallback chain)
+const { data: resolvedProvider } = useQuery({
+  queryKey: ['providers', 'default'],
+  queryFn: () => providersApi.getDefault(),
   staleTime: 5000, // Short cache - provider display should update quickly after settings change
 });
 
@@ -54,20 +54,16 @@ const poweredByText = computed(() => {
   let provider = activeConversation.value?.model_provider;
   let model = activeConversation.value?.model_name;
 
-  // Fall back to default settings if not set on conversation
-  // Default provider is now fallback_chain[0] (not a separate setting)
-  if (!provider) {
-    const fallbackChain = llmSettings.value?.provider?.fallback_chain?.value;
-    if (Array.isArray(fallbackChain) && fallbackChain.length > 0) {
-      provider = String(fallbackChain[0]);
+  // Fall back to resolved default provider (first available from fallback chain)
+  if (!provider && resolvedProvider.value) {
+    provider = resolvedProvider.value.provider;
+    if (!model) {
+      model = resolvedProvider.value.model;
     }
   }
-  // Default model is provider-specific, stored as {name}.model in settings
-  if (!model && provider) {
-    const providerModel = llmSettings.value?.provider?.[`${provider}.model`]?.value;
-    if (providerModel) {
-      model = String(providerModel);
-    }
+
+  if (!resolvedProvider.value?.available && !activeConversation.value?.model_provider) {
+    return 'No providers available';
   }
 
   if (provider && model) {

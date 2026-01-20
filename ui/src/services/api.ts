@@ -31,6 +31,7 @@ import type {
   TagBulkDeleteResponse,
   Provider,
   ProviderListResponse,
+  ResolvedProvider,
   ModelInfo,
   AnalyticsSummary,
   TokensByProvider,
@@ -819,6 +820,16 @@ export const providersApi = {
   refreshModels: async (providerName?: string): Promise<{ providers?: Record<string, ModelInfo[]>; provider?: string; models?: ModelInfo[] }> => {
     const params = providerName ? { provider_name: providerName } : {};
     const { data } = await apiClient.post('/providers/refresh-models', null, { params });
+    return data;
+  },
+
+  /**
+   * Get the resolved default provider (first available from fallback chain).
+   * Checks actual availability of each provider (pings servers, checks API keys).
+   * Returns what will actually be used for chat/summarization.
+   */
+  getDefault: async (): Promise<ResolvedProvider> => {
+    const { data } = await apiClient.get<ResolvedProvider>('/providers/default');
     return data;
   },
 };

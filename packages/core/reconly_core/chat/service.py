@@ -283,96 +283,14 @@ class ChatService:
         # Default fallback
         return "ollama"
 
-    def _get_fallback_chain(self) -> list[str]:
-        """Get the full list of chat-capable providers from the fallback chain.
-
-        Returns all providers in the fallback chain that support chat (have
-        registered adapters). Used for runtime fallback when a provider fails.
+    def _resolve_provider(self) -> dict:
+        """Resolve the default provider using the central resolve_default_provider().
 
         Returns:
-            List of provider names in priority order.
+            Dict with provider, model, available, fallback_used, unavailable_providers
         """
-        from reconly_core.services.settings_service import SettingsService
-        from reconly_core.chat.adapters.registry import is_adapter_registered
-
-        result = []
-
-        # Get chain from settings
-        try:
-            settings_service = SettingsService(self.db)
-            chain = settings_service.get("llm.fallback_chain")
-            if chain and isinstance(chain, list):
-                for provider in chain:
-                    if is_adapter_registered(provider) and provider not in result:
-                        result.append(provider)
-        except Exception:
-            pass
-
-        # If no valid providers from settings, use defaults
-        if not result:
-            # Check what's configured
-            if os.getenv("ANTHROPIC_API_KEY"):
-                result.append("anthropic")
-            if os.getenv("OPENAI_API_KEY"):
-                result.append("openai")
-            # Local providers as final fallbacks
-            result.append("lmstudio")
-            result.append("ollama")
-
-        return result
-
-    def _is_connection_error(self, error: Exception) -> bool:
-        """Check if an error is a connection/availability error that should trigger fallback.
-
-        Args:
-            error: The exception to check.
-
-        Returns:
-            True if the error indicates the provider is unavailable (connection refused,
-            timeout, server not running), False for other errors (auth, model not found, etc).
-        """
-        import httpx
-
-        # Check for OpenAI client connection errors (used by OpenAI, LMStudio)
-        try:
-            import openai
-            if isinstance(error, openai.APIConnectionError):
-                return True
-        except ImportError:
-            pass
-
-        # Check for Anthropic client connection errors
-        try:
-            import anthropic
-            if isinstance(error, anthropic.APIConnectionError):
-                return True
-        except ImportError:
-            pass
-
-        error_str = str(error).lower()
-
-        # Check for connection-related errors
-        if isinstance(error, (ConnectionError, ConnectionRefusedError)):
-            return True
-        if isinstance(error, httpx.ConnectError):
-            return True
-        if isinstance(error, httpx.ConnectTimeout):
-            return True
-
-        # Check error message for connection-related keywords
-        connection_keywords = [
-            "connection refused",
-            "connect error",
-            "cannot connect",
-            "failed to connect",
-            "connection failed",
-            "server not running",
-            "unreachable",
-            "connection timed out",
-            "no route to host",
-            "connection error",
-        ]
-        return any(kw in error_str for kw in connection_keywords)
+        from reconly_core.providers.factory import resolve_default_provider
+        return resolve_default_provider(db=self.db)
 
     def _get_default_model(self, provider: str) -> str:
         """Get the default model from app settings for the given provider.
@@ -1357,101 +1275,68 @@ class ChatService:
         # Load conversation
         conversation = await self.get_conversation(conversation_id)
 
-        # Save user message first (before attempting provider calls)
+        # Determine provider and model
+        # Priority: conversation setting > resolved default from fallback chain
+        if conversation.model_provider:
+            provider = conversation.model_provider
+            model = conversation.model_name or self._get_default_model(provider)
+        else:
+            # Use central resolve_default_provider() to get first available
+            resolved = self._resolve_provider()
+            if not resolved["available"]:
+                unavailable = ", ".join(resolved["unavailable_providers"]) or "none configured"
+                raise ProviderError(
+                    f"No providers available. Checked: {unavailable}\n\n"
+                    "Please ensure at least one provider is available:\n"
+                    "  - For local providers (Ollama, LMStudio), check the server is running\n"
+                    "  - For cloud providers, check your API key is configured"
+                )
+            provider = resolved["provider"]
+            model = conversation.model_name or resolved["model"] or self._get_default_model(provider)
+
+            if resolved["fallback_used"]:
+                logger.info(
+                    f"Using fallback provider '{provider}' "
+                    f"(primary was unavailable: {resolved['unavailable_providers']})"
+                )
+
+        # Get adapter and tools
+        adapter = self._get_adapter(provider)
+        tools = self.registry.list_tools()
+
+        # Save user message
         self._save_message(
             conversation_id=conversation_id,
             role="user",
             content=user_message,
         )
 
-        # Determine provider(s) to try
-        # If conversation has explicit provider, use only that (user chose it)
-        # Otherwise, use fallback chain for automatic provider selection
-        if conversation.model_provider:
-            providers_to_try = [conversation.model_provider]
-        else:
-            providers_to_try = self._get_fallback_chain()
+        # Prepare context
+        messages = await self._prepare_context(conversation_id, user_message)
+        messages = self._format_messages_for_provider(provider, messages, adapter, tools)
 
-        tools = self.registry.list_tools()
-        last_error: Exception | None = None
-        errors_by_provider: dict[str, str] = {}
-
-        # Try each provider in the chain until one works
-        for provider in providers_to_try:
-            try:
-                model = conversation.model_name or self._get_default_model(provider)
-                adapter = self._get_adapter(provider)
-
-                # Prepare context (needs to be done per-provider as formatting may differ)
-                messages = await self._prepare_context(conversation_id, user_message)
-                messages = self._format_messages_for_provider(provider, messages, adapter, tools)
-
-                # Process with tools
-                response = await self._process_with_tools(
-                    conversation_id=conversation_id,
-                    messages=messages,
-                    provider=provider,
-                    model=model,
-                    adapter=adapter,
-                    tools=tools,
-                    context=context,
-                )
-
-                # Success - log if we fell back
-                if provider != providers_to_try[0]:
-                    logger.info(
-                        f"Chat succeeded with fallback provider '{provider}' "
-                        f"(primary '{providers_to_try[0]}' was unavailable)"
-                    )
-
-                # Save assistant response
-                message = self._save_message(
-                    conversation_id=conversation_id,
-                    role="assistant",
-                    content=response.content,
-                    tokens_in=response.tokens_in,
-                    tokens_out=response.tokens_out,
-                )
-
-                response.message_id = message.id
-                return response
-
-            except ProviderError as e:
-                last_error = e
-                errors_by_provider[provider] = str(e)
-
-                # Only fallback on connection errors, not auth/model errors
-                if self._is_connection_error(e):
-                    logger.warning(
-                        f"Provider '{provider}' unavailable ({e}), trying next in fallback chain"
-                    )
-                    continue
-                else:
-                    # Non-connection error (auth, model not found, etc) - don't fallback
-                    raise
-
-            except Exception as e:
-                last_error = e
-                errors_by_provider[provider] = str(e)
-
-                # Check if it's a connection error
-                if self._is_connection_error(e):
-                    logger.warning(
-                        f"Provider '{provider}' connection error ({e}), trying next in fallback chain"
-                    )
-                    continue
-                else:
-                    # Re-raise non-connection errors
-                    raise ProviderError(f"Provider '{provider}' error: {e}")
-
-        # All providers failed
-        error_details = "\n".join(f"  - {p}: {e}" for p, e in errors_by_provider.items())
-        raise ProviderError(
-            f"All providers in fallback chain failed:\n{error_details}\n\n"
-            "Please ensure at least one provider is available:\n"
-            "  - For local providers (Ollama, LMStudio), check the server is running\n"
-            "  - For cloud providers, check your API key is configured"
+        # Process with tools
+        response = await self._process_with_tools(
+            conversation_id=conversation_id,
+            messages=messages,
+            provider=provider,
+            model=model,
+            adapter=adapter,
+            tools=tools,
+            context=context,
         )
+
+        # Save assistant response
+        message = self._save_message(
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response.content,
+            tokens_in=response.tokens_in,
+            tokens_out=response.tokens_out,
+        )
+
+        response.message_id = message.id
+        return response
 
     async def chat_stream(
         self,
@@ -1484,154 +1369,119 @@ class ChatService:
         # Load conversation
         conversation = await self.get_conversation(conversation_id)
 
-        # Save user message first (before attempting provider calls)
+        # Determine provider and model
+        # Priority: conversation setting > resolved default from fallback chain
+        if conversation.model_provider:
+            provider = conversation.model_provider
+            model = conversation.model_name or self._get_default_model(provider)
+        else:
+            # Use central resolve_default_provider() to get first available
+            resolved = self._resolve_provider()
+            if not resolved["available"]:
+                unavailable = ", ".join(resolved["unavailable_providers"]) or "none configured"
+                yield StreamChunk(
+                    type="error",
+                    content=f"No providers available. Checked: {unavailable}"
+                )
+                return
+            provider = resolved["provider"]
+            model = conversation.model_name or resolved["model"] or self._get_default_model(provider)
+
+            if resolved["fallback_used"]:
+                logger.info(
+                    f"Using fallback provider '{provider}' "
+                    f"(primary was unavailable: {resolved['unavailable_providers']})"
+                )
+
+        # Get adapter and tools
+        adapter = self._get_adapter(provider)
+        tools = self.registry.list_tools()
+
+        # Save user message
         self._save_message(
             conversation_id=conversation_id,
             role="user",
             content=user_message,
         )
 
-        # Determine provider(s) to try
-        # If conversation has explicit provider, use only that (user chose it)
-        # Otherwise, use fallback chain for automatic provider selection
-        if conversation.model_provider:
-            providers_to_try = [conversation.model_provider]
-        else:
-            providers_to_try = self._get_fallback_chain()
-
-        tools = self.registry.list_tools()
-
-        # Try to find a working provider before starting the stream
-        provider = None
-        model = None
-        adapter = None
-        messages = None
-        formatted_tools = None
-        errors_by_provider: dict[str, str] = {}
-
-        for try_provider in providers_to_try:
-            try:
-                try_model = conversation.model_name or self._get_default_model(try_provider)
-                try_adapter = self._get_adapter(try_provider)
-
-                # Prepare context for this provider
-                try_messages = await self._prepare_context(conversation_id, user_message)
-                try_messages = self._format_messages_for_provider(
-                    try_provider, try_messages, try_adapter, tools
-                )
-                try_formatted_tools = try_adapter.format_tools(tools) if tools else None
-
-                # Try an initial call to verify provider is available
-                response = await self._call_llm(
-                    try_provider, try_model, try_messages, try_formatted_tools
-                )
-
-                # Success - use this provider
-                provider = try_provider
-                model = try_model
-                adapter = try_adapter
-                messages = try_messages
-                formatted_tools = try_formatted_tools
-
-                if provider != providers_to_try[0]:
-                    logger.info(
-                        f"Chat stream using fallback provider '{provider}' "
-                        f"(primary '{providers_to_try[0]}' was unavailable)"
-                    )
-                break
-
-            except Exception as e:
-                errors_by_provider[try_provider] = str(e)
-
-                # Only fallback on connection errors
-                if self._is_connection_error(e):
-                    logger.warning(
-                        f"Provider '{try_provider}' unavailable ({e}), trying next in fallback chain"
-                    )
-                    continue
-                else:
-                    # Non-connection error - yield error and stop
-                    yield StreamChunk(type="error", content=str(e))
-                    return
-
-        if provider is None:
-            # All providers failed
-            error_details = "\n".join(f"  - {p}: {e}" for p, e in errors_by_provider.items())
-            yield StreamChunk(
-                type="error",
-                content=f"All providers in fallback chain failed:\n{error_details}"
-            )
-            return
+        # Prepare context
+        messages = await self._prepare_context(conversation_id, user_message)
+        messages = self._format_messages_for_provider(provider, messages, adapter, tools)
+        formatted_tools = adapter.format_tools(tools) if tools else None
 
         # Process with streaming
         # Note: Currently implements pseudo-streaming by yielding after each step
         # True streaming would require provider-specific streaming implementations
 
-        total_tokens_in = response["usage"].get("input_tokens", 0)
-        total_tokens_out = response["usage"].get("output_tokens", 0)
-        iteration = 1  # Already did first call
+        total_tokens_in = 0
+        total_tokens_out = 0
+        iteration = 0
         full_content = ""
 
-        # Process the first response we already have
-        tool_calls = response.get("tool_calls", [])
-        content = response.get("content", "")
+        while iteration < MAX_TOOL_ITERATIONS:
+            iteration += 1
 
-        if content:
-            yield StreamChunk(type="text", content=content)
-            full_content += content
+            # Call LLM
+            try:
+                response = await self._call_llm(provider, model, messages, formatted_tools)
+            except Exception as e:
+                yield StreamChunk(type="error", content=str(e))
+                return
 
-        # If no tool calls from first response, we might be done
-        if not tool_calls:
-            # Save and finish
-            self._save_message(
-                conversation_id=conversation_id,
-                role="assistant",
-                content=full_content,
-                tokens_in=total_tokens_in,
-                tokens_out=total_tokens_out,
-            )
-            yield StreamChunk(
-                type="done",
-                tokens_in=total_tokens_in,
-                tokens_out=total_tokens_out,
-            )
-            return
+            total_tokens_in += response["usage"].get("input_tokens", 0)
+            total_tokens_out += response["usage"].get("output_tokens", 0)
 
-        # Process tool calls from first response
-        for call in tool_calls:
-            yield StreamChunk(
-                type="tool_call",
-                tool_call={
-                    "id": call.call_id,
-                    "name": call.tool_name,
-                    "parameters": call.parameters,
-                },
-            )
+            tool_calls = response.get("tool_calls", [])
+            content = response.get("content", "")
 
-            result = await self.executor.execute(
-                call,
-                context=context or {"db": self.db},
-            )
+            # Yield text content
+            if content:
+                yield StreamChunk(type="text", content=content)
+                full_content += content
 
-            yield StreamChunk(
-                type="tool_result",
-                tool_result={
-                    "call_id": call.call_id,
-                    "tool_name": call.tool_name,
-                    "success": result.success,
-                    "result": result.result if result.success else None,
-                    "error": result.error if not result.success else None,
-                },
-            )
+            # If no tool calls, we're done
+            if not tool_calls:
+                break
 
-            self._save_message(
-                conversation_id=conversation_id,
-                role="assistant",
-                content=content,
-                tool_calls=[{
-                    "id": call.call_id,
-                    "name": call.tool_name,
-                    "parameters": call.parameters,
+            # Execute tool calls
+            for call in tool_calls:
+                # Yield tool call notification
+                yield StreamChunk(
+                    type="tool_call",
+                    tool_call={
+                        "id": call.call_id,
+                        "name": call.tool_name,
+                        "parameters": call.parameters,
+                    },
+                )
+
+                # Execute tool
+                result = await self.executor.execute(
+                    call,
+                    context=context or {"db": self.db},
+                )
+
+                # Yield tool result
+                yield StreamChunk(
+                    type="tool_result",
+                    tool_result={
+                        "call_id": call.call_id,
+                        "tool_name": call.tool_name,
+                        "success": result.success,
+                        "result": result.result if result.success else None,
+                        "error": result.error if not result.success else None,
+                    },
+                )
+
+                # Save to database
+                self._save_message(
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=content,
+                    tool_calls=[{
+                        "id": call.call_id,
+                        "name": call.tool_name,
+                        "parameters": call.parameters,
                 }],
             )
 

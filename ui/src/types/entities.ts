@@ -579,6 +579,23 @@ export interface ProviderListResponse {
 }
 
 /**
+ * Response from GET /providers/default endpoint.
+ * Returns the first available provider from the fallback chain.
+ */
+export interface ResolvedProvider {
+  /** The resolved provider name (first available) */
+  provider: string;
+  /** The default model for this provider */
+  model: string | null;
+  /** Whether the provider is available */
+  available: boolean;
+  /** Whether we fell back from first choice */
+  fallback_used: boolean;
+  /** Providers that were checked but unavailable */
+  unavailable_providers: string[];
+}
+
+/**
  * @deprecated Use ProviderListResponse instead. Kept for backwards compatibility.
  */
 export interface ProviderConfig {
