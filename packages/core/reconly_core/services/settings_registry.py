@@ -301,6 +301,20 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="RAG_DEFAULT_CHUNK_SOURCE",
         description="Default chunk source for RAG queries: 'source_content' or 'digest'",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Fetch Settings
+    # Configuration for content fetching behavior
+    # ─────────────────────────────────────────────────────────────────────────
+    "fetch.rss.fetch_full_content": SettingDef(
+        category="fetch",
+        type=bool,
+        default=False,
+        editable=True,
+        env_var="FETCH_RSS_FULL_CONTENT",
+        description="Follow article links to scrape full content instead of using RSS summary. Adds latency but improves RAG quality.",
+    ),
+
     "rag.graph.semantic_threshold": SettingDef(
         category="rag",
         type=float,

@@ -127,7 +127,10 @@ async def get_settings(
             for key, data in settings_data.items()
         }
         # Return with only the requested category
-        result = {"provider": {}, "email": {}, "export": {}}
+        result = {
+            "provider": {}, "email": {}, "export": {}, "fetch": {},
+            "embedding": {}, "rag": {}, "agent": {}, "resilience": {}
+        }
         result[category] = category_settings
         return SettingsResponse(**result)
 

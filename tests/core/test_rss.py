@@ -394,3 +394,235 @@ class TestRSSFetcher:
 
             assert len(articles) == 1
             assert articles[0]['title'] == 'Old Article'
+
+
+class TestRSSFetcherFullContent:
+    """Test suite for fetch_full_content functionality."""
+
+    @pytest.fixture(autouse=True)
+    def disable_age_limit(self, monkeypatch):
+        """Disable the first-run age limit for tests."""
+        monkeypatch.setenv('RSS_FIRST_RUN_MAX_AGE_DAYS', '0')
+
+    @pytest.fixture
+    def rss_fetcher(self):
+        """Create RSSFetcher instance for testing."""
+        return RSSFetcher()
+
+    @pytest.fixture
+    def mock_rss_feed(self):
+        """Mock RSS feed with articles that have links."""
+        mock_feed = Mock()
+        mock_feed.bozo = False
+        mock_feed.feed = {'title': 'Test RSS Feed'}
+
+        entry = Mock()
+        entry.get = Mock(side_effect=lambda k, default=None: {
+            'link': 'https://example.com/article1',
+            'title': 'Test Article'
+        }.get(k, default))
+        entry.summary = 'This is the RSS summary/description'
+        entry.published_parsed = (2025, 12, 30, 12, 0, 0, 0, 0, 0)
+        entry.author = 'John Doe'
+        entry.content = None
+        entry.description = None
+
+        mock_feed.entries = [entry]
+        return mock_feed
+
+    def test_fetch_without_full_content_does_not_scrape(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=False (default)
+        THEN articles have 'content' from RSS summary
+        AND articles do NOT have 'full_content' field."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=False)
+
+            assert len(articles) == 1
+            article = articles[0]
+            assert article['content'] == 'This is the RSS summary/description'
+            assert 'full_content' not in article
+
+    def test_fetch_with_full_content_adds_full_content_field(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=True
+        THEN articles have both 'content' (RSS summary) and 'full_content' (scraped)
+        AND full_content contains the scraped article text."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            # Mock WebsiteFetcher.fetch() to return full content
+            mock_website_content = [{
+                'url': 'https://example.com/article1',
+                'title': 'Test Article',
+                'content': 'This is the full scraped article content with much more detail.',
+                'source_type': 'website'
+            }]
+
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', return_value=mock_website_content):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                article = articles[0]
+                # Should have both RSS summary and full content
+                assert article['content'] == 'This is the RSS summary/description'
+                assert article['full_content'] == 'This is the full scraped article content with much more detail.'
+                assert article['url'] == 'https://example.com/article1'
+
+    def test_fetch_full_content_graceful_fallback_on_exception(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=True AND WebsiteFetcher raises exception (403, timeout, etc.)
+        THEN articles still have 'content' from RSS summary
+        AND articles do NOT have 'full_content' field (graceful fallback)
+        AND feed run continues successfully."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            # Mock WebsiteFetcher.fetch() to raise an exception
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', side_effect=Exception('HTTP 403 Forbidden')):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                article = articles[0]
+                # Should still have RSS summary
+                assert article['content'] == 'This is the RSS summary/description'
+                # Should NOT have full_content field due to scraping failure
+                assert 'full_content' not in article
+                # Feed run should succeed despite scraping failure
+                assert article['title'] == 'Test Article'
+
+    def test_fetch_full_content_ignores_empty_content(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=True AND WebsiteFetcher returns empty content
+        THEN articles have 'content' from RSS summary
+        AND articles do NOT have 'full_content' field."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            # Mock WebsiteFetcher.fetch() to return empty content
+            mock_website_content = [{
+                'url': 'https://example.com/article1',
+                'title': 'Test Article',
+                'content': '',  # Empty content
+                'source_type': 'website'
+            }]
+
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', return_value=mock_website_content):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                article = articles[0]
+                # Should have RSS summary
+                assert article['content'] == 'This is the RSS summary/description'
+                # Should NOT add empty full_content
+                assert 'full_content' not in article
+
+    def test_fetch_full_content_ignores_none_content(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=True AND WebsiteFetcher returns None as content
+        THEN articles do NOT have 'full_content' field."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            # Mock WebsiteFetcher.fetch() to return None content
+            mock_website_content = [{
+                'url': 'https://example.com/article1',
+                'title': 'Test Article',
+                'content': None,
+                'source_type': 'website'
+            }]
+
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', return_value=mock_website_content):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                article = articles[0]
+                assert 'full_content' not in article
+
+    def test_fetch_full_content_handles_empty_response_list(self, rss_fetcher, mock_rss_feed):
+        """WHEN fetch_full_content=True AND WebsiteFetcher returns empty list
+        THEN articles do NOT have 'full_content' field."""
+        with patch('feedparser.parse', return_value=mock_rss_feed):
+            # Mock WebsiteFetcher.fetch() to return empty list
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', return_value=[]):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                article = articles[0]
+                assert 'full_content' not in article
+
+    def test_fetch_full_content_processes_multiple_articles(self, rss_fetcher):
+        """WHEN fetch_full_content=True AND feed has multiple articles
+        THEN each article is scraped independently
+        AND successful scrapes add full_content while failures fall back gracefully."""
+        mock_feed = Mock()
+        mock_feed.bozo = False
+        mock_feed.feed = {'title': 'Test Feed'}
+
+        # Create 3 entries
+        entries = []
+        for i in range(3):
+            entry = Mock()
+            entry.get = Mock(side_effect=lambda k, default=None, i=i: {
+                'link': f'https://example.com/article{i}',
+                'title': f'Article {i}'
+            }.get(k, default))
+            entry.summary = f'RSS summary {i}'
+            entry.published_parsed = (2025, 12, 30, 12, i, 0, 0, 0, 0)
+            entry.author = 'Author'
+            entry.content = None
+            entry.description = None
+            entries.append(entry)
+
+        mock_feed.entries = entries
+
+        with patch('feedparser.parse', return_value=mock_feed):
+            # Mock WebsiteFetcher to succeed for article0, fail for article1, return empty for article2
+            def mock_website_fetch(url):
+                if 'article0' in url:
+                    return [{'url': url, 'title': 'Article 0', 'content': 'Full content 0'}]
+                elif 'article1' in url:
+                    raise Exception('403 Forbidden')
+                else:  # article2
+                    return [{'url': url, 'title': 'Article 2', 'content': ''}]
+
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', side_effect=mock_website_fetch):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 3
+
+                # Article 0: should have full_content (successful scrape)
+                article0 = next(a for a in articles if a['title'] == 'Article 0')
+                assert article0['content'] == 'RSS summary 0'
+                assert article0['full_content'] == 'Full content 0'
+
+                # Article 1: should NOT have full_content (scraping failed)
+                article1 = next(a for a in articles if a['title'] == 'Article 1')
+                assert article1['content'] == 'RSS summary 1'
+                assert 'full_content' not in article1
+
+                # Article 2: should NOT have full_content (empty content)
+                article2 = next(a for a in articles if a['title'] == 'Article 2')
+                assert article2['content'] == 'RSS summary 2'
+                assert 'full_content' not in article2
+
+    def test_fetch_full_content_with_missing_link_uses_feed_url(self, rss_fetcher):
+        """WHEN fetch_full_content=True AND article has no link
+        THEN article URL falls back to feed URL
+        AND scraping is attempted with feed URL (though likely returns empty)."""
+        mock_feed = Mock()
+        mock_feed.bozo = False
+        mock_feed.feed = {'title': 'Test Feed'}
+
+        entry = Mock()
+        # Entry without link - will fall back to feed URL
+        entry.get = Mock(side_effect=lambda k, default=None: {
+            'title': 'Article Without Link'
+        }.get(k, default))
+        entry.summary = 'RSS summary'
+        entry.published_parsed = (2025, 12, 30, 12, 0, 0, 0, 0, 0)
+        entry.author = None
+        entry.content = None
+        entry.description = None
+
+        mock_feed.entries = [entry]
+
+        with patch('feedparser.parse', return_value=mock_feed):
+            # Mock WebsiteFetcher to return empty content (feed URL likely isn't a valid article)
+            with patch('reconly_core.fetchers.website.WebsiteFetcher.fetch', return_value=[]):
+                articles = rss_fetcher.fetch('https://example.com/feed', fetch_full_content=True)
+
+                assert len(articles) == 1
+                # Article URL should fall back to feed URL when link is missing
+                assert articles[0]['url'] == 'https://example.com/feed'
+                # Should have RSS summary
+                assert articles[0]['content'] == 'RSS summary'
+                # Should NOT have full_content (empty response from WebsiteFetcher)
+                assert 'full_content' not in articles[0]

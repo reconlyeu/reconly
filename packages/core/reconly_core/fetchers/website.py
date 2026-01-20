@@ -66,20 +66,61 @@ class WebsiteFetcher(BaseFetcher):
             title_text = title.get_text().strip() if title else "No title"
 
             # Get main content - try different common content containers
+            # Order matters: more specific selectors first, then broader ones
             content = ""
-            main_content = (
-                soup.find('main') or
-                soup.find('article') or
-                soup.find('div', class_='content') or
-                soup.find('div', id='content') or
-                soup.find('body')
-            )
+            main_content = None
 
-            if main_content:
-                # Get text and clean it up
-                content = main_content.get_text(separator='\n', strip=True)
+            # Try specific blog/article content selectors first (most likely to have actual content)
+            content_selectors = [
+                # Common blog content classes
+                ('div', {'class_': 'post-content'}),
+                ('div', {'class_': 'entry-content'}),
+                ('div', {'class_': 'article-content'}),
+                ('div', {'class_': 'blog-content'}),
+                ('div', {'class_': 'markdown-body'}),  # GitHub, tech blogs
+                ('div', {'class_': 'prose'}),  # Tailwind prose class
+                ('div', {'class_': 'content-body'}),
+                # Hugging Face specific
+                ('div', {'class_': 'container'}),
+                # Generic semantic elements
+                ('article', {}),
+                ('main', {}),
+                # Generic content divs
+                ('div', {'class_': 'content'}),
+                ('div', {'id': 'content'}),
+                ('div', {'class_': 'post'}),
+                ('div', {'id': 'post'}),
+                # ARIA role
+                ('div', {'attrs': {'role': 'main'}}),
+            ]
+
+            # Find the best content container (prefer ones with more text)
+            best_content = ""
+            best_element = None
+
+            for tag, attrs in content_selectors:
+                if 'attrs' in attrs:
+                    element = soup.find(tag, attrs=attrs['attrs'])
+                else:
+                    element = soup.find(tag, **attrs) if attrs else soup.find(tag)
+
+                if element:
+                    text = element.get_text(separator='\n', strip=True)
+                    # Use this element if it has more content than what we found so far
+                    # Minimum threshold of 100 chars to avoid picking up headers/navs
+                    if len(text) > len(best_content) and len(text) > 100:
+                        best_content = text
+                        best_element = element
+
+            # Fall back to body if no good content found
+            if not best_content:
+                body = soup.find('body')
+                if body:
+                    best_content = body.get_text(separator='\n', strip=True)
+
+            if best_content:
                 # Remove excessive newlines
-                content = '\n'.join(line.strip() for line in content.split('\n') if line.strip())
+                content = '\n'.join(line.strip() for line in best_content.split('\n') if line.strip())
 
             return [{
                 'url': url,

@@ -1226,6 +1226,8 @@ class FeedService:
         fetcher=None,
     ) -> Dict[str, Any]:
         """Process an RSS source (individual or per_source mode)."""
+        from reconly_core.services.settings_service import SettingsService
+
         # Get last read timestamp
         last_read = self.tracker.get_last_read(source.url)
 
@@ -1233,9 +1235,18 @@ class FeedService:
         source_config = source.config or {}
         max_items = source_config.get('max_items')
 
+        # Get fetch_full_content setting
+        settings = SettingsService(session)
+        fetch_full_content = settings.get("fetch.rss.fetch_full_content")
+
         if fetcher is None:
             fetcher = get_fetcher('rss')
-        articles = fetcher.fetch(source.url, since=last_read, max_items=max_items)
+        articles = fetcher.fetch(
+            source.url,
+            since=last_read,
+            max_items=max_items,
+            fetch_full_content=fetch_full_content,
+        )
 
         if not articles:
             return {"success": True, "items_count": 0}
@@ -1686,11 +1697,14 @@ class FeedService:
         if model_info.get("model_key"):
             provider = f"{provider}-{model_info['model_key']}"
 
+        # Prefer full_content (scraped article) over content (RSS summary) for display
+        digest_content = result.get("full_content") or result.get("content")
+
         # Create digest
         digest = Digest(
             url=result["url"],
             title=result.get("title"),
-            content=result.get("content"),
+            content=digest_content,
             summary=result.get("summary"),
             source_type="consolidated",
             feed_url=None,
@@ -1730,8 +1744,8 @@ class FeedService:
                 session.add(source_item)
                 session.flush()  # Get source_item.id for SourceContent FK
 
-                # Store source content for RAG
-                content = item.get('content', '')
+                # Store source content for RAG - prefer full_content if available
+                content = item.get('full_content') or item.get('content', '')
                 self._store_source_content(source_item, content, session)
         else:
             # per_source mode - all items from same source
@@ -1753,8 +1767,8 @@ class FeedService:
                 session.add(source_item)
                 session.flush()  # Get source_item.id for SourceContent FK
 
-                # Store source content for RAG
-                content = article.get('content', '')
+                # Store source content for RAG - prefer full_content if available
+                content = article.get('full_content') or article.get('content', '')
                 self._store_source_content(source_item, content, session)
 
         return digest
@@ -1814,11 +1828,23 @@ class FeedService:
                     continue
 
                 if source.type == "rss":
+                    from reconly_core.services.settings_service import SettingsService
+
                     last_read = self.tracker.get_last_read(source.url)
                     source_config = source.config or {}
                     max_items = source_config.get('max_items')
+
+                    # Get fetch_full_content setting
+                    settings = SettingsService(session)
+                    fetch_full_content = settings.get("fetch.rss.fetch_full_content")
+
                     fetcher = get_fetcher('rss')
-                    articles = fetcher.fetch(source.url, since=last_read, max_items=max_items)
+                    articles = fetcher.fetch(
+                        source.url,
+                        since=last_read,
+                        max_items=max_items,
+                        fetch_full_content=fetch_full_content,
+                    )
 
                     # Apply content filter if configured
                     if articles and (source.include_keywords or source.exclude_keywords):
@@ -1850,6 +1876,8 @@ class FeedService:
                                 'url': article.get('url'),
                                 'title': article.get('title'),
                                 'published': article.get('published'),
+                                'content': article.get('content', ''),
+                                'full_content': article.get('full_content'),
                                 'source_id': source.id,
                                 'source_name': source.name,
                             })
@@ -2035,10 +2063,13 @@ class FeedService:
         if model_info.get("model_key"):
             provider = f"{provider}-{model_info['model_key']}"
 
+        # Prefer full_content (scraped article) over content (RSS summary) for display
+        digest_content = result.get("full_content") or result.get("content")
+
         digest = Digest(
             url=result["url"],
             title=result.get("title"),
-            content=result.get("content"),
+            content=digest_content,
             summary=result.get("summary"),
             source_type=result.get("source_type"),
             feed_url=result.get("feed_url"),
