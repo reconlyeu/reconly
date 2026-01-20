@@ -1697,11 +1697,14 @@ class FeedService:
         if model_info.get("model_key"):
             provider = f"{provider}-{model_info['model_key']}"
 
+        # Prefer full_content (scraped article) over content (RSS summary) for display
+        digest_content = result.get("full_content") or result.get("content")
+
         # Create digest
         digest = Digest(
             url=result["url"],
             title=result.get("title"),
-            content=result.get("content"),
+            content=digest_content,
             summary=result.get("summary"),
             source_type="consolidated",
             feed_url=None,
@@ -2060,10 +2063,13 @@ class FeedService:
         if model_info.get("model_key"):
             provider = f"{provider}-{model_info['model_key']}"
 
+        # Prefer full_content (scraped article) over content (RSS summary) for display
+        digest_content = result.get("full_content") or result.get("content")
+
         digest = Digest(
             url=result["url"],
             title=result.get("title"),
-            content=result.get("content"),
+            content=digest_content,
             summary=result.get("summary"),
             source_type=result.get("source_type"),
             feed_url=result.get("feed_url"),
