@@ -333,6 +333,22 @@ class ChatService:
         """
         import httpx
 
+        # Check for OpenAI client connection errors (used by OpenAI, LMStudio)
+        try:
+            import openai
+            if isinstance(error, openai.APIConnectionError):
+                return True
+        except ImportError:
+            pass
+
+        # Check for Anthropic client connection errors
+        try:
+            import anthropic
+            if isinstance(error, anthropic.APIConnectionError):
+                return True
+        except ImportError:
+            pass
+
         error_str = str(error).lower()
 
         # Check for connection-related errors
@@ -354,6 +370,7 @@ class ChatService:
             "unreachable",
             "connection timed out",
             "no route to host",
+            "connection error",
         ]
         return any(kw in error_str for kw in connection_keywords)
 
