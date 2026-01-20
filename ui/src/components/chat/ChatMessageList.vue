@@ -132,7 +132,7 @@ defineExpose({ scrollToBottom });
 
       <!-- Streaming tool calls -->
       <div
-        v-if="streaming?.toolCalls.length"
+        v-if="streaming?.isStreaming && streaming?.toolCalls.length"
         class="px-4 py-2 space-y-2"
       >
         <div
