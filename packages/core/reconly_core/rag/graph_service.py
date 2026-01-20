@@ -580,7 +580,13 @@ class GraphService:
             return feed_run.feed_id, feed_cache[feed_run.feed_id]
 
         min_sim = min_similarity or self.min_similarity
-        rel_types = relationship_types or ["semantic", "tag", "source"]
+        # Build default relationship types based on include_tags if not explicitly provided
+        if relationship_types:
+            rel_types = relationship_types
+        elif include_tags:
+            rel_types = ["semantic", "tag", "source"]
+        else:
+            rel_types = ["semantic", "source"]
 
         # Build base digest query with filters
         def build_filtered_digest_ids() -> set[int]:
