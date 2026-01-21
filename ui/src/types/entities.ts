@@ -13,6 +13,7 @@ export type SourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'ima
 export type FilterMode = 'title_only' | 'content' | 'both';
 export type AuthStatus = 'active' | 'pending_oauth' | 'auth_failed';
 export type IMAPProvider = 'gmail' | 'outlook' | 'generic';
+export type SearchProvider = 'duckduckgo' | 'searxng' | 'tavily';
 
 export interface SourceConfig {
   // RSS-specific
@@ -28,6 +29,7 @@ export interface SourceConfig {
   };
   // Agent-specific
   max_iterations?: number;
+  search_provider?: SearchProvider;  // Per-source search provider override
   // IMAP-specific
   provider?: IMAPProvider;
   folders?: string[];
@@ -663,13 +665,19 @@ export interface SettingValue {
  * Settings organized by category with source indicators.
  * Each setting includes its current value, source (database/environment/default),
  * and whether it can be edited via the UI.
+ *
+ * Categories are populated dynamically from SETTINGS_REGISTRY, allowing
+ * extensions to register new categories without code changes.
  */
 export interface Settings {
-  provider: Record<string, SettingValue>;
-  email: Record<string, SettingValue>;
-  export: Record<string, SettingValue>;
-  fetch: Record<string, SettingValue>;
+  categories: Record<string, Record<string, SettingValue>>;
 }
+
+/**
+ * Helper type to access settings by category.
+ * Usage: settings.categories.provider['api_key']
+ */
+export type SettingsCategory = Record<string, SettingValue>;
 
 export interface SettingUpdate {
   key: string;

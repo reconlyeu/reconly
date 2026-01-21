@@ -55,7 +55,7 @@ const { data: embeddingSettings, isLoading: embeddingLoading } = useQuery({
 
 // Embedding configuration computed from settings
 const embeddingConfig = computed(() => {
-  const emb = embeddingSettings.value?.embedding;
+  const emb = embeddingSettings.value?.categories?.embedding;
   if (!emb) {
     return {
       provider: 'ollama',
@@ -142,17 +142,17 @@ const selectedProvider = computed(() => {
 
 // Get configured model for a provider from settings
 const getConfiguredModel = (providerName: string): string | null => {
-  if (!settings.value?.provider) return null;
+  if (!settings.value?.categories?.provider) return null;
   // Settings key format: provider.{name}.model -> stored as {name}.model after prefix strip
-  const modelSetting = settings.value.provider[`${providerName}.model`];
+  const modelSetting = settings.value.categories.provider[`${providerName}.model`];
   return (modelSetting?.value as string) || null;
 };
 
 // Initialize local chain from settings or API response
 const initializeChain = () => {
   // First try to get from settings
-  if (settings.value?.provider?.fallback_chain?.value) {
-    localChain.value = [...(settings.value.provider.fallback_chain.value as string[])];
+  if (settings.value?.categories?.provider?.fallback_chain?.value) {
+    localChain.value = [...(settings.value.categories.provider.fallback_chain.value as string[])];
     hasChanges.value = false;
     return;
   }

@@ -15,7 +15,6 @@ class TestAgentSettingsRegistry:
         """All agent settings should be in the registry."""
         expected_keys = [
             "agent.search_provider",
-            "agent.brave_api_key",
             "agent.searxng_url",
             "agent.max_search_results",
             "agent.default_max_iterations",
@@ -29,16 +28,10 @@ class TestAgentSettingsRegistry:
         for key in agent_keys:
             assert SETTINGS_REGISTRY[key].category == "agent"
 
-    def test_brave_api_key_is_secret(self):
-        """brave_api_key should be marked as secret."""
-        setting = SETTINGS_REGISTRY["agent.brave_api_key"]
-        assert setting.secret is True
-        assert setting.editable is False  # Secrets are env-only
-
-    def test_search_provider_defaults_to_brave(self):
-        """search_provider should default to brave."""
+    def test_search_provider_defaults_to_duckduckgo(self):
+        """search_provider should default to duckduckgo (works without config)."""
         setting = SETTINGS_REGISTRY["agent.search_provider"]
-        assert setting.default == "brave"
+        assert setting.default == "duckduckgo"
 
     def test_searxng_url_has_default(self):
         """searxng_url should have a sensible default."""
@@ -60,32 +53,6 @@ class TestAgentSettingsRegistry:
 
 class TestAgentSettingsValidation:
     """Tests for AgentSettings.validate() method."""
-
-    def test_validate_brave_with_api_key_succeeds(self):
-        """Brave provider with API key should validate successfully."""
-        settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="test-api-key",
-        )
-        settings.validate()  # Should not raise
-
-    def test_validate_brave_without_api_key_fails(self):
-        """Brave provider without API key should fail validation."""
-        settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key=None,
-        )
-        with pytest.raises(AgentSettingsError, match="Brave API key required"):
-            settings.validate()
-
-    def test_validate_brave_with_empty_api_key_fails(self):
-        """Brave provider with empty API key should fail validation."""
-        settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="",
-        )
-        with pytest.raises(AgentSettingsError, match="Brave API key required"):
-            settings.validate()
 
     def test_validate_searxng_with_url_succeeds(self):
         """SearXNG provider with URL should validate successfully."""
@@ -124,8 +91,8 @@ class TestAgentSettingsValidation:
     def test_validate_max_search_results_zero_fails(self):
         """max_search_results of 0 should fail validation."""
         settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="test-key",
+            search_provider="searxng",
+            searxng_url="http://localhost:8080",
             max_search_results=0,
         )
         with pytest.raises(AgentSettingsError, match="max_search_results must be at least 1"):
@@ -134,8 +101,8 @@ class TestAgentSettingsValidation:
     def test_validate_max_search_results_negative_fails(self):
         """Negative max_search_results should fail validation."""
         settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="test-key",
+            search_provider="searxng",
+            searxng_url="http://localhost:8080",
             max_search_results=-5,
         )
         with pytest.raises(AgentSettingsError, match="max_search_results must be at least 1"):
@@ -144,24 +111,44 @@ class TestAgentSettingsValidation:
     def test_validate_default_max_iterations_zero_fails(self):
         """default_max_iterations of 0 should fail validation."""
         settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="test-key",
+            search_provider="searxng",
+            searxng_url="http://localhost:8080",
             default_max_iterations=0,
         )
         with pytest.raises(AgentSettingsError, match="default_max_iterations must be at least 1"):
             settings.validate()
 
+    def test_validate_duckduckgo_without_config_succeeds(self):
+        """DuckDuckGo should validate without any configuration."""
+        settings = AgentSettings(search_provider="duckduckgo")
+        settings.validate()  # Should not raise
+
+    def test_validate_tavily_requires_api_key(self):
+        """Tavily should fail validation without API key."""
+        settings = AgentSettings(search_provider="tavily")
+        with pytest.raises(AgentSettingsError, match="Tavily API key required"):
+            settings.validate()
+
+    def test_validate_tavily_with_api_key_succeeds(self):
+        """Tavily should validate with API key."""
+        settings = AgentSettings(
+            search_provider="tavily",
+            tavily_api_key="tvly-test-key",
+        )
+        settings.validate()  # Should not raise
+
+    def test_validate_tavily_with_empty_api_key_fails(self):
+        """Tavily should fail validation with empty API key."""
+        settings = AgentSettings(
+            search_provider="tavily",
+            tavily_api_key="",
+        )
+        with pytest.raises(AgentSettingsError, match="Tavily API key required"):
+            settings.validate()
+
 
 class TestAgentSettingsIsConfigured:
     """Tests for AgentSettings.is_configured() method."""
-
-    def test_is_configured_returns_true_for_valid_brave(self):
-        """is_configured should return True for valid Brave config."""
-        settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key="test-key",
-        )
-        assert settings.is_configured() is True
 
     def test_is_configured_returns_true_for_valid_searxng(self):
         """is_configured should return True for valid SearXNG config."""
@@ -171,11 +158,11 @@ class TestAgentSettingsIsConfigured:
         )
         assert settings.is_configured() is True
 
-    def test_is_configured_returns_false_for_missing_brave_key(self):
-        """is_configured should return False when Brave key is missing."""
+    def test_is_configured_returns_false_for_missing_searxng_url(self):
+        """is_configured should return False when SearXNG URL is missing."""
         settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key=None,
+            search_provider="searxng",
+            searxng_url="",
         )
         assert settings.is_configured() is False
 
@@ -196,8 +183,7 @@ class TestAgentSettingsFromService:
             service = SettingsService(db_session)
             settings = AgentSettings.from_settings_service(service)
 
-            assert settings.search_provider == "brave"
-            assert settings.brave_api_key is None
+            assert settings.search_provider == "duckduckgo"
             assert settings.searxng_url == "http://localhost:8080"
             assert settings.max_search_results == 10
             assert settings.default_max_iterations == 5
@@ -206,7 +192,6 @@ class TestAgentSettingsFromService:
         """from_settings_service should load values from environment."""
         env_vars = {
             "AGENT_SEARCH_PROVIDER": "searxng",
-            "BRAVE_API_KEY": "test-brave-key",
             "SEARXNG_URL": "http://searxng.local:9090",
             "AGENT_MAX_SEARCH_RESULTS": "20",
             "AGENT_DEFAULT_MAX_ITERATIONS": "10",
@@ -216,7 +201,6 @@ class TestAgentSettingsFromService:
             settings = AgentSettings.from_settings_service(service)
 
             assert settings.search_provider == "searxng"
-            assert settings.brave_api_key == "test-brave-key"
             assert settings.searxng_url == "http://searxng.local:9090"
             assert settings.max_search_results == 20
             assert settings.default_max_iterations == 10

@@ -181,19 +181,10 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
     "agent.search_provider": SettingDef(
         category="agent",
         type=str,
-        default="brave",
+        default="duckduckgo",
         editable=True,
         env_var="AGENT_SEARCH_PROVIDER",
-        description="Search provider: brave or searxng",
-    ),
-    "agent.brave_api_key": SettingDef(
-        category="agent",
-        type=str,
-        default=None,
-        editable=False,  # Secret - env only
-        env_var="BRAVE_API_KEY",
-        secret=True,
-        description="Brave Search API key",
+        description="Search provider: duckduckgo, searxng, or tavily",
     ),
     "agent.searxng_url": SettingDef(
         category="agent",
@@ -202,6 +193,15 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         editable=True,
         env_var="SEARXNG_URL",
         description="SearXNG instance URL",
+    ),
+    "agent.tavily_api_key": SettingDef(
+        category="agent",
+        type=str,
+        default=None,
+        editable=False,  # Secret - env only
+        env_var="TAVILY_API_KEY",
+        secret=True,
+        description="Tavily Search API key (get free key at tavily.com)",
     ),
     "agent.max_search_results": SettingDef(
         category="agent",

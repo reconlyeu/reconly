@@ -81,17 +81,17 @@ const getSettingKey = (fieldKey: string): string => {
 
 // Get stored value for a field from settings
 const getStoredValue = (fieldKey: string): unknown => {
-  if (!settings.value?.provider) return null;
+  if (!settings.value?.categories?.provider) return null;
   // Settings API returns keys with provider prefix: provider.ollama.model -> ollama.model
   const qualifiedKey = `${props.provider.name}.${fieldKey}`;
-  return settings.value.provider[qualifiedKey]?.value ?? null;
+  return settings.value.categories.provider[qualifiedKey]?.value ?? null;
 };
 
 // Get setting source for a field
 const getSettingSource = (fieldKey: string): string => {
-  if (!settings.value?.provider) return 'default';
+  if (!settings.value?.categories?.provider) return 'default';
   const qualifiedKey = `${props.provider.name}.${fieldKey}`;
-  return settings.value.provider[qualifiedKey]?.source || 'default';
+  return settings.value.categories.provider[qualifiedKey]?.source || 'default';
 };
 
 // Get select options for a field

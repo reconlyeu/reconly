@@ -57,18 +57,18 @@ const getSettingKey = (fieldKey: string): string => {
 
 // Get stored value for a field from settings
 const getStoredValue = (fieldKey: string): unknown => {
-  if (!settings.value?.fetch) return null;
+  if (!settings.value?.categories?.fetch) return null;
   // Settings API returns keys with fetcher prefix: fetch.rss.timeout -> rss.timeout
   const qualifiedKey = `${props.fetcher.name}.${fieldKey}`;
-  return settings.value.fetch[qualifiedKey]?.value ?? null;
+  return settings.value.categories.fetch[qualifiedKey]?.value ?? null;
 };
 
 // Get setting source for a field
 const getSettingSource = (fieldKey: string): string => {
-  if (!settings.value?.fetch) return 'default';
+  if (!settings.value?.categories?.fetch) return 'default';
   // Settings API returns keys with fetcher prefix
   const qualifiedKey = `${props.fetcher.name}.${fieldKey}`;
-  return settings.value.fetch[qualifiedKey]?.source || 'default';
+  return settings.value.categories.fetch[qualifiedKey]?.source || 'default';
 };
 
 // Update local config from settings

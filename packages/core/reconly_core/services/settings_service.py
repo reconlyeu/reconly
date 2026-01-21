@@ -301,6 +301,48 @@ class SettingsService:
         self.db.commit()
         return True
 
+    def get_dynamic_component_settings(self, prefix: str) -> dict[str, dict[str, Any]]:
+        """
+        Get dynamic component settings from database by prefix.
+
+        Component settings (provider.*, fetch.*, export.*) may be stored dynamically
+        and not always in SETTINGS_REGISTRY. This method queries them directly.
+
+        Args:
+            prefix: Key prefix to match (e.g., "provider", "fetch", "export")
+
+        Returns:
+            Dict of setting keys to {value, source, editable} dicts
+        """
+        result = {}
+        db_settings = (
+            self.db.query(AppSetting)
+            .filter(AppSetting.key.like(f"{prefix}.%"))
+            .all()
+        )
+
+        for db_setting in db_settings:
+            # Skip if already in registry (will be returned by normal get_all)
+            if db_setting.key in SETTINGS_REGISTRY:
+                continue
+
+            try:
+                value = json.loads(db_setting.value)
+            except json.JSONDecodeError:
+                value = db_setting.value
+
+            result[db_setting.key] = {
+                "value": value,
+                "source": "database",
+                "editable": True,
+            }
+
+        return result
+
+    def get_provider_settings(self) -> dict[str, dict[str, Any]]:
+        """Get all provider-specific settings from database (convenience method)."""
+        return self.get_dynamic_component_settings("provider")
+
 
 def migrate_provider_settings(db: Session) -> dict[str, Any]:
     """

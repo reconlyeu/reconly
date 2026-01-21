@@ -108,12 +108,14 @@ async def get_settings(
     """
     Get all settings with source indicators.
 
-    Returns settings organized by category (provider, email, export),
-    with each setting showing its value, source (database/environment/default),
-    and whether it's editable.
+    Returns settings organized by category, with each setting showing its value,
+    source (database/environment/default), and whether it's editable.
+
+    Categories are populated dynamically from SETTINGS_REGISTRY - extensions can
+    register new categories without code changes.
 
     Args:
-        category: Optional filter by category (provider, email, export)
+        category: Optional filter by category (e.g., provider, email, fetch, rag)
     """
     service = SettingsService(db)
 
@@ -126,26 +128,41 @@ async def get_settings(
             ".".join(key.split(".")[1:]): SettingValue(**data)
             for key, data in settings_data.items()
         }
-        # Return with only the requested category
-        result = {
-            "provider": {}, "email": {}, "export": {}, "fetch": {},
-            "embedding": {}, "rag": {}, "agent": {}, "resilience": {}
-        }
-        result[category] = category_settings
-        return SettingsResponse(**result)
 
-    # Get all settings by category
+        # For component categories, also include dynamic settings from database
+        # that may not be in SETTINGS_REGISTRY
+        if category in ("provider", "fetch", "export"):
+            dynamic_settings = service.get_dynamic_component_settings(category)
+            for key, data in dynamic_settings.items():
+                short_key = ".".join(key.split(".")[1:])
+                category_settings[short_key] = SettingValue(**data)
+
+        # Return with only the requested category
+        return SettingsResponse(categories={category: category_settings})
+
+    # Get all settings by category dynamically from registry
     all_settings = service.get_by_category()
 
     # Convert to response format
-    result = {}
+    categories = {}
     for cat, cat_settings in all_settings.items():
-        result[cat] = {
+        categories[cat] = {
             ".".join(key.split(".")[1:]): SettingValue(**data)
             for key, data in cat_settings.items()
         }
 
-    return SettingsResponse(**result)
+    # Add dynamic component settings (provider.*, fetch.*, export.*) from database
+    # These may not be in SETTINGS_REGISTRY but stored via set_raw()
+    for component_prefix in ("provider", "fetch", "export"):
+        dynamic_settings = service.get_dynamic_component_settings(component_prefix)
+        if dynamic_settings:
+            if component_prefix not in categories:
+                categories[component_prefix] = {}
+            for key, data in dynamic_settings.items():
+                short_key = ".".join(key.split(".")[1:])
+                categories[component_prefix][short_key] = SettingValue(**data)
+
+    return SettingsResponse(categories=categories)
 
 
 @router.put("", response_model=dict)
@@ -175,7 +192,12 @@ async def update_settings(
 
     for setting in request.settings:
         try:
-            service.set(setting.key, setting.value)
+            # Component settings (provider.*, fetch.*, export.*) may be dynamically
+            # registered and not always in SETTINGS_REGISTRY, so use set_raw() for them
+            if any(setting.key.startswith(prefix) for prefix in ("provider.", "fetch.", "export.")):
+                service.set_raw(setting.key, setting.value)
+            else:
+                service.set(setting.key, setting.value)
             updated.append(setting.key)
         except KeyError:
             errors.append({"key": setting.key, "error": f"Unknown setting: {setting.key}"})
@@ -206,10 +228,17 @@ async def reset_settings(
 
     for key in request.keys:
         try:
-            if service.reset(key):
-                reset_keys.append(key)
+            # Component settings use delete() since they may not be in SETTINGS_REGISTRY
+            if any(key.startswith(prefix) for prefix in ("provider.", "fetch.", "export.")):
+                if service.delete(key):
+                    reset_keys.append(key)
+                else:
+                    not_found.append(key)
             else:
-                not_found.append(key)
+                if service.reset(key):
+                    reset_keys.append(key)
+                else:
+                    not_found.append(key)
         except KeyError:
             not_found.append(key)
 

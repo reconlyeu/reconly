@@ -737,6 +737,10 @@ class FeedService:
                 return self._process_imap_source(
                     source, feed, feed_run, summarizer, language, options, session, fetcher
                 )
+            elif source.type == "agent":
+                return self._process_agent_source(
+                    source, feed, feed_run, summarizer, language, options, session, fetcher
+                )
             else:
                 return self._process_website_source(
                     source, feed, feed_run, summarizer, language, options, session, fetcher
@@ -824,6 +828,70 @@ class FeedService:
             "tokens_in": result.get("model_info", {}).get("input_tokens", 0),
             "tokens_out": result.get("model_info", {}).get("output_tokens", 0),
             "cost": result.get("estimated_cost", 0.0),
+        }
+
+    def _process_agent_source(
+        self,
+        source: Source,
+        feed: Feed,
+        feed_run: FeedRun,
+        summarizer: BaseProvider,
+        language: str,
+        options: FeedRunOptions,
+        session: Session,
+        fetcher=None,
+    ) -> Dict[str, Any]:
+        """Process an AI agent source.
+
+        Agent sources use the URL field as a research prompt. The agent fetcher
+        needs db session to resolve provider settings (model, base_url, etc.)
+        from the settings configured in the UI.
+        """
+        if fetcher is None:
+            fetcher = get_fetcher('agent')
+
+        # Agent fetcher requires db, source_id, and config kwargs to properly
+        # resolve provider settings and track agent runs
+        content_items = fetcher.fetch(
+            source.url,  # This is the research prompt for agent sources
+            db=session,
+            source_id=source.id,
+            config=source.config or {},
+            trace_id=feed_run.trace_id if feed_run else None,
+        )
+
+        if not content_items:
+            return {"success": True, "items_count": 0}
+
+        content_data = content_items[0]
+
+        # Agent results already contain the research report as content,
+        # no additional summarization needed - save directly as digest
+        if not options.dry_run:
+            digest = self._save_digest(
+                content_data, source, feed, feed_run, session
+            )
+
+            # Log token usage from agent metadata
+            agent_metadata = content_data.get('metadata', {})
+            if agent_metadata:
+                self._log_llm_usage(
+                    {
+                        'model_info': {
+                            'input_tokens': agent_metadata.get('tokens_in', 0),
+                            'output_tokens': agent_metadata.get('tokens_out', 0),
+                        },
+                        'estimated_cost': 0.0,  # Agent cost tracked in AgentRun
+                    },
+                    source, feed, feed_run, digest, session
+                )
+
+        return {
+            "success": True,
+            "items_count": 1,
+            "tokens_in": content_data.get('metadata', {}).get('tokens_in', 0),
+            "tokens_out": content_data.get('metadata', {}).get('tokens_out', 0),
+            "cost": 0.0,
         }
 
     def _process_imap_source(
