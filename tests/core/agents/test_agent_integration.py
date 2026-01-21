@@ -2,7 +2,6 @@
 
 Tests cover:
 - Full flow: create agent source → add to feed → run feed → verify digest
-- Agent with Brave search (requires API key)
 - Agent with SearXNG (requires instance)
 - Error handling (search failure, LLM timeout)
 - Max iterations timeout
@@ -29,11 +28,6 @@ from reconly_core.fetchers.agent import AgentFetcher
 # Environment Detection
 # =============================================================================
 
-def _has_brave_api_key() -> bool:
-    """Check if Brave API key is configured."""
-    return bool(os.getenv("BRAVE_API_KEY"))
-
-
 def _has_searxng_instance() -> bool:
     """Check if SearXNG instance is available."""
     import requests
@@ -46,11 +40,6 @@ def _has_searxng_instance() -> bool:
 
 
 # Skip markers
-requires_brave = pytest.mark.skipif(
-    not _has_brave_api_key(),
-    reason="Brave API key not configured (set BRAVE_API_KEY)"
-)
-
 requires_searxng = pytest.mark.skipif(
     not _has_searxng_instance(),
     reason="SearXNG instance not available (set SEARXNG_URL)"
@@ -238,34 +227,6 @@ class TestAgentFullFlow:
         assert digest.source_id == agent_source.id
         assert feed_run.status == "completed"
         assert feed_run.items_processed == 1
-
-
-# =============================================================================
-# Brave Search Integration Tests
-# =============================================================================
-
-@requires_brave
-class TestAgentWithBraveSearch:
-    """Test agent with real Brave Search API (requires BRAVE_API_KEY)."""
-
-    def test_brave_search_integration(self, db_session):
-        """Test that agent can use Brave Search for web queries."""
-        from reconly_core.agents.search import web_search
-
-        settings = AgentSettings(
-            search_provider="brave",
-            brave_api_key=os.getenv("BRAVE_API_KEY"),
-            max_search_results=3,
-        )
-
-        # Perform a real search
-        results = web_search("Python programming", settings)
-
-        assert results is not None
-        assert isinstance(results, str)
-        assert len(results) > 0
-        # Results should contain markdown formatted search results
-        assert "http" in results.lower() or "www" in results.lower()
 
 
 # =============================================================================

@@ -6,6 +6,11 @@ on configured topics.
 
 The fetcher supports optional AgentRun tracking when called with a database
 session and source_id, recording execution status, timing, and results.
+
+Configuration:
+    The fetcher supports per-source search provider override via the config dict:
+    - config["search_provider"]: Override the global search provider for this source
+    - If not set, uses the global agent.search_provider setting
 """
 from __future__ import annotations
 
@@ -25,6 +30,7 @@ if TYPE_CHECKING:
     from sqlalchemy.orm import Session
     from reconly_core.agents import AgentResult, AgentSettings, ResearchAgent
     from reconly_core.database.models import AgentRun
+    from reconly_core.services.settings_service import SettingsService
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +146,7 @@ class AgentFetcher(BaseFetcher):
 
         Args:
             prompt: The research topic to investigate
-            config: Configuration dict with optional max_iterations
+            config: Configuration dict with optional max_iterations and search_provider
             db: Optional SQLAlchemy Session for AgentRun tracking
             source_id: Source ID for AgentRun tracking (required if db provided)
             trace_id: Optional trace ID for log correlation
@@ -162,10 +168,27 @@ class AgentFetcher(BaseFetcher):
         try:
             # Get agent settings from environment/defaults
             agent_settings = self._get_agent_settings()
+
+            # Apply per-source search_provider override if specified
+            source_override = config.get('search_provider')
+            if source_override:
+                agent_settings.search_provider = source_override
+
+            # Log which provider is being used
+            logger.info(
+                "Agent research using search provider",
+                extra={
+                    "search_provider": agent_settings.search_provider,
+                    "source_override": source_override is not None,
+                    "source_id": source_id,
+                },
+            )
+
             agent_settings.validate()
 
             # Get summarizer (uses default provider from settings)
-            summarizer = get_summarizer(enable_fallback=True)
+            # Pass db to read UI-configured provider/model from database
+            summarizer = get_summarizer(enable_fallback=True, db=db)
 
             # Configure max iterations from config or settings default
             max_iterations = config.get(
@@ -324,9 +347,9 @@ class AgentFetcher(BaseFetcher):
         from reconly_core.agents import AgentSettings
 
         return AgentSettings(
-            search_provider=os.getenv('AGENT_SEARCH_PROVIDER', 'brave'),
-            brave_api_key=os.getenv('BRAVE_API_KEY'),
+            search_provider=os.getenv('AGENT_SEARCH_PROVIDER', 'duckduckgo'),
             searxng_url=os.getenv('SEARXNG_URL', 'http://localhost:8080'),
+            tavily_api_key=os.getenv('TAVILY_API_KEY'),
             max_search_results=int(os.getenv('AGENT_MAX_SEARCH_RESULTS', '10')),
             default_max_iterations=int(os.getenv('AGENT_DEFAULT_MAX_ITERATIONS', '5')),
         )
@@ -374,7 +397,7 @@ class AgentFetcher(BaseFetcher):
         return 'AI Research Agent (web search + content analysis)'
 
     def get_config_schema(self) -> FetcherConfigSchema:
-        """Return configuration schema with max_iterations field."""
+        """Return configuration schema with max_iterations and search_provider fields."""
         return FetcherConfigSchema(
             fields=[
                 ConfigField(
@@ -387,6 +410,19 @@ class AgentFetcher(BaseFetcher):
                     ),
                     default=5,
                     editable=True,
+                ),
+                ConfigField(
+                    key="search_provider",
+                    type="string",
+                    label="Search Provider",
+                    description=(
+                        "Search provider override for this source. "
+                        "Leave empty to use global setting. "
+                        "Options: duckduckgo, searxng, tavily"
+                    ),
+                    default=None,
+                    editable=True,
+                    required=False,
                 ),
             ]
         )
@@ -473,40 +509,92 @@ class AgentFetcher(BaseFetcher):
                     "Must be an integer."
                 )
 
+        # Validate search_provider override if provided
+        search_provider = config.get('search_provider')
+        if search_provider:
+            result = self._validate_search_provider(result, search_provider)
+
         # If test_fetch is enabled, validate agent settings
         if test_fetch and result.valid:
-            result = self._validate_agent_settings(result)
+            result = self._validate_agent_settings(result, config)
 
         return result
 
-    def _validate_agent_settings(self, result: ValidationResult) -> ValidationResult:
+    def _validate_search_provider(
+        self,
+        result: ValidationResult,
+        provider: str,
+    ) -> ValidationResult:
         """
-        Validate agent settings can be loaded and are configured.
+        Validate that a search provider is valid and properly configured.
 
         Args:
             result: ValidationResult to update
+            provider: The search provider name to validate
 
         Returns:
             Updated ValidationResult
         """
+        from reconly_core.agents.search import SEARCH_PROVIDERS
+
+        # Check if provider is valid
+        if provider not in SEARCH_PROVIDERS:
+            available = ", ".join(sorted(SEARCH_PROVIDERS.keys()))
+            result.add_error(
+                f"Invalid search provider '{provider}'. "
+                f"Available providers: {available}"
+            )
+            return result
+
+        # Validate provider-specific requirements
+        if provider == "tavily":
+            tavily_key = os.getenv("TAVILY_API_KEY")
+            if not tavily_key:
+                result.add_error(
+                    "Tavily search provider requires TAVILY_API_KEY environment variable. "
+                    "Get your API key at https://tavily.com/"
+                )
+
+        if provider == "searxng":
+            searxng_url = os.getenv("SEARXNG_URL")
+            if not searxng_url:
+                result.add_warning(
+                    "SearXNG URL is not configured. "
+                    "Using default: http://localhost:8080"
+                )
+
+        return result
+
+    def _validate_agent_settings(
+        self,
+        result: ValidationResult,
+        config: Optional[dict[str, Any]] = None,
+    ) -> ValidationResult:
+        """
+        Validate agent settings can be loaded and are configured.
+
+        Note: Provider-specific validation (API keys, URLs) is handled by
+        _validate_search_provider() which is called earlier in the validation flow.
+        This method focuses on loading settings and verifying LLM availability.
+
+        Args:
+            result: ValidationResult to update
+            config: Optional config dict with potential search_provider override
+
+        Returns:
+            Updated ValidationResult
+        """
+        config = config or {}
+
         try:
             agent_settings = self._get_agent_settings()
 
-            # Check search provider configuration
-            if agent_settings.search_provider == 'brave':
-                if not agent_settings.brave_api_key:
-                    result.add_error(
-                        "Brave Search API key is not configured. "
-                        "Set BRAVE_API_KEY environment variable or use SearXNG."
-                    )
-            elif agent_settings.search_provider == 'searxng':
-                if not agent_settings.searxng_url:
-                    result.add_warning(
-                        "SearXNG URL is not configured. "
-                        "Using default: http://localhost:8080"
-                    )
+            # Apply per-source search_provider override if specified
+            source_override = config.get('search_provider')
+            if source_override:
+                agent_settings.search_provider = source_override
 
-            # Try to validate settings
+            # Validate settings (catches any issues not caught by _validate_search_provider)
             try:
                 agent_settings.validate()
             except Exception as e:

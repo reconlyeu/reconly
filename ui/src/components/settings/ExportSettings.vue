@@ -75,7 +75,7 @@ const isExporterEnabled = computed(() => {
 
 // Get the configured vault/export path for the selected exporter
 const configuredPath = computed(() => {
-  if (!settings.value?.export || !localSettings.value.default_format) return null;
+  if (!settings.value?.categories?.export || !localSettings.value.default_format) return null;
 
   const format = localSettings.value.default_format;
 
@@ -84,16 +84,16 @@ const configuredPath = computed(() => {
   // - Obsidian uses vault_path
   // - JSON/CSV use export_path
   if (format === 'obsidian') {
-    return settings.value.export['obsidian.vault_path']?.value as string || null;
+    return settings.value.categories.export['obsidian.vault_path']?.value as string || null;
   } else {
-    return settings.value.export[`${format}.export_path`]?.value as string || null;
+    return settings.value.categories.export[`${format}.export_path`]?.value as string || null;
   }
 });
 
 // Update local settings when data loads
 const updateLocalFromSettings = () => {
-  if (settings.value?.export) {
-    const e = settings.value.export;
+  if (settings.value?.categories?.export) {
+    const e = settings.value.categories.export;
     if (e.default_format?.value !== undefined) {
       localSettings.value.default_format = String(e.default_format.value || 'json');
     }
@@ -216,10 +216,10 @@ const handleExportToPath = () => {
 
 // Get export setting as SettingValue format
 const getExportSetting = (key: string): SettingValue => {
-  if (!settings.value?.export?.[key]) {
+  if (!settings.value?.categories?.export?.[key]) {
     return { value: null, source: 'default', editable: true };
   }
-  return settings.value.export[key];
+  return settings.value.categories.export[key];
 };
 </script>
 

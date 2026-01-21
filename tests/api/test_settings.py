@@ -13,9 +13,12 @@ class TestSettingsAPI:
         response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
-        assert "provider" in data
-        assert "email" in data
-        assert "export" in data
+        # Response is wrapped in "categories" for dynamic category support
+        assert "categories" in data
+        categories = data["categories"]
+        assert "provider" in categories
+        assert "email" in categories
+        assert "export" in categories
 
     def test_get_settings_includes_source_indicators(self, client):
         """Test settings include source indicators."""
@@ -25,7 +28,7 @@ class TestSettingsAPI:
 
         # Check provider settings have required fields
         # Now using llm.fallback_chain which becomes fallback_chain in response
-        provider = data["provider"]
+        provider = data["categories"]["provider"]
         assert "fallback_chain" in provider
         setting = provider["fallback_chain"]
         assert "value" in setting
@@ -40,10 +43,10 @@ class TestSettingsAPI:
         data = response.json()
 
         # Email category should have settings
-        assert len(data["email"]) > 0
-        # Other categories should be empty
-        assert len(data["provider"]) == 0
-        assert len(data["export"]) == 0
+        assert len(data["categories"]["email"]) > 0
+        # Other categories should not be present (dynamic filtering)
+        assert "provider" not in data["categories"]
+        assert "export" not in data["categories"]
 
     def test_get_settings_shows_default_source(self, client):
         """Test settings show 'default' source when no override exists."""
@@ -54,7 +57,7 @@ class TestSettingsAPI:
 
             # With no env vars set, source should be default
             # Note: Some settings might still be from env if test env has them
-            provider = data["provider"]
+            provider = data["categories"]["provider"]
             assert "fallback_chain" in provider
 
     def test_get_settings_masks_secrets(self, client):
@@ -64,7 +67,7 @@ class TestSettingsAPI:
             assert response.status_code == 200
             data = response.json()
 
-            provider = data["provider"]
+            provider = data["categories"]["provider"]
             api_key_setting = provider.get("anthropic.api_key")
             if api_key_setting and api_key_setting["value"]:
                 # Should be masked, not showing full key
@@ -78,7 +81,7 @@ class TestSettingsAPI:
         data = response.json()
 
         # API keys should not be editable
-        provider = data["provider"]
+        provider = data["categories"]["provider"]
         if "anthropic.api_key" in provider:
             assert provider["anthropic.api_key"]["editable"] is False
 
@@ -106,8 +109,8 @@ class TestSettingsUpdate:
         response = client.get("/api/v1/settings")
         assert response.status_code == 200
         data = response.json()
-        assert data["email"]["smtp_host"]["value"] == "mail.example.com"
-        assert data["email"]["smtp_host"]["source"] == "database"
+        assert data["categories"]["email"]["smtp_host"]["value"] == "mail.example.com"
+        assert data["categories"]["email"]["smtp_host"]["source"] == "database"
 
     def test_update_multiple_settings(self, client):
         """Test updating multiple settings at once."""
@@ -174,7 +177,7 @@ class TestSettingsReset:
 
         # Verify it's set
         response = client.get("/api/v1/settings")
-        assert response.json()["email"]["smtp_host"]["source"] == "database"
+        assert response.json()["categories"]["email"]["smtp_host"]["source"] == "database"
 
         # Reset it
         response = client.post(
@@ -187,7 +190,7 @@ class TestSettingsReset:
 
         # Verify it's no longer from database
         response = client.get("/api/v1/settings")
-        assert response.json()["email"]["smtp_host"]["source"] != "database"
+        assert response.json()["categories"]["email"]["smtp_host"]["source"] != "database"
 
     def test_reset_nonexistent_returns_not_found(self, client):
         """Test resetting a setting with no DB value returns not_found."""

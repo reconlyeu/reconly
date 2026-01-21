@@ -345,7 +345,7 @@ class TestAgentSettings:
         with patch.dict('os.environ', {}, clear=True):
             settings = agent_fetcher._get_agent_settings()
 
-            assert settings.search_provider == 'brave'
+            assert settings.search_provider == 'searxng'
             assert settings.searxng_url == 'http://localhost:8080'
             assert settings.max_search_results == 10
             assert settings.default_max_iterations == 5
@@ -354,7 +354,6 @@ class TestAgentSettings:
         """Test that _get_agent_settings reads from environment."""
         env_vars = {
             'AGENT_SEARCH_PROVIDER': 'searxng',
-            'BRAVE_API_KEY': 'test-key',
             'SEARXNG_URL': 'http://searx.local',
             'AGENT_MAX_SEARCH_RESULTS': '20',
             'AGENT_DEFAULT_MAX_ITERATIONS': '10',
@@ -364,7 +363,6 @@ class TestAgentSettings:
             settings = agent_fetcher._get_agent_settings()
 
             assert settings.search_provider == 'searxng'
-            assert settings.brave_api_key == 'test-key'
             assert settings.searxng_url == 'http://searx.local'
             assert settings.max_search_results == 20
             assert settings.default_max_iterations == 10

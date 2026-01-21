@@ -148,14 +148,12 @@ Create autonomous research agents that investigate topics on schedule — like h
 **Quick Setup:**
 
 ```bash
-# Option A: Brave Search (recommended, free tier at https://brave.com/search/api/)
-AGENT_SEARCH_PROVIDER=brave
-BRAVE_API_KEY=your-api-key
-
-# Option B: SearXNG (self-hosted, fully private)
+# SearXNG (self-hosted, supports many search engines)
 AGENT_SEARCH_PROVIDER=searxng
 SEARXNG_URL=http://localhost:8080
 ```
+
+SearXNG is a meta-search engine that can query Google, Bing, DuckDuckGo, Brave, and many more search backends - all while respecting your privacy.
 
 **Creating an Agent Source:**
 
@@ -311,9 +309,8 @@ Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management,
 
 | Problem | Solution |
 |---------|----------|
-| "Brave API key required" | Set `BRAVE_API_KEY` in `.env` and restart the API |
-| "SearXNG URL required" | Set `SEARXNG_URL` in `.env` or switch to `AGENT_SEARCH_PROVIDER=brave` |
-| Agent returns empty results | Check search provider connectivity; try a simpler prompt |
+| "SearXNG URL required" | Set `SEARXNG_URL` in `.env` and restart the API |
+| Agent returns empty results | Check SearXNG connectivity; try a simpler prompt |
 | "Max iterations reached" | Increase `max_iterations` on the source (default: 5, max: 20) |
 
 ### RAG/Search Issues

@@ -37,8 +37,8 @@ const hasChanges = ref(false);
 
 // Update local settings when data loads
 const updateLocalFromSettings = () => {
-  if (settings.value?.email) {
-    const e = settings.value.email;
+  if (settings.value?.categories?.email) {
+    const e = settings.value.categories.email;
     if (e.smtp_host?.value !== undefined) {
       localSettings.value.smtp_host = String(e.smtp_host.value || 'localhost');
     }
@@ -128,10 +128,10 @@ const testConnection = async () => {
 
 // Get email setting as SettingValue format
 const getEmailSetting = (key: string): SettingValue => {
-  if (!settings.value?.email?.[key]) {
+  if (!settings.value?.categories?.email?.[key]) {
     return { value: null, source: 'default', editable: true };
   }
-  return settings.value.email[key];
+  return settings.value.categories.email[key];
 };
 </script>
 

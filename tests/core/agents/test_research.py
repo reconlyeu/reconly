@@ -43,8 +43,8 @@ def mock_summarizer():
 def agent_settings():
     """Create agent settings for testing."""
     return AgentSettings(
-        search_provider="brave",
-        brave_api_key="test-api-key",
+        search_provider="searxng",
+        searxng_url="http://localhost:8080",
         max_search_results=5,
         default_max_iterations=5,
     )

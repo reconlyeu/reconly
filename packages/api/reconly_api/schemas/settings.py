@@ -17,30 +17,14 @@ class SettingValue(BaseModel):
 
 
 class SettingsResponse(BaseModel):
-    """Settings organized by category with source indicators."""
-    provider: dict[str, SettingValue] = Field(
-        default_factory=dict, description="LLM provider settings"
-    )
-    email: dict[str, SettingValue] = Field(
-        default_factory=dict, description="Email/SMTP settings"
-    )
-    export: dict[str, SettingValue] = Field(
-        default_factory=dict, description="Export settings"
-    )
-    fetch: dict[str, SettingValue] = Field(
-        default_factory=dict, description="Fetcher settings (RSS, YouTube, etc.)"
-    )
-    embedding: dict[str, SettingValue] = Field(
-        default_factory=dict, description="RAG embedding settings"
-    )
-    rag: dict[str, SettingValue] = Field(
-        default_factory=dict, description="RAG system settings"
-    )
-    agent: dict[str, SettingValue] = Field(
-        default_factory=dict, description="Agent research settings"
-    )
-    resilience: dict[str, SettingValue] = Field(
-        default_factory=dict, description="Circuit breaker, retry, and validation settings"
+    """Settings organized by category with source indicators.
+
+    Categories are populated dynamically from SETTINGS_REGISTRY, allowing
+    extensions to register new categories without code changes.
+    """
+    categories: dict[str, dict[str, SettingValue]] = Field(
+        default_factory=dict,
+        description="Settings organized by category (e.g., provider, email, fetch, rag, etc.)"
     )
 
 

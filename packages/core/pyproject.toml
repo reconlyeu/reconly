@@ -29,12 +29,16 @@ dependencies = [
     "html2text>=2024.2.0",  # HTML to text conversion for email content
     "python-dateutil>=2.9.0",  # Date parsing for email headers
     "cryptography>=42.0.0",  # Fernet encryption for OAuth tokens
+    "duckduckgo-search>=6.0.0",  # DuckDuckGo web search (no API key required)
 ]
 
 [project.scripts]
 reconly = "reconly_core.cli.main:main"
 
 [project.optional-dependencies]
+research = [
+    "tavily-python>=0.3.0",  # AI-optimized search (requires API key)
+]
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",

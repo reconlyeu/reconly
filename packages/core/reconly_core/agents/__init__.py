@@ -4,7 +4,7 @@ This module provides:
 - AgentSettings: Configuration for agent search providers
 - AgentResult: Structured output from research operations
 - ResearchAgent: ReAct loop agent for web research
-- web_search: Search dispatcher for Brave/SearXNG
+- web_search: Search dispatcher for search providers (SearXNG, etc.)
 - web_fetch: URL content fetcher
 """
 from reconly_core.agents.schema import AgentResult

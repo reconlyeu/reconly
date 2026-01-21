@@ -18,7 +18,6 @@ import {
   RotateCcw,
   FolderOpen,
   Check,
-  Info,
 } from 'lucide-vue-next';
 import type { Exporter } from '@/types/entities';
 
@@ -57,18 +56,18 @@ const getSettingKey = (fieldKey: string): string => {
 
 // Get stored value for a field from settings
 const getStoredValue = (fieldKey: string): unknown => {
-  if (!settings.value?.export) return null;
+  if (!settings.value?.categories?.export) return null;
   // Settings API returns keys with exporter prefix: export.obsidian.vault_path -> obsidian.vault_path
   const qualifiedKey = `${props.exporter.name}.${fieldKey}`;
-  return settings.value.export[qualifiedKey]?.value ?? null;
+  return settings.value.categories.export[qualifiedKey]?.value ?? null;
 };
 
 // Get setting source for a field
 const getSettingSource = (fieldKey: string): string => {
-  if (!settings.value?.export) return 'default';
+  if (!settings.value?.categories?.export) return 'default';
   // Settings API returns keys with exporter prefix
   const qualifiedKey = `${props.exporter.name}.${fieldKey}`;
-  return settings.value.export[qualifiedKey]?.source || 'default';
+  return settings.value.categories.export[qualifiedKey]?.source || 'default';
 };
 
 // Update local config from settings

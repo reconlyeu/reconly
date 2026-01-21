@@ -201,7 +201,10 @@ watch(
       showFilters.value = !!(maxItems.value || newSource.include_keywords?.length || newSource.exclude_keywords?.length);
       // Restore agent fields
       if (newSource.type === 'agent') {
-        agentConfig.value = { max_iterations: newSource.config?.max_iterations };
+        agentConfig.value = {
+          max_iterations: newSource.config?.max_iterations,
+          search_provider: newSource.config?.search_provider,
+        };
         agentPrompt.value = newSource.url; // URL field stores the prompt for agent sources
       } else {
         agentConfig.value = {};
@@ -279,7 +282,9 @@ const saveMutation = useMutation({
     // Build config object based on source type
     let config: SourceConfig | null = null;
     if (data.type === 'agent') {
-      config = agentConfig.value.max_iterations ? { max_iterations: agentConfig.value.max_iterations } : null;
+      const { max_iterations, search_provider } = agentConfig.value;
+      const hasConfig = max_iterations || search_provider;
+      config = hasConfig ? { max_iterations, search_provider } : null;
     } else if (maxItems.value) {
       config = { max_items: maxItems.value };
     }
