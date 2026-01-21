@@ -27,7 +27,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from reconly_core.config_types import ConfigField
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
@@ -40,7 +40,6 @@ if TYPE_CHECKING:
     from reconly_core.agents.strategies.base import ResearchStrategy
     from reconly_core.database.models import AgentRun
     from reconly_core.providers.base import BaseProvider
-    from reconly_core.services.settings_service import SettingsService
 
 logger = logging.getLogger(__name__)
 
@@ -817,12 +816,8 @@ class AgentFetcher(BaseFetcher):
 
         # Check if GPT Researcher is available for comprehensive/deep strategies
         if strategy in ('comprehensive', 'deep'):
-            try:
-                # Attempt to import gpt-researcher to check availability
-                from reconly_core.agents.strategies.gpt_researcher import (
-                    GPTResearcherStrategy,
-                )
-            except ImportError:
+            import importlib.util
+            if importlib.util.find_spec("gpt_researcher") is None:
                 result.add_warning(
                     f"The '{strategy}' strategy requires gpt-researcher which is not installed. "
                     "Install with: pip install reconly-core[research]. "

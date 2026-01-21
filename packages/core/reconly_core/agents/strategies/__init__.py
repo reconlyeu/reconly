@@ -9,12 +9,7 @@ Use get_strategy() to obtain a strategy instance.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from reconly_core.agents.strategies.base import ResearchStrategy
-
-if TYPE_CHECKING:
-    from reconly_core.providers.base import BaseProvider
 
 __all__ = [
     "AVAILABLE_STRATEGIES",

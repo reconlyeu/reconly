@@ -69,28 +69,20 @@ class TestIsGPTResearcherInstalled:
 
     def test_returns_false_on_import_error(self):
         """Returns False when import raises ImportError."""
-        from reconly_core.agents import capabilities
+        # Test by verifying the expected behavior pattern
+        # We can't easily mock the import, so we test the pattern works
 
-        # Test by directly checking the function behavior
-        # We can't easily mock the import, so we test the expected behavior
+        # Create a mock that simulates ImportError
+        def mock_is_installed():
+            try:
+                raise ImportError("Test import error")
+            except ImportError:
+                return False
+            return True
 
-        # Save the original function
-        original_func = capabilities.is_gpt_researcher_installed
-
-        try:
-            # Create a mock that simulates ImportError
-            def mock_is_installed():
-                try:
-                    raise ImportError("Test import error")
-                except ImportError:
-                    return False
-                return True
-
-            # Verify the pattern works
-            result = mock_is_installed()
-            assert result is False
-        finally:
-            pass
+        # Verify the pattern works
+        result = mock_is_installed()
+        assert result is False
 
 
 # =============================================================================

@@ -633,8 +633,6 @@ class TestGetStrategy:
 
     def test_raises_import_error_when_gpt_researcher_not_installed(self, mock_summarizer):
         """get_strategy raises ImportError when gpt-researcher is not installed."""
-        from reconly_core.agents.strategies import get_strategy
-
         # Mock the lazy import in get_strategy to raise ImportError
         with patch(
             "reconly_core.agents.strategies.gpt_researcher.GPTResearcherStrategy",
