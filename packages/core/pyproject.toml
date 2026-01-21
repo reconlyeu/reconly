@@ -38,6 +38,7 @@ reconly = "reconly_core.cli.main:main"
 [project.optional-dependencies]
 research = [
     "tavily-python>=0.3.0",  # AI-optimized search (requires API key)
+    "gpt-researcher>=0.9.0",  # Comprehensive/deep research strategies
 ]
 dev = [
     "pytest>=8.0.0",

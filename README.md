@@ -29,15 +29,16 @@
 
 ## Why Reconly?
 
-- **Research & Monitoring** — Aggregate RSS, YouTube, websites, email, and AI agents into briefings
-- **Privacy-First** — Run offline with local AI (Ollama) and private search — data stays local
-- **Smart Filtering** — Keyword filters and tags to focus on what matters
-- **Cost-Optimized** — Free local models to premium cloud, with automatic fallbacks
-- **Knowledge Export** — Sync to Obsidian, Logseq, or any PKM via Markdown/JSON
-- **AI Chat** — Ask questions about your digests and get answers with citations
-- **Knowledge Graph** — Discover topic connections with semantic search — MCP-enabled
-- **Automation** — Webhooks for Zapier/n8n, plugins, and community bundles
-- **Docker Ready** — Production setup in 5 minutes
+| | |
+|---|---|
+| **Autonomous Intelligence** | AI agents research topics while RSS, YouTube, email, and websites flow into unified briefings |
+| **Own Your Data** | Run fully offline with local AI and private search (SearXNG). No cloud dependency, no data leaks |
+| **Cut Through Noise** | Keyword filters strip ads and sponsored content. See only what matters |
+| **Control Costs** | Free local models → paid cloud, with automatic fallbacks |
+| **Build Your Knowledge** | Export to Obsidian, Logseq, or any PKM system |
+| **Ask Your Archive** | Chat with your digests, get answers with citations |
+| **See the Big Picture** | Knowledge graphs reveal topic connections. MCP-enabled for AI assistants |
+| **Automate Everything** | Webhooks for n8n/Zapier, plugins, and community bundles |
 
 ---
 
@@ -95,30 +96,24 @@ For contributing or running without Docker, see the [Setup Guide](docs/setup.md)
 
 ## Features
 
-- **AI Research Agents**: Autonomous research agents that search the web and synthesize findings
-- **Consolidated Digests**: Combine multiple items into single briefings with source attribution
-- **Source Content Filters**: Include/exclude keywords to filter content before summarization
-- **Digest Tagging**: Organize and filter digests with tags and autocomplete
-- **Webhooks**: Receive notifications on feed completion for automation workflows
-- **Cost Optimized**: Automatic fallback from free to paid providers
-- **Privacy First**: Run completely offline with Ollama
-- **Database-Driven Feeds**: Manage sources and feeds via CLI or API
-- **Per-Feed Scheduling**: Cron-based scheduling for each feed
-- **Template System**: Customizable prompt and report templates
-- **Feed Bundles**: Export/import feed configurations as portable JSON packages
-- **Web UI**: Modern interface for managing everything
-- **Email Digests**: Send beautiful HTML digests via SMTP
-- **Docker Ready**: Get started in 5 minutes
+| Category | What You Get |
+|----------|--------------|
+| **Sources** | RSS, YouTube, websites, email (IMAP), AI research agents |
+| **Processing** | Consolidated digests, keyword filters, tagging, per-feed scheduling |
+| **AI** | Multi-provider (Ollama/OpenAI/Anthropic), RAG search, knowledge graph |
+| **Output** | Markdown/JSON export, email digests, webhooks for n8n/Zapier |
+| **Management** | Web UI, CLI, API, feed bundles, customizable templates |
+| **Deployment** | Docker-ready in 5 minutes, fully self-hosted |
 
 ### Built-in & Extensible
 
-All core components can be extended via the [plugin system](https://github.com/reconlyeu/reconly-extensions):
+All components can be extended via the [plugin system](https://github.com/reconlyeu/reconly-extensions):
 
 | Component | Built-in | Extensible |
 |-----------|----------|------------|
-| **Sources** | RSS, YouTube, Website, Email (IMAP), Research Agents | Custom fetchers |
-| **LLM Providers** | Ollama, HuggingFace, OpenAI, Anthropic | Custom providers |
-| **Exporters** | Obsidian, JSON, CSV | Custom formats |
+| **Sources** | RSS, YouTube, Website, Email (IMAP), AI Research Agents | Custom fetchers |
+| **LLM Providers** | Ollama, HuggingFace, OpenAI, Anthropic, LM Studio | Custom providers |
+| **Exporters** | Obsidian, Logseq, JSON, CSV | Custom formats |
 
 ---
 
@@ -139,28 +134,31 @@ All core components can be extended via the [plugin system](https://github.com/r
 
 Create autonomous research agents that investigate topics on schedule — like having a personal research assistant.
 
-**How it works:**
-1. You define a research prompt (e.g., "Latest developments in AI agents this week")
-2. The agent uses web search and page fetching to gather information
-3. Results are synthesized into a digest, just like other sources
-4. Runs on schedule like any feed
+**Research Strategies:**
+
+| Strategy | Duration | Sources | Best For |
+|----------|----------|---------|----------|
+| **Simple** | ~30s | 2-5 | Quick lookups, time-sensitive queries |
+| **Comprehensive** | ~3min | 20+ | Deep research, competitive intel |
+| **Deep** | ~5min | 50+ | Exhaustive analysis, due diligence |
+
+*Comprehensive/Deep strategies require `pip install gpt-researcher`*
 
 **Quick Setup:**
 
 ```bash
-# SearXNG (self-hosted, supports many search engines)
-AGENT_SEARCH_PROVIDER=searxng
-SEARXNG_URL=http://localhost:8080
+# Search provider (pick one)
+AGENT_SEARCH_PROVIDER=duckduckgo    # Free, no setup
+AGENT_SEARCH_PROVIDER=searxng       # Self-hosted, unlimited
+AGENT_SEARCH_PROVIDER=tavily        # AI-optimized, requires API key
 ```
-
-SearXNG is a meta-search engine that can query Google, Bing, DuckDuckGo, Brave, and many more search backends - all while respecting your privacy.
 
 **Creating an Agent Source:**
 
 1. Go to **Sources → Add Source**
-2. Select type: **Agent**
-3. Enter your research prompt in the URL field
-4. Set max iterations (default: 5)
+2. Select type: **AI Agent**
+3. Choose a research strategy
+4. Enter your research prompt
 5. Add to a Feed and run
 
 **Example prompts:**
@@ -168,13 +166,7 @@ SearXNG is a meta-search engine that can query Google, Bing, DuckDuckGo, Brave, 
 - "Find recent developments in local LLM deployment and performance"
 - "Summarize this week's AI safety research papers and discussions"
 
-**Agent Run History:**
-
-View detailed execution logs including:
-- Tool calls (searches performed, pages fetched)
-- Iterations and duration
-- Sources consulted
-- Token usage and costs
+**Documentation:** See [Agent Research Source Guide](docs/sources/agent-research-source.md) for full setup.
 
 ---
 
@@ -309,9 +301,11 @@ Check out **[Reconly Enterprise](https://reconly.eu)** for SSO, team management,
 
 | Problem | Solution |
 |---------|----------|
-| "SearXNG URL required" | Set `SEARXNG_URL` in `.env` and restart the API |
-| Agent returns empty results | Check SearXNG connectivity; try a simpler prompt |
-| "Max iterations reached" | Increase `max_iterations` on the source (default: 5, max: 20) |
+| "GPT Researcher not installed" | Run `pip install gpt-researcher` for comprehensive/deep strategies |
+| Comprehensive/Deep options disabled | Install gpt-researcher package and restart API |
+| Agent returns empty results | Check search provider connectivity; try a simpler prompt |
+| Research times out | Use simpler strategy or reduce `max_subtopics` |
+| DuckDuckGo rate limited | Switch to SearXNG or Tavily for production use |
 
 ### RAG/Search Issues
 

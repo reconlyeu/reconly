@@ -219,6 +219,22 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="AGENT_DEFAULT_MAX_ITERATIONS",
         description="Default maximum iterations for agent research loops",
     ),
+    "agent.gptr_report_format": SettingDef(
+        category="agent",
+        type=str,
+        default="APA",
+        editable=True,
+        env_var="AGENT_GPTR_REPORT_FORMAT",
+        description="Report format for GPT Researcher (APA, MLA, CMS, Harvard, IEEE)",
+    ),
+    "agent.gptr_max_subtopics": SettingDef(
+        category="agent",
+        type=int,
+        default=3,
+        editable=True,
+        env_var="AGENT_GPTR_MAX_SUBTOPICS",
+        description="Maximum subtopics for GPT Researcher deep research",
+    ),
 
     # ─────────────────────────────────────────────────────────────────────────
     # Resilience Settings

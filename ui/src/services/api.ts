@@ -75,6 +75,7 @@ import type {
   AgentRun,
   AgentRunStatus,
   AgentRunListResponse,
+  AgentCapabilities,
   // IMAP & OAuth types
   IMAPSourceCreate,
   IMAPSourceCreateResponse,
@@ -441,6 +442,15 @@ export const agentRunsApi = {
 
   get: async (id: number): Promise<AgentRun> => {
     const { data } = await apiClient.get<AgentRun>(`/agent-runs/${id}`);
+    return data;
+  },
+
+  /**
+   * Get agent capabilities including available research strategies.
+   * Returns which strategies are available based on installed packages.
+   */
+  getCapabilities: async (): Promise<AgentCapabilities> => {
+    const { data } = await apiClient.get<AgentCapabilities>('/agent-runs/capabilities');
     return data;
   },
 };

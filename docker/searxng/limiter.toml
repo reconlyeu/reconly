@@ -1,0 +1,18 @@
+# SearXNG Rate Limiter Configuration
+# Documentation: https://docs.searxng.org/admin/settings/settings_limiter.html
+#
+# This configuration is optimized for local development with relaxed limits.
+# For production, consider stricter limits.
+
+[botdetection.ip_limit]
+# Disable IP-based rate limiting for local development
+link_token = false
+
+[botdetection.ip_lists]
+# No blocked IPs for development
+pass_ip = [
+    "192.168.0.0/16",
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "127.0.0.0/8",
+]

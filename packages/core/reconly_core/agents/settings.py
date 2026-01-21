@@ -25,6 +25,8 @@ class AgentSettings:
         tavily_api_key: API key for Tavily (required if search_provider is "tavily")
         max_search_results: Maximum number of search results to retrieve per query
         default_max_iterations: Default maximum iterations for agent research loops
+        gptr_report_format: Report format for GPT Researcher (APA, MLA, CMS, Harvard, IEEE)
+        gptr_max_subtopics: Maximum subtopics for GPT Researcher deep research
     """
 
     search_provider: str = "duckduckgo"
@@ -32,6 +34,8 @@ class AgentSettings:
     tavily_api_key: str | None = None
     max_search_results: int = 10
     default_max_iterations: int = 5
+    gptr_report_format: str = "APA"
+    gptr_max_subtopics: int = 3
 
     @classmethod
     def from_settings_service(cls, settings: SettingsService) -> AgentSettings:
@@ -49,6 +53,8 @@ class AgentSettings:
             tavily_api_key=settings.get("agent.tavily_api_key"),
             max_search_results=settings.get("agent.max_search_results"),
             default_max_iterations=settings.get("agent.default_max_iterations"),
+            gptr_report_format=settings.get("agent.gptr_report_format"),
+            gptr_max_subtopics=settings.get("agent.gptr_max_subtopics"),
         )
 
     def validate(self) -> None:
@@ -91,6 +97,19 @@ class AgentSettings:
         if self.default_max_iterations < 1:
             raise AgentSettingsError(
                 f"default_max_iterations must be at least 1, got {self.default_max_iterations}"
+            )
+
+        # Validate GPT Researcher settings
+        valid_report_formats = {"APA", "MLA", "CMS", "Harvard", "IEEE"}
+        if self.gptr_report_format not in valid_report_formats:
+            raise AgentSettingsError(
+                f"Invalid gptr_report_format '{self.gptr_report_format}'. "
+                f"Valid formats: {', '.join(sorted(valid_report_formats))}"
+            )
+
+        if self.gptr_max_subtopics < 1 or self.gptr_max_subtopics > 10:
+            raise AgentSettingsError(
+                f"gptr_max_subtopics must be between 1 and 10, got {self.gptr_max_subtopics}"
             )
 
     def is_configured(self) -> bool:

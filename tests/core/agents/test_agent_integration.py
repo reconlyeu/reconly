@@ -145,7 +145,7 @@ class TestAgentFullFlow:
     def test_agent_fetcher_fetch_with_mock(
         self, db_session, agent_source, mock_agent_result, mock_summarizer
     ):
-        """Test AgentFetcher.fetch() with mocked ResearchAgent."""
+        """Test AgentFetcher.fetch() with mocked strategy pattern."""
         fetcher = AgentFetcher()
 
         # Create mock settings that pass validation
@@ -156,16 +156,16 @@ class TestAgentFullFlow:
         mock_settings.default_max_iterations = 5
         mock_settings.validate = MagicMock()  # Skip validation
 
-        with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
+        # Setup mock strategy
+        mock_strategy = MagicMock()
+        mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+
+        with patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy, \
              patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
-            # Setup mocks - use AsyncMock for async run() method
-            mock_agent_instance = MagicMock()
-            mock_agent_instance.run = AsyncMock(return_value=mock_agent_result)
-            mock_agent_instance.tokens_in = 500
-            mock_agent_instance.tokens_out = 100
-            MockAgent.return_value = mock_agent_instance
+            mock_get_strategy.return_value = mock_strategy
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
             mock_get_summarizer.return_value = mock_summarizer
 
             # Execute fetch - url is the prompt string, not the Source object
@@ -274,15 +274,18 @@ class TestAgentErrorHandling:
         mock_settings.default_max_iterations = 5
         mock_settings.validate = MagicMock()
 
-        with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
+        # Setup mock strategy to raise exception
+        mock_strategy = MagicMock()
+        mock_strategy.research = AsyncMock(side_effect=Exception("Search API unavailable"))
+
+        with patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy, \
              patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
-            # Setup mock to raise an exception during search
-            mock_agent_instance = MagicMock()
-            mock_agent_instance.run.side_effect = Exception("Search API unavailable")
-            MockAgent.return_value = mock_agent_instance
-            mock_get_summarizer.return_value = MagicMock()
+            mock_get_strategy.return_value = mock_strategy
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
 
             # Fetch should handle the error and return empty or raise gracefully
             with pytest.raises(Exception) as exc_info:
@@ -307,15 +310,18 @@ class TestAgentErrorHandling:
         mock_settings.default_max_iterations = 5
         mock_settings.validate = MagicMock()
 
-        with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
+        # Setup mock strategy to simulate timeout
+        mock_strategy = MagicMock()
+        mock_strategy.research = AsyncMock(side_effect=TimeoutError("LLM request timed out"))
+
+        with patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy, \
              patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
-            # Setup mock to simulate timeout
-            mock_agent_instance = MagicMock()
-            mock_agent_instance.run.side_effect = TimeoutError("LLM request timed out")
-            MockAgent.return_value = mock_agent_instance
-            mock_get_summarizer.return_value = MagicMock()
+            mock_get_strategy.return_value = mock_strategy
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
 
             with pytest.raises(TimeoutError) as exc_info:
                 fetcher.fetch(
@@ -360,15 +366,15 @@ class TestAgentMaxIterations:
 
         iterations_executed = []
 
-        def mock_run(prompt):
-            # Track iterations
-            iterations_executed.append(1)
+        async def mock_research(prompt, settings, max_iter):
+            # Track that research was called
+            iterations_executed.append(max_iter)
             # Return a result that indicates completion
             return AgentResult(
                 title="Research Complete",
                 content="Findings after iterations",
                 sources=["https://example.com"],
-                iterations=len(iterations_executed),
+                iterations=max_iter,
                 tool_calls=[],
             )
 
@@ -380,19 +386,17 @@ class TestAgentMaxIterations:
         mock_settings.default_max_iterations = 5
         mock_settings.validate = MagicMock()
 
-        async def async_mock_run(prompt):
-            return mock_run(prompt)
+        mock_strategy = MagicMock()
+        mock_strategy.research = mock_research
 
-        with patch('reconly_core.agents.ResearchAgent') as MockAgent, \
+        with patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy, \
              patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer, \
              patch.object(fetcher, '_get_agent_settings', return_value=mock_settings):
 
-            mock_agent_instance = MagicMock()
-            mock_agent_instance.run = async_mock_run
-            mock_agent_instance.tokens_in = 100
-            mock_agent_instance.tokens_out = 50
-            MockAgent.return_value = mock_agent_instance
-            mock_get_summarizer.return_value = MagicMock()
+            mock_get_strategy.return_value = mock_strategy
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
 
             result = fetcher.fetch(
                 url=agent_source.url,
@@ -401,7 +405,7 @@ class TestAgentMaxIterations:
                 source_id=agent_source.id,
             )
 
-            # Agent should have been called (at least once)
+            # Strategy should have been called with the configured max_iterations
             assert len(iterations_executed) >= 1
             assert result is not None
 

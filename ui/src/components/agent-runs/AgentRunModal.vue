@@ -27,6 +27,11 @@ import {
   RotateCw,
   Coins,
   Hash,
+  Zap,
+  BookOpen,
+  Search,
+  ListTree,
+  ClipboardList,
 } from 'lucide-vue-next';
 
 interface Props {
@@ -45,6 +50,10 @@ const expandedToolCalls = ref<Set<number>>(new Set());
 
 // Track copied state
 const copiedTraceId = ref(false);
+
+// Track expanded sections
+const expandedSubtopics = ref(false);
+const expandedResearchPlan = ref(false);
 
 // Toggle tool call expansion
 const toggleToolCall = (index: number) => {
@@ -153,6 +162,36 @@ const getToolIcon = (toolName: string) => {
   if (toolName.toLowerCase().includes('fetch')) return Globe;
   return Wrench;
 };
+
+// Get strategy icon
+const getStrategyIcon = (strategy: string | null | undefined) => {
+  switch (strategy) {
+    case 'comprehensive':
+      return BookOpen;
+    case 'deep':
+      return Search;
+    default:
+      return Zap;
+  }
+};
+
+// Get strategy badge class
+const getStrategyBadgeClass = (strategy: string | null | undefined): string => {
+  switch (strategy) {
+    case 'comprehensive':
+      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    case 'deep':
+      return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    default:
+      return 'bg-text-muted/10 text-text-muted border-text-muted/20';
+  }
+};
+
+// Get strategy label
+const getStrategyLabel = (strategy: string | null | undefined): string => {
+  if (!strategy) return 'Simple';
+  return strategy.charAt(0).toUpperCase() + strategy.slice(1);
+};
 </script>
 
 <template>
@@ -182,7 +221,7 @@ const getToolIcon = (toolName: string) => {
                 :class="getStatusClass(run.status)"
               />
               <div>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                   <h2 class="text-xl font-bold text-text-primary">
                     Agent Run Details
                   </h2>
@@ -193,6 +232,17 @@ const getToolIcon = (toolName: string) => {
                     ]"
                   >
                     {{ getStatusLabel(run.status) }}
+                  </span>
+                  <!-- Strategy Badge -->
+                  <span
+                    :class="[
+                      'inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium',
+                      getStrategyBadgeClass(run.research_strategy),
+                    ]"
+                    :title="`Research strategy: ${getStrategyLabel(run.research_strategy)}`"
+                  >
+                    <component :is="getStrategyIcon(run.research_strategy)" :size="12" />
+                    {{ getStrategyLabel(run.research_strategy) }}
                   </span>
                 </div>
                 <p class="mt-1 text-sm text-text-muted">
@@ -211,7 +261,7 @@ const getToolIcon = (toolName: string) => {
           <!-- Content (scrollable) -->
           <div class="relative flex-1 overflow-y-auto p-6 space-y-6">
             <!-- Stats Grid -->
-            <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div class="grid grid-cols-2 gap-4 sm:grid-cols-5">
               <!-- Duration -->
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
@@ -231,6 +281,17 @@ const getToolIcon = (toolName: string) => {
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ run.iterations }}
+                </p>
+              </div>
+
+              <!-- Source Count -->
+              <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
+                <div class="flex items-center gap-2 text-text-muted">
+                  <Search :size="14" />
+                  <span class="text-xs">Sources</span>
+                </div>
+                <p class="mt-1 text-lg font-semibold text-text-primary">
+                  {{ run.source_count ?? (run.sources_consulted?.length || 0) }}
                 </p>
               </div>
 
@@ -282,6 +343,74 @@ const getToolIcon = (toolName: string) => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <p class="text-sm text-text-secondary whitespace-pre-wrap">{{ run.prompt }}</p>
               </div>
+            </div>
+
+            <!-- Subtopics (collapsible) -->
+            <div v-if="run.subtopics && run.subtopics.length > 0">
+              <button
+                @click="expandedSubtopics = !expandedSubtopics"
+                class="flex w-full items-center justify-between mb-2"
+              >
+                <h3 class="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <ListTree :size="14" class="text-text-muted" />
+                  Subtopics ({{ run.subtopics.length }})
+                </h3>
+                <component
+                  :is="expandedSubtopics ? ChevronDown : ChevronRight"
+                  :size="16"
+                  class="text-text-muted"
+                />
+              </button>
+              <Transition name="slide">
+                <div v-if="expandedSubtopics" class="rounded-lg border border-border-subtle bg-bg-surface p-4">
+                  <ul class="space-y-2">
+                    <li
+                      v-for="(subtopic, index) in run.subtopics"
+                      :key="index"
+                      class="flex items-start gap-2 text-sm text-text-secondary"
+                    >
+                      <span class="flex-shrink-0 rounded-full bg-accent-primary/10 px-2 py-0.5 text-xs text-accent-primary">
+                        {{ index + 1 }}
+                      </span>
+                      <span>{{ subtopic }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Research Plan (expandable) -->
+            <div v-if="run.research_plan">
+              <button
+                @click="expandedResearchPlan = !expandedResearchPlan"
+                class="flex w-full items-center justify-between mb-2"
+              >
+                <h3 class="flex items-center gap-2 text-sm font-medium text-text-primary">
+                  <ClipboardList :size="14" class="text-text-muted" />
+                  Research Plan
+                </h3>
+                <component
+                  :is="expandedResearchPlan ? ChevronDown : ChevronRight"
+                  :size="16"
+                  class="text-text-muted"
+                />
+              </button>
+              <Transition name="slide">
+                <div v-if="expandedResearchPlan" class="rounded-lg border border-border-subtle bg-bg-surface p-4">
+                  <div class="prose prose-sm prose-invert max-w-none text-text-secondary whitespace-pre-wrap">
+                    {{ run.research_plan }}
+                  </div>
+                </div>
+              </Transition>
+            </div>
+
+            <!-- Report Format (if set) -->
+            <div v-if="run.report_format" class="flex items-center gap-2 text-sm">
+              <FileText :size="14" class="text-text-muted" />
+              <span class="text-text-muted">Report Format:</span>
+              <span class="rounded bg-bg-hover px-2 py-0.5 text-text-secondary font-medium">
+                {{ run.report_format }}
+              </span>
             </div>
 
             <!-- Tool Calls -->
