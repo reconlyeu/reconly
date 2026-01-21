@@ -13,6 +13,7 @@ from reconly_api.schemas.settings import (
     TestEmailRequest, TestEmailResponse,
 )
 from reconly_core.services.settings_service import SettingsService
+from reconly_core.services.settings_registry import SETTINGS_REGISTRY
 
 router = APIRouter()
 
@@ -195,6 +196,11 @@ async def update_settings(
             # Component settings (provider.*, fetch.*, export.*) may be dynamically
             # registered and not always in SETTINGS_REGISTRY, so use set_raw() for them
             if any(setting.key.startswith(prefix) for prefix in ("provider.", "fetch.", "export.")):
+                # Check if setting is in registry and non-editable (e.g., API keys)
+                if setting.key in SETTINGS_REGISTRY:
+                    setting_def = SETTINGS_REGISTRY[setting.key]
+                    if not setting_def.editable:
+                        raise ValueError(f"Setting '{setting.key}' is not editable (env-only)")
                 service.set_raw(setting.key, setting.value)
             else:
                 service.set(setting.key, setting.value)
