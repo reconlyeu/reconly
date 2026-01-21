@@ -252,14 +252,14 @@ class TestResultFormatting:
 
     def test_format_result_synthetic_url(self, agent_fetcher, mock_agent_result):
         """Test that _format_result creates synthetic URL."""
-        mock_agent = MagicMock()
-        mock_agent.total_tokens_in = 100
-        mock_agent.total_tokens_out = 50
+        mock_summarizer = MagicMock()
+        mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
 
         result = agent_fetcher._format_result(
             "Test research topic",
             mock_agent_result,
-            mock_agent,
+            "simple",
+            mock_summarizer,
         )
 
         assert result['url'].startswith('agent://')
@@ -267,14 +267,14 @@ class TestResultFormatting:
 
     def test_format_result_sanitizes_url(self, agent_fetcher, mock_agent_result):
         """Test that _format_result sanitizes special characters in URL."""
-        mock_agent = MagicMock()
-        mock_agent.total_tokens_in = 100
-        mock_agent.total_tokens_out = 50
+        mock_summarizer = MagicMock()
+        mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
 
         result = agent_fetcher._format_result(
             "Test/with/slashes and spaces",
             mock_agent_result,
-            mock_agent,
+            "simple",
+            mock_summarizer,
         )
 
         assert '/' not in result['url'].replace('agent://', '')
@@ -282,15 +282,15 @@ class TestResultFormatting:
 
     def test_format_result_truncates_long_prompts(self, agent_fetcher, mock_agent_result):
         """Test that _format_result truncates long prompts in URL."""
-        mock_agent = MagicMock()
-        mock_agent.total_tokens_in = 100
-        mock_agent.total_tokens_out = 50
+        mock_summarizer = MagicMock()
+        mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
 
         long_prompt = "A" * 100  # 100 characters
         result = agent_fetcher._format_result(
             long_prompt,
             mock_agent_result,
-            mock_agent,
+            "simple",
+            mock_summarizer,
         )
 
         # URL should be truncated to ~50 chars of prompt
@@ -299,14 +299,14 @@ class TestResultFormatting:
 
     def test_format_result_includes_agent_result_data(self, agent_fetcher, mock_agent_result):
         """Test that _format_result includes data from AgentResult."""
-        mock_agent = MagicMock()
-        mock_agent.total_tokens_in = 100
-        mock_agent.total_tokens_out = 50
+        mock_summarizer = MagicMock()
+        mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
 
         result = agent_fetcher._format_result(
             "Test",
             mock_agent_result,
-            mock_agent,
+            "simple",
+            mock_summarizer,
         )
 
         assert result['title'] == mock_agent_result.title
@@ -316,20 +316,21 @@ class TestResultFormatting:
         assert result['metadata']['sources'] == mock_agent_result.sources
         assert result['metadata']['tool_calls'] == mock_agent_result.tool_calls
 
-    def test_format_result_includes_token_tracking(self, agent_fetcher, mock_agent_result):
-        """Test that _format_result includes token counts from agent."""
-        mock_agent = MagicMock()
-        mock_agent.total_tokens_in = 500
-        mock_agent.total_tokens_out = 200
+    def test_format_result_includes_strategy_metadata(self, agent_fetcher, mock_agent_result):
+        """Test that _format_result includes strategy and LLM metadata."""
+        mock_summarizer = MagicMock()
+        mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
 
         result = agent_fetcher._format_result(
             "Test",
             mock_agent_result,
-            mock_agent,
+            "comprehensive",
+            mock_summarizer,
         )
 
-        assert result['metadata']['tokens_in'] == 500
-        assert result['metadata']['tokens_out'] == 200
+        assert result['metadata']['research_strategy'] == 'comprehensive'
+        assert result['metadata']['llm_provider'] == 'openai'
+        assert result['metadata']['llm_model'] == 'gpt-4'
 
 
 # =============================================================================
@@ -345,7 +346,7 @@ class TestAgentSettings:
         with patch.dict('os.environ', {}, clear=True):
             settings = agent_fetcher._get_agent_settings()
 
-            assert settings.search_provider == 'searxng'
+            assert settings.search_provider == 'duckduckgo'
             assert settings.searxng_url == 'http://localhost:8080'
             assert settings.max_search_results == 10
             assert settings.default_max_iterations == 5
@@ -374,14 +375,14 @@ class TestAgentSettings:
 
 
 class TestAgentFetcherIntegration:
-    """Integration tests with mocked ResearchAgent."""
+    """Integration tests with mocked strategy pattern."""
 
     @pytest.mark.asyncio
-    async def test_run_agent_creates_research_agent(self, agent_fetcher, mock_agent_result):
-        """Test that _run_agent creates and runs ResearchAgent."""
+    async def test_run_agent_uses_strategy_pattern(self, agent_fetcher, mock_agent_result):
+        """Test that _run_agent uses the strategy pattern."""
         with patch(
-            'reconly_core.agents.ResearchAgent'
-        ) as mock_agent_class, patch(
+            'reconly_core.agents.strategies.get_strategy'
+        ) as mock_get_strategy, patch(
             'reconly_core.providers.factory.get_summarizer'
         ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
@@ -393,33 +394,57 @@ class TestAgentFetcherIntegration:
             mock_get_settings.return_value = mock_settings
 
             mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
             mock_get_summarizer.return_value = mock_summarizer
 
-            mock_agent = MagicMock()
-            mock_agent.run = AsyncMock(return_value=mock_agent_result)
-            mock_agent.total_tokens_in = 100
-            mock_agent.total_tokens_out = 50
-            mock_agent_class.return_value = mock_agent
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_get_strategy.return_value = mock_strategy
 
             # Run
             await agent_fetcher._run_agent("Test topic", {})
 
-            # Verify
-            mock_agent_class.assert_called_once_with(
-                summarizer=mock_summarizer,
-                settings=mock_settings,
-                max_iterations=5,
-            )
-            mock_agent.run.assert_called_once_with("Test topic")
+            # Verify strategy was called
+            mock_get_strategy.assert_called_once_with('simple', summarizer=mock_summarizer)
+            mock_strategy.research.assert_called_once_with("Test topic", mock_settings, 5)
+
+    @pytest.mark.asyncio
+    async def test_run_agent_respects_config_strategy(self, agent_fetcher, mock_agent_result):
+        """Test that _run_agent uses research_strategy from config."""
+        with patch(
+            'reconly_core.agents.strategies.get_strategy'
+        ) as mock_get_strategy, patch(
+            'reconly_core.providers.factory.get_summarizer'
+        ) as mock_get_summarizer, patch.object(
+            agent_fetcher, '_get_agent_settings'
+        ) as mock_get_settings:
+            mock_settings = MagicMock()
+            mock_settings.default_max_iterations = 5
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_get_strategy.return_value = mock_strategy
+
+            # Run with comprehensive strategy
+            await agent_fetcher._run_agent("Test", {'research_strategy': 'comprehensive'})
+
+            # Verify comprehensive strategy was requested
+            mock_get_strategy.assert_called_once_with('comprehensive', summarizer=mock_summarizer)
 
     @pytest.mark.asyncio
     async def test_run_agent_respects_config_max_iterations(self, agent_fetcher, mock_agent_result):
         """Test that _run_agent uses max_iterations from config."""
         with patch(
-            'reconly_core.agents.ResearchAgent'
-        ) as mock_agent_class, patch(
+            'reconly_core.agents.strategies.get_strategy'
+        ) as mock_get_strategy, patch(
             'reconly_core.providers.factory.get_summarizer'
-        ), patch.object(
+        ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
         ) as mock_get_settings:
             mock_settings = MagicMock()
@@ -427,28 +452,30 @@ class TestAgentFetcherIntegration:
             mock_settings.validate.return_value = None
             mock_get_settings.return_value = mock_settings
 
-            mock_agent = MagicMock()
-            mock_agent.run = AsyncMock(return_value=mock_agent_result)
-            mock_agent.total_tokens_in = 100
-            mock_agent.total_tokens_out = 50
-            mock_agent_class.return_value = mock_agent
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_get_strategy.return_value = mock_strategy
 
             # Run with custom max_iterations
             await agent_fetcher._run_agent("Test", {'max_iterations': 10})
 
-            # Verify custom value was used
-            mock_agent_class.assert_called_once()
-            call_kwargs = mock_agent_class.call_args.kwargs
-            assert call_kwargs['max_iterations'] == 10
+            # Verify custom value was passed to strategy
+            mock_strategy.research.assert_called_once()
+            call_args = mock_strategy.research.call_args
+            assert call_args[0][2] == 10  # max_iterations is third positional arg
 
     @pytest.mark.asyncio
     async def test_run_agent_returns_formatted_result(self, agent_fetcher, mock_agent_result):
         """Test that _run_agent returns properly formatted result."""
         with patch(
-            'reconly_core.agents.ResearchAgent'
-        ) as mock_agent_class, patch(
+            'reconly_core.agents.strategies.get_strategy'
+        ) as mock_get_strategy, patch(
             'reconly_core.providers.factory.get_summarizer'
-        ), patch.object(
+        ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
         ) as mock_get_settings:
             mock_settings = MagicMock()
@@ -456,11 +483,13 @@ class TestAgentFetcherIntegration:
             mock_settings.validate.return_value = None
             mock_get_settings.return_value = mock_settings
 
-            mock_agent = MagicMock()
-            mock_agent.run = AsyncMock(return_value=mock_agent_result)
-            mock_agent.total_tokens_in = 100
-            mock_agent.total_tokens_out = 50
-            mock_agent_class.return_value = mock_agent
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_get_strategy.return_value = mock_strategy
 
             result = await agent_fetcher._run_agent("Test topic", {})
 
@@ -468,5 +497,354 @@ class TestAgentFetcherIntegration:
             assert result['title'] == mock_agent_result.title
             assert result['content'] == mock_agent_result.content
             assert result['source_type'] == 'agent'
-            assert result['metadata']['tokens_in'] == 100
-            assert result['metadata']['tokens_out'] == 50
+            assert result['metadata']['research_strategy'] == 'simple'
+            assert result['metadata']['llm_provider'] == 'openai'
+            assert result['metadata']['llm_model'] == 'gpt-4'
+
+
+# =============================================================================
+# Strategy-Specific Integration Tests
+# =============================================================================
+
+
+class TestAgentFetcherStrategyIntegration:
+    """Tests for integration with different research strategies."""
+
+    @pytest.mark.asyncio
+    async def test_comprehensive_strategy_applies_config_overrides(
+        self, agent_fetcher, mock_agent_result
+    ):
+        """Test that comprehensive strategy applies report_format and max_subtopics."""
+        with (
+            patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
+            patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
+            patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.search_provider = 'duckduckgo'
+            mock_settings.default_max_iterations = 5
+            mock_settings.gptr_report_format = 'APA'
+            mock_settings.gptr_max_subtopics = 3
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_strategy.estimate_cost_usd.return_value = 0.50
+            mock_get_strategy.return_value = mock_strategy
+
+            config = {
+                'research_strategy': 'comprehensive',
+                'report_format': 'IEEE',
+                'max_subtopics': 5,
+            }
+
+            await agent_fetcher._run_agent("Test topic", config)
+
+            # Verify settings were modified
+            assert mock_settings.gptr_report_format == 'IEEE'
+            assert mock_settings.gptr_max_subtopics == 5
+
+    @pytest.mark.asyncio
+    async def test_deep_strategy_uses_correct_timeout(
+        self, agent_fetcher, mock_agent_result
+    ):
+        """Test that deep strategy uses 10-minute timeout."""
+        from reconly_core.fetchers.agent import STRATEGY_TIMEOUTS
+
+        with (
+            patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
+            patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
+            patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+            patch('asyncio.wait_for') as mock_wait_for,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.search_provider = 'duckduckgo'
+            mock_settings.default_max_iterations = 5
+            mock_settings.gptr_report_format = 'APA'
+            mock_settings.gptr_max_subtopics = 3
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_strategy.estimate_cost_usd.return_value = 1.00
+            mock_get_strategy.return_value = mock_strategy
+
+            # Make wait_for return the result
+            mock_wait_for.return_value = mock_agent_result
+
+            await agent_fetcher._run_agent("Test topic", {'research_strategy': 'deep'})
+
+            # Verify timeout
+            mock_wait_for.assert_called_once()
+            _, kwargs = mock_wait_for.call_args
+            assert kwargs['timeout'] == STRATEGY_TIMEOUTS['deep']  # 600 seconds
+
+    @pytest.mark.asyncio
+    async def test_search_provider_override_from_config(
+        self, agent_fetcher, mock_agent_result
+    ):
+        """Test that search_provider can be overridden per-source."""
+        with (
+            patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
+            patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
+            patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.search_provider = 'duckduckgo'  # Default
+            mock_settings.default_max_iterations = 5
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_strategy.research = AsyncMock(return_value=mock_agent_result)
+            mock_get_strategy.return_value = mock_strategy
+
+            # Override search provider in config
+            config = {'search_provider': 'tavily'}
+
+            await agent_fetcher._run_agent("Test topic", config)
+
+            # Verify search_provider was overridden
+            assert mock_settings.search_provider == 'tavily'
+
+    @pytest.mark.asyncio
+    async def test_import_error_handling_for_gpt_researcher(
+        self, agent_fetcher
+    ):
+        """Test that ImportError is raised when GPT Researcher not installed."""
+        with (
+            patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
+            patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
+            patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.search_provider = 'duckduckgo'
+            mock_settings.default_max_iterations = 5
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            # Simulate ImportError when getting comprehensive strategy
+            mock_get_strategy.side_effect = ImportError(
+                "GPT Researcher strategy requires the 'research' extra"
+            )
+
+            with pytest.raises(ImportError) as exc_info:
+                await agent_fetcher._run_agent("Test", {'research_strategy': 'comprehensive'})
+
+            assert 'research' in str(exc_info.value).lower()
+
+
+# =============================================================================
+# Timeout Error Tests
+# =============================================================================
+
+
+class TestAgentFetcherTimeoutHandling:
+    """Tests for timeout handling in AgentFetcher."""
+
+    @pytest.mark.asyncio
+    async def test_timeout_error_includes_strategy_info(
+        self, agent_fetcher
+    ):
+        """Test that TimeoutError includes strategy name and duration."""
+        import asyncio as asyncio_module
+        from reconly_core.fetchers.agent import STRATEGY_TIMEOUTS
+
+        with (
+            patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
+            patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
+            patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+            patch('asyncio.wait_for') as mock_wait_for,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.search_provider = 'duckduckgo'
+            mock_settings.default_max_iterations = 5
+            mock_settings.validate.return_value = None
+            mock_get_settings.return_value = mock_settings
+
+            mock_summarizer = MagicMock()
+            mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
+            mock_get_summarizer.return_value = mock_summarizer
+
+            mock_strategy = MagicMock()
+            mock_get_strategy.return_value = mock_strategy
+
+            # Simulate timeout
+            mock_wait_for.side_effect = asyncio_module.TimeoutError()
+
+            with pytest.raises(TimeoutError) as exc_info:
+                await agent_fetcher._run_agent("Test", {'research_strategy': 'comprehensive'})
+
+            error_msg = str(exc_info.value)
+            assert 'comprehensive' in error_msg
+            assert str(STRATEGY_TIMEOUTS['comprehensive']) in error_msg
+
+
+# =============================================================================
+# Validation Tests for Strategy Fields
+# =============================================================================
+
+
+class TestAgentFetcherValidation:
+    """Tests for config validation specific to strategy fields."""
+
+    def test_validate_valid_research_strategy(self, agent_fetcher):
+        """Test validation accepts valid research_strategy values."""
+        from reconly_core.fetchers.agent import VALID_STRATEGIES
+
+        for strategy in VALID_STRATEGIES:
+            result = agent_fetcher.validate(
+                "What are the latest developments in quantum computing?",
+                config={'research_strategy': strategy}
+            )
+            # Should not have errors for valid strategy (may have warnings)
+            strategy_errors = [e for e in result.errors if 'strategy' in e.lower()]
+            assert len(strategy_errors) == 0, f"Strategy '{strategy}' should be valid"
+
+    def test_validate_invalid_research_strategy(self, agent_fetcher):
+        """Test validation rejects invalid research_strategy."""
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={'research_strategy': 'invalid_strategy'}
+        )
+
+        assert result.valid is False
+        assert any('strategy' in err.lower() for err in result.errors)
+
+    def test_validate_report_format_valid(self, agent_fetcher):
+        """Test validation accepts valid report_format values."""
+        from reconly_core.fetchers.agent import VALID_REPORT_FORMATS
+
+        for fmt in VALID_REPORT_FORMATS:
+            result = agent_fetcher.validate(
+                "Test research topic for validation",
+                config={'research_strategy': 'comprehensive', 'report_format': fmt}
+            )
+            format_errors = [e for e in result.errors if 'format' in e.lower()]
+            assert len(format_errors) == 0, f"Format '{fmt}' should be valid"
+
+    def test_validate_report_format_invalid(self, agent_fetcher):
+        """Test validation rejects invalid report_format."""
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={'research_strategy': 'comprehensive', 'report_format': 'INVALID'}
+        )
+
+        assert result.valid is False
+        assert any('format' in err.lower() for err in result.errors)
+
+    def test_validate_max_subtopics_range(self, agent_fetcher):
+        """Test validation enforces max_subtopics range (1-10)."""
+        # Below range
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={'research_strategy': 'deep', 'max_subtopics': 0}
+        )
+        assert result.valid is False
+
+        # Above range
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={'research_strategy': 'deep', 'max_subtopics': 15}
+        )
+        assert result.valid is False
+
+        # Within range
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={'research_strategy': 'deep', 'max_subtopics': 5}
+        )
+        subtopic_errors = [e for e in result.errors if 'subtopic' in e.lower()]
+        assert len(subtopic_errors) == 0
+
+    def test_validate_warns_for_simple_strategy_options(self, agent_fetcher):
+        """Test validation warns when comprehensive options used with simple strategy."""
+        result = agent_fetcher.validate(
+            "Test research topic for validation",
+            config={
+                'research_strategy': 'simple',
+                'report_format': 'APA',
+                'max_subtopics': 5,
+            }
+        )
+
+        # Should have warnings about options being ignored
+        assert len(result.warnings) >= 1
+        warning_text = ' '.join(result.warnings).lower()
+        assert 'ignored' in warning_text or 'simple' in warning_text
+
+
+# =============================================================================
+# Config Schema Tests for Strategy Fields
+# =============================================================================
+
+
+class TestAgentFetcherConfigSchemaStrategy:
+    """Tests for strategy-related config schema fields."""
+
+    def test_schema_has_research_strategy_field(self, agent_fetcher):
+        """Test config schema includes research_strategy."""
+        schema = agent_fetcher.get_config_schema()
+        field_keys = [f.key for f in schema.fields]
+        assert 'research_strategy' in field_keys
+
+    def test_research_strategy_field_properties(self, agent_fetcher):
+        """Test research_strategy field has correct properties."""
+        schema = agent_fetcher.get_config_schema()
+        strategy_field = next(f for f in schema.fields if f.key == 'research_strategy')
+
+        assert strategy_field.type == 'select'
+        assert strategy_field.default == 'simple'
+        assert strategy_field.editable is True
+
+    def test_schema_has_report_format_field(self, agent_fetcher):
+        """Test config schema includes report_format."""
+        schema = agent_fetcher.get_config_schema()
+        field_keys = [f.key for f in schema.fields]
+        assert 'report_format' in field_keys
+
+    def test_report_format_field_properties(self, agent_fetcher):
+        """Test report_format field has correct properties."""
+        schema = agent_fetcher.get_config_schema()
+        format_field = next(f for f in schema.fields if f.key == 'report_format')
+
+        assert format_field.type == 'select'
+        assert format_field.default == 'APA'
+
+    def test_schema_has_max_subtopics_field(self, agent_fetcher):
+        """Test config schema includes max_subtopics."""
+        schema = agent_fetcher.get_config_schema()
+        field_keys = [f.key for f in schema.fields]
+        assert 'max_subtopics' in field_keys
+
+    def test_max_subtopics_field_properties(self, agent_fetcher):
+        """Test max_subtopics field has correct properties."""
+        schema = agent_fetcher.get_config_schema()
+        subtopics_field = next(f for f in schema.fields if f.key == 'max_subtopics')
+
+        assert subtopics_field.type == 'integer'
+        assert subtopics_field.default == 3
+
+    def test_schema_has_search_provider_field(self, agent_fetcher):
+        """Test config schema includes search_provider for per-source override."""
+        schema = agent_fetcher.get_config_schema()
+        field_keys = [f.key for f in schema.fields]
+        assert 'search_provider' in field_keys

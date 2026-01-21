@@ -6,6 +6,7 @@ This module provides:
 - ResearchAgent: ReAct loop agent for web research
 - web_search: Search dispatcher for search providers (SearXNG, etc.)
 - web_fetch: URL content fetcher
+- get_agent_capabilities: Discover available research strategies
 """
 from reconly_core.agents.schema import AgentResult
 from reconly_core.agents.settings import AgentSettings, AgentSettingsError
@@ -23,6 +24,13 @@ from reconly_core.agents.fetch import (
     WebFetchError,
     WebFetchTimeoutError,
     WebFetchHTTPError,
+)
+from reconly_core.agents.capabilities import (
+    get_agent_capabilities,
+    AgentCapabilities,
+    StrategyInfo,
+    is_gpt_researcher_installed,
+    get_available_search_providers,
 )
 
 __all__ = [
@@ -46,4 +54,10 @@ __all__ = [
     "WebFetchError",
     "WebFetchTimeoutError",
     "WebFetchHTTPError",
+    # Capabilities
+    "get_agent_capabilities",
+    "AgentCapabilities",
+    "StrategyInfo",
+    "is_gpt_researcher_installed",
+    "get_available_search_providers",
 ]

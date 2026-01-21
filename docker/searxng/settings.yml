@@ -1,0 +1,94 @@
+# SearXNG Configuration for Reconly
+# Documentation: https://docs.searxng.org/admin/settings/settings.html
+#
+# IMPORTANT: For production, regenerate secret_key with:
+#   openssl rand -hex 32
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "Reconly Search"
+  privacypolicy_url: false
+  donation_url: false
+  contact_url: false
+  enable_metrics: false
+
+search:
+  # Safe search: 0=None, 1=Moderate, 2=Strict
+  safe_search: 0
+  autocomplete: ""
+  # Default language (empty = all languages)
+  default_lang: "en"
+  # Maximum number of requests per search
+  max_request_timeout: 10.0
+  # Formats available for API
+  formats:
+    - html
+    - json
+    - csv
+    - rss
+
+server:
+  # Development secret key - regenerate for production!
+  secret_key: "b9e8f7a6d5c4e3b2a1f0e9d8c7b6a5948372615049382716054839271605483a"
+  # Bind to all interfaces for Docker
+  bind_address: "0.0.0.0"
+  port: 8080
+  # Public URL (overridden by SEARXNG_BASE_URL env var)
+  base_url: false
+  # Image proxy for privacy
+  image_proxy: true
+  # HTTP protocol version
+  http_protocol_version: "1.1"
+  # Limiter (requires Redis/Valkey)
+  limiter: true
+  # Public instance mode (disables some features)
+  public_instance: false
+  # Method for request handling
+  method: "GET"
+
+redis:
+  # Connect to Valkey container
+  url: "redis://valkey:6379/0"
+
+ui:
+  # Static files are served from the container
+  static_use_hash: true
+  # Default theme
+  default_theme: "simple"
+  # Search on category select
+  search_on_category_select: true
+  # Hotkeys
+  hotkeys: "vim"
+  # Results on new tab
+  results_on_new_tab: false
+  # Query in title
+  query_in_title: true
+  # Infinite scroll
+  infinite_scroll: false
+  # Default locale
+  default_locale: "en"
+
+# Engine settings - enable/disable specific search engines
+# Uncomment and modify as needed
+# engines:
+#   - name: google
+#     disabled: false
+#   - name: duckduckgo
+#     disabled: false
+#   - name: bing
+#     disabled: false
+#   - name: wikipedia
+#     disabled: false
+
+outgoing:
+  # Request timeout for engines
+  request_timeout: 6.0
+  # Max redirects
+  max_redirects: 3
+  # Pool connections
+  pool_connections: 100
+  pool_maxsize: 20
+  # Enable HTTP/2 if available
+  enable_http2: true

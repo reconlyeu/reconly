@@ -15,6 +15,10 @@ export type AuthStatus = 'active' | 'pending_oauth' | 'auth_failed';
 export type IMAPProvider = 'gmail' | 'outlook' | 'generic';
 export type SearchProvider = 'duckduckgo' | 'searxng' | 'tavily';
 
+// Agent research strategy types
+export type ResearchStrategy = 'simple' | 'comprehensive' | 'deep';
+export type ResearchReportFormat = 'APA' | 'MLA' | 'CMS' | 'Harvard' | 'IEEE';
+
 export interface SourceConfig {
   // RSS-specific
   max_items?: number;
@@ -30,6 +34,9 @@ export interface SourceConfig {
   // Agent-specific
   max_iterations?: number;
   search_provider?: SearchProvider;  // Per-source search provider override
+  research_strategy?: ResearchStrategy;  // Research depth strategy
+  report_format?: ResearchReportFormat;  // For comprehensive/deep strategies
+  max_subtopics?: number;  // For comprehensive/deep (1-10)
   // IMAP-specific
   provider?: IMAPProvider;
   folders?: string[];
@@ -355,11 +362,32 @@ export interface AgentRun {
   trace_id?: string | null;
   created_at: string;
   duration_seconds?: number | null;
+  // GPT Researcher fields
+  research_strategy?: string | null;
+  subtopics?: string[] | null;
+  research_plan?: string | null;
+  report_format?: string | null;
+  source_count?: number | null;
 }
 
 export interface AgentRunListResponse {
   items: AgentRun[];
   total: number;
+}
+
+// Agent capabilities for strategy selection
+export interface StrategyInfo {
+  available: boolean;
+  description: string;
+  estimated_duration_seconds: number;
+  requires_api_key?: boolean;
+}
+
+export interface AgentCapabilities {
+  strategies: Record<ResearchStrategy, StrategyInfo>;
+  gpt_researcher_installed: boolean;
+  search_providers: string[];
+  configured_search_provider: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

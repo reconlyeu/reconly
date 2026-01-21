@@ -1282,7 +1282,10 @@ class AgentRun(Base):
     # Tracing
     trace_id = Column(String(36), nullable=True, index=True)  # UUID for log correlation
 
-    # Metadata
+    # Strategy-specific extra data (research_strategy, subtopics, etc.)
+    extra_data = Column(JSON, nullable=True)
+
+    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
@@ -1315,6 +1318,7 @@ class AgentRun(Base):
             'estimated_cost': self.estimated_cost,
             'error_log': self.error_log,
             'trace_id': self.trace_id,
+            'extra_data': self.extra_data,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 

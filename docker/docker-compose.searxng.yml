@@ -1,0 +1,74 @@
+# SearXNG - Privacy-respecting metasearch engine
+#
+# Usage:
+#   docker-compose -f docker/docker-compose.searxng.yml up -d    # Start SearXNG
+#   docker-compose -f docker/docker-compose.searxng.yml down     # Stop SearXNG
+#   docker-compose -f docker/docker-compose.searxng.yml logs -f  # View logs
+#
+# Access:
+#   URL: http://localhost:8888
+#
+# API Usage (JSON format):
+#   curl "http://localhost:8888/search?q=test&format=json"
+#
+# Configuration files are in docker/searxng/:
+#   - settings.yml  - Main SearXNG configuration
+#   - limiter.toml  - Rate limiting configuration (optional)
+#
+# Note: The secret_key in settings.yml should be regenerated for production use:
+#   openssl rand -hex 32
+
+services:
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: reconly-searxng-valkey
+    restart: unless-stopped
+    command: valkey-server --save 30 1 --loglevel warning
+    volumes:
+      - valkey_data:/data
+    networks:
+      - searxng
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: reconly-searxng
+    restart: unless-stopped
+    depends_on:
+      - valkey
+    ports:
+      - "${SEARXNG_PORT:-8888}:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}/
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    networks:
+      - searxng
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+networks:
+  searxng:
+
+volumes:
+  valkey_data:
+    name: reconly_searxng_valkey_data

@@ -13,6 +13,9 @@ import {
   ChevronRight,
   RotateCw,
   Coins,
+  Zap,
+  BookOpen,
+  Search,
 } from 'lucide-vue-next';
 import BaseCard from '@/components/common/BaseCard.vue';
 
@@ -116,6 +119,36 @@ const getGlowColor = (status: AgentRunStatus): 'primary' | 'success' | 'error' =
       return 'primary';
   }
 };
+
+// Get strategy icon
+const getStrategyIcon = (strategy: string | null | undefined) => {
+  switch (strategy) {
+    case 'comprehensive':
+      return BookOpen;
+    case 'deep':
+      return Search;
+    default:
+      return Zap;
+  }
+};
+
+// Get strategy badge class
+const getStrategyBadgeClass = (strategy: string | null | undefined): string => {
+  switch (strategy) {
+    case 'comprehensive':
+      return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    case 'deep':
+      return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    default:
+      return 'bg-text-muted/10 text-text-muted border-text-muted/20';
+  }
+};
+
+// Get strategy label
+const getStrategyLabel = (strategy: string | null | undefined): string => {
+  if (!strategy) return 'Simple';
+  return strategy.charAt(0).toUpperCase() + strategy.slice(1);
+};
 </script>
 
 <template>
@@ -147,6 +180,17 @@ const getGlowColor = (status: AgentRunStatus): 'primary' | 'success' | 'error' =
               ]"
             >
               {{ getStatusLabel(run.status) }}
+            </span>
+            <!-- Strategy Badge -->
+            <span
+              :class="[
+                'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+                getStrategyBadgeClass(run.research_strategy),
+              ]"
+              :title="`Research strategy: ${getStrategyLabel(run.research_strategy)}`"
+            >
+              <component :is="getStrategyIcon(run.research_strategy)" :size="10" />
+              {{ getStrategyLabel(run.research_strategy) }}
             </span>
             <span class="text-xs text-text-muted">
               {{ formatDate(run.started_at || run.created_at) }}
@@ -196,6 +240,17 @@ const getGlowColor = (status: AgentRunStatus): 'primary' | 'success' | 'error' =
           </div>
           <p class="text-sm font-medium text-text-primary">
             {{ formatTokens(run.tokens_in, run.tokens_out) }}
+          </p>
+        </div>
+
+        <!-- Source Count (if available) -->
+        <div v-if="run.source_count" class="text-center">
+          <div class="flex items-center gap-1 text-text-muted">
+            <Search :size="12" />
+            <span class="text-xs">Sources</span>
+          </div>
+          <p class="text-sm font-medium text-text-primary">
+            {{ run.source_count }}
           </p>
         </div>
 
