@@ -39,6 +39,8 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage/
+ui/coverage/
 .tox/
 .hypothesis/
 
@@ -61,6 +63,7 @@ logs/
 .env
 .env.local
 .env.*.local
+.env-old
 
 # Docker
 docker-compose.override.yml
