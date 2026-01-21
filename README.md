@@ -112,7 +112,7 @@ All components can be extended via the [plugin system](https://github.com/reconl
 | Component | Built-in | Extensible |
 |-----------|----------|------------|
 | **Sources** | RSS, YouTube, Website, Email (IMAP), AI Research Agents | Custom fetchers |
-| **LLM Providers** | Ollama, HuggingFace, OpenAI, Anthropic, LM Studio | Custom providers |
+| **LLM Providers** | Ollama, LM Studio, HuggingFace, OpenAI, Anthropic | Custom providers |
 | **Exporters** | Obsidian, Logseq, JSON, CSV | Custom formats |
 
 ---
@@ -121,7 +121,7 @@ All components can be extended via the [plugin system](https://github.com/reconl
 
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
-| **Ollama** | Free | 100% Local | [5 min setup](docs/setup.md#option-a-ollama-local-free-private) |
+| **Ollama/LM Studio** | Free | 100% Local | [5 min setup](docs/setup.md#option-a-ollama-local-free-private) |
 | **HuggingFace** | Free tier | Cloud | API key |
 | **OpenAI** | ~$0.02/article | Cloud | API key |
 | **Anthropic** | ~$0.04/article | Cloud | API key |
