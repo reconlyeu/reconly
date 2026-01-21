@@ -68,7 +68,6 @@ class WebsiteFetcher(BaseFetcher):
             # Get main content - try different common content containers
             # Order matters: more specific selectors first, then broader ones
             content = ""
-            main_content = None
 
             # Try specific blog/article content selectors first (most likely to have actual content)
             content_selectors = [
@@ -96,7 +95,6 @@ class WebsiteFetcher(BaseFetcher):
 
             # Find the best content container (prefer ones with more text)
             best_content = ""
-            best_element = None
 
             for tag, attrs in content_selectors:
                 if 'attrs' in attrs:
@@ -110,7 +108,6 @@ class WebsiteFetcher(BaseFetcher):
                     # Minimum threshold of 100 chars to avoid picking up headers/navs
                     if len(text) > len(best_content) and len(text) > 100:
                         best_content = text
-                        best_element = element
 
             # Fall back to body if no good content found
             if not best_content:
