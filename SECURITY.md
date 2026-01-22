@@ -2,8 +2,42 @@
 
 This document provides security guidelines for deploying Reconly in production environments.
 
+## Reporting Security Vulnerabilities
+
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+If you discover a security vulnerability, please report it via one of these methods:
+
+1. **GitHub Security Advisories** (Preferred): Use the "Report a vulnerability" button in the Security tab of this repository.
+2. **Email**: Send details to security@reconly.eu
+
+### What to Include
+
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Any suggested fixes (optional)
+
+### Response Timeline
+
+- **Initial response**: Within 48 hours
+- **Status update**: Within 7 days
+- **Fix timeline**: Depends on severity (critical: 24-72h, high: 1-2 weeks)
+
+### Disclosure Policy
+
+We follow responsible disclosure. We will:
+
+- Acknowledge your report promptly
+- Work with you to understand and resolve the issue
+- Credit you in the release notes (unless you prefer anonymity)
+- Not take legal action against researchers acting in good faith
+
+---
+
 ## Table of Contents
 
+- [Reporting Security Vulnerabilities](#reporting-security-vulnerabilities)
 - [Secure Deployment Checklist](#secure-deployment-checklist)
 - [SECRET_KEY Configuration](#secret_key-configuration)
 - [HTTPS Setup](#https-setup)
@@ -455,11 +489,9 @@ Configuration summary
 
 ## Security Contacts
 
-If you discover a security vulnerability, please report it responsibly:
+For security vulnerability reports, see [Reporting Security Vulnerabilities](#reporting-security-vulnerabilities) at the top of this document.
 
-1. **Do not** open a public GitHub issue
-2. Email security concerns to the maintainers
-3. Allow reasonable time for a fix before public disclosure
+For general security questions: security@reconly.eu
 
 ---
 
