@@ -3,10 +3,11 @@ import os
 import time
 import feedparser
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from dateutil import parser as date_parser
 
 from reconly_core.config_types import ConfigField
+from reconly_core.utils.images import extract_preview_image
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
@@ -126,9 +127,11 @@ class RSSFetcher(BaseFetcher):
 
                 # Optionally fetch full article content by following the link
                 if fetch_full_content and article_url:
-                    full_content = self._fetch_full_article_content(article_url)
+                    full_content, image_url = self._fetch_full_article_content(article_url)
                     if full_content:
                         article['full_content'] = full_content
+                    if image_url:
+                        article['image_url'] = image_url
 
                 articles.append(article)
 
@@ -206,25 +209,30 @@ class RSSFetcher(BaseFetcher):
 
         return None
 
-    def _fetch_full_article_content(self, url: str) -> Optional[str]:
+    def _fetch_full_article_content(self, url: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Fetch full article content by scraping the article URL.
+        Fetch full article content and preview image by scraping the article URL.
 
-        Uses WebsiteFetcher to scrape the article page. On failure,
-        logs a warning and returns None (graceful fallback to RSS summary).
+        Uses WebsiteFetcher to scrape the article page and extracts og:image
+        for preview thumbnails. On failure, logs a warning and returns None
+        (graceful fallback to RSS summary).
 
         Args:
             url: The article URL to fetch
 
         Returns:
-            Full article content as string, or None if fetching failed
+            Tuple of (full_content, image_url), either or both may be None
         """
         try:
             # Import here to avoid circular dependency
             from reconly_core.fetchers.website import WebsiteFetcher
+            import requests
 
             fetcher = WebsiteFetcher(timeout=10)
             result = fetcher.fetch(url)
+
+            content = None
+            image_url = None
 
             # WebsiteFetcher returns a list with a single dict
             if result:
@@ -235,14 +243,38 @@ class RSSFetcher(BaseFetcher):
                         url=url,
                         content_length=len(content),
                     )
-                    return content
 
-            logger.warning(
-                "full_content_empty",
-                url=url,
-                reason="WebsiteFetcher returned no content",
-            )
-            return None
+            # Fetch the raw HTML to extract og:image
+            # (WebsiteFetcher strips meta tags, so we need separate fetch)
+            try:
+                response = requests.get(
+                    url,
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'},
+                    timeout=5,
+                )
+                if response.status_code == 200:
+                    image_url = extract_preview_image(response.text, url)
+                    if image_url:
+                        logger.debug(
+                            "preview_image_extracted",
+                            url=url,
+                            image_url=image_url,
+                        )
+            except Exception as img_err:
+                logger.debug(
+                    "preview_image_extraction_failed",
+                    url=url,
+                    error=str(img_err),
+                )
+
+            if not content:
+                logger.warning(
+                    "full_content_empty",
+                    url=url,
+                    reason="WebsiteFetcher returned no content",
+                )
+
+            return content, image_url
 
         except Exception as e:
             logger.warning(
@@ -250,7 +282,7 @@ class RSSFetcher(BaseFetcher):
                 url=url,
                 error=str(e),
             )
-            return None
+            return None, None
 
     def get_source_type(self) -> str:
         """Get the source type identifier."""

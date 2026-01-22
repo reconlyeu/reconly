@@ -28,12 +28,9 @@ import os
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
-from urllib.parse import urljoin, urlparse
-
-import requests
-from bs4 import BeautifulSoup
 
 from reconly_core.config_types import ConfigField
+from reconly_core.utils.images import fetch_preview_image_from_urls
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
@@ -558,73 +555,6 @@ class AgentFetcher(BaseFetcher):
 
         return metadata
 
-    def _extract_preview_image(self, sources: list[str], max_attempts: int = 5) -> Optional[str]:
-        """Extract og:image from source URLs for preview thumbnail.
-
-        Iterates through source URLs and extracts the first valid Open Graph
-        image found. Uses a short timeout to avoid blocking on slow sites.
-
-        Args:
-            sources: List of source URLs from research
-            max_attempts: Maximum number of URLs to try (default: 5)
-
-        Returns:
-            First valid image URL found, or None if no images found
-        """
-        if not sources:
-            return None
-
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-
-        for url in sources[:max_attempts]:
-            try:
-                # Skip non-http URLs
-                parsed = urlparse(url)
-                if parsed.scheme not in ('http', 'https'):
-                    continue
-
-                response = requests.get(url, headers=headers, timeout=5)
-                if response.status_code != 200:
-                    continue
-
-                soup = BeautifulSoup(response.content, 'html.parser')
-
-                # Try og:image first (most common)
-                og_image = soup.find('meta', property='og:image')
-                if og_image and og_image.get('content'):
-                    image_url = og_image['content']
-                    # Handle relative URLs
-                    if not image_url.startswith(('http://', 'https://')):
-                        image_url = urljoin(url, image_url)
-                    logger.info(
-                        "Preview image extracted",
-                        extra={"source_url": url, "image_url": image_url},
-                    )
-                    return image_url
-
-                # Fallback to twitter:image
-                twitter_image = soup.find('meta', {'name': 'twitter:image'})
-                if twitter_image and twitter_image.get('content'):
-                    image_url = twitter_image['content']
-                    if not image_url.startswith(('http://', 'https://')):
-                        image_url = urljoin(url, image_url)
-                    logger.info(
-                        "Preview image extracted (twitter)",
-                        extra={"source_url": url, "image_url": image_url},
-                    )
-                    return image_url
-
-            except Exception as e:
-                logger.debug(
-                    "Failed to extract image from source",
-                    extra={"url": url, "error": str(e)},
-                )
-                continue
-
-        return None
-
     def _format_result(
         self,
         prompt: str,
@@ -663,8 +593,8 @@ class AgentFetcher(BaseFetcher):
         # Extract GPT Researcher-specific metadata
         metadata.update(self._extract_gptr_metadata(result.tool_calls, strategy_name))
 
-        # Extract preview image from source URLs
-        image_url = self._extract_preview_image(result.sources)
+        # Extract preview image from source URLs (og:image)
+        image_url = fetch_preview_image_from_urls(result.sources)
 
         return {
             'url': synthetic_url,
