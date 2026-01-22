@@ -37,21 +37,25 @@ class GPTResearcherStrategy(ResearchStrategy):
     Attributes:
         deep_mode: If True, use deep research with subtopics exploration
         summarizer: LLM provider for configuration (model, API key)
+        embedding_config: Dict with 'provider' and 'model' for embeddings
     """
 
     def __init__(
         self,
         deep_mode: bool = False,
         summarizer: "BaseProvider | None" = None,
+        embedding_config: dict[str, str] | None = None,
     ):
         """Initialize the GPT Researcher strategy.
 
         Args:
             deep_mode: Enable deep research mode with subtopic exploration
             summarizer: LLM provider instance for configuration extraction
+            embedding_config: Dict with 'provider' and 'model' keys for embeddings
         """
         self.deep_mode = deep_mode
         self.summarizer = summarizer
+        self.embedding_config = embedding_config or {}
 
     async def research(
         self,
@@ -88,6 +92,19 @@ class GPTResearcherStrategy(ResearchStrategy):
         )
 
         with self._configure_environment(settings):
+            # Debug: log configured environment
+            log.info(
+                "gpt_researcher_env_configured",
+                SMART_LLM=os.environ.get("SMART_LLM"),
+                FAST_LLM=os.environ.get("FAST_LLM"),
+                STRATEGIC_LLM=os.environ.get("STRATEGIC_LLM"),
+                EMBEDDING=os.environ.get("EMBEDDING"),
+                RETRIEVER=os.environ.get("RETRIEVER"),
+                SEARX_URL=os.environ.get("SEARX_URL"),
+                OLLAMA_BASE_URL=os.environ.get("OLLAMA_BASE_URL"),
+                has_openai_key=bool(os.environ.get("OPENAI_API_KEY")),
+                has_anthropic_key=bool(os.environ.get("ANTHROPIC_API_KEY")),
+            )
             try:
                 report_type = "detailed_report" if self.deep_mode else "research_report"
                 researcher = GPTResearcher(
@@ -101,24 +118,29 @@ class GPTResearcherStrategy(ResearchStrategy):
                 await researcher.conduct_research()
                 report = await researcher.write_report()
 
-                sources = self._get_attr(researcher, "get_source_urls", [])
-                subtopics = self._get_attr(researcher, "get_subtopics", [])
-                context = self._get_attr(researcher, "get_research_context", [])
+                sources = await self._get_attr_async(researcher, "get_source_urls", [])
+                subtopics = await self._get_attr_async(researcher, "get_subtopics", [])
+                context = await self._get_attr_async(researcher, "get_research_context", [])
+
+                # Normalize results to lists (GPT Researcher may return objects)
+                sources_list = self._to_list(sources)
+                subtopics_list = self._to_list(subtopics)
+                context_list = self._to_list(context)
 
                 log.info(
                     "gpt_researcher_completed",
                     strategy=strategy_name,
-                    sources_count=len(sources),
-                    subtopics_count=len(subtopics),
-                    report_length=len(report),
+                    sources_count=len(sources_list),
+                    subtopics_count=len(subtopics_list),
+                    report_length=len(report) if report else 0,
                 )
 
                 return AgentResult(
                     title=self._extract_title(report, prompt),
                     content=report,
-                    sources=sources,
-                    iterations=len(context) if context else 1,
-                    tool_calls=self._build_tool_calls(sources, subtopics, context),
+                    sources=sources_list,
+                    iterations=len(context_list) if context_list else 1,
+                    tool_calls=self._build_tool_calls(sources_list, subtopics_list, context_list),
                 )
 
             except Exception as e:
@@ -139,9 +161,11 @@ class GPTResearcherStrategy(ResearchStrategy):
             "OLLAMA_BASE_URL",
             "SMART_LLM",
             "FAST_LLM",
+            "STRATEGIC_LLM",
             "RETRIEVER",
             "SEARX_URL",
             "TAVILY_API_KEY",
+            "EMBEDDING",
         ]
         original_values = {key: os.environ.get(key) for key in env_vars}
 
@@ -156,9 +180,19 @@ class GPTResearcherStrategy(ResearchStrategy):
                 else:
                     os.environ[key] = value
 
+    def _get_underlying_provider(self) -> "BaseProvider | None":
+        """Get the underlying provider, unwrapping SummarizerWithFallback if needed."""
+        if self.summarizer is None:
+            return None
+        # SummarizerWithFallback wraps the primary provider
+        if hasattr(self.summarizer, "primary"):
+            return self.summarizer.primary
+        return self.summarizer
+
     def _configure_llm_env(self) -> None:
         """Map Reconly provider config to GPT Researcher env vars."""
-        if self.summarizer is None:
+        provider = self._get_underlying_provider()
+        if provider is None:
             log.warning(
                 "gpt_researcher_no_summarizer",
                 msg="No summarizer provided, using default GPT Researcher LLM config",
@@ -169,32 +203,37 @@ class GPTResearcherStrategy(ResearchStrategy):
         provider_name = model_info.get("provider", "").lower()
         model_name = model_info.get("model", "")
 
-        log.debug(
+        # Debug: log what we're configuring
+        log.info(
             "gpt_researcher_configuring_llm",
             provider=provider_name,
             model=model_name,
+            provider_class=type(provider).__name__,
+            has_api_key=hasattr(provider, "api_key") and bool(getattr(provider, "api_key", None)),
+            has_base_url=hasattr(provider, "base_url") and bool(getattr(provider, "base_url", None)),
         )
 
         if provider_name in ("openai", "openai-compatible"):
-            api_key = getattr(self.summarizer, "api_key", None)
+            api_key = getattr(provider, "api_key", None)
             if api_key:
                 os.environ["OPENAI_API_KEY"] = api_key
             os.environ["SMART_LLM"] = f"openai:{model_name}"
             os.environ["FAST_LLM"] = "openai:gpt-4o-mini"
 
         elif provider_name == "anthropic":
-            api_key = getattr(self.summarizer, "api_key", None)
+            api_key = getattr(provider, "api_key", None)
             if api_key:
                 os.environ["ANTHROPIC_API_KEY"] = api_key
             os.environ["SMART_LLM"] = f"anthropic:{model_name}"
             os.environ["FAST_LLM"] = "anthropic:claude-3-haiku-20240307"
 
         elif provider_name == "ollama":
-            base_url = getattr(self.summarizer, "base_url", None)
+            base_url = getattr(provider, "base_url", None)
             if base_url:
                 os.environ["OLLAMA_BASE_URL"] = base_url
             os.environ["SMART_LLM"] = f"ollama:{model_name}"
             os.environ["FAST_LLM"] = f"ollama:{model_name}"
+            os.environ["STRATEGIC_LLM"] = f"ollama:{model_name}"
 
         else:
             log.warning(
@@ -203,11 +242,40 @@ class GPTResearcherStrategy(ResearchStrategy):
                 msg="Provider not directly supported, using default GPT Researcher config",
             )
 
+        # Configure embeddings from embedding_config (applies to all providers)
+        self._configure_embedding_env()
+
+    def _configure_embedding_env(self) -> None:
+        """Configure GPT Researcher embedding env vars from embedding_config."""
+        if not self.embedding_config:
+            log.warning(
+                "gpt_researcher_no_embedding_config",
+                msg="No embedding config provided, GPT Researcher may use OpenAI defaults",
+            )
+            return
+
+        emb_provider = self.embedding_config.get("provider", "").lower()
+        emb_model = self.embedding_config.get("model", "")
+
+        log.info(
+            "gpt_researcher_configuring_embedding",
+            provider=emb_provider,
+            model=emb_model,
+        )
+
+        if emb_provider and emb_model:
+            # GPT Researcher expects EMBEDDING=provider:model format
+            os.environ["EMBEDDING"] = f"{emb_provider}:{emb_model}"
+
     def _configure_search_env(self, settings: "AgentSettings") -> None:
         """Map Reconly search provider settings to GPT Researcher retriever config."""
         provider = settings.search_provider
 
-        log.debug("gpt_researcher_configuring_search", search_provider=provider)
+        log.info(
+            "gpt_researcher_configuring_search",
+            search_provider=provider,
+            searxng_url=settings.searxng_url,
+        )
 
         if provider == "searxng":
             os.environ["RETRIEVER"] = "searx"
@@ -230,6 +298,25 @@ class GPTResearcherStrategy(ResearchStrategy):
             )
             os.environ["RETRIEVER"] = "duckduckgo"
 
+    def _to_list(self, value: Any) -> list:
+        """Convert various GPT Researcher return types to lists."""
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        # Handle Pydantic models with a 'subtopics' or similar attribute
+        if hasattr(value, "subtopics"):
+            return list(value.subtopics) if value.subtopics else []
+        if hasattr(value, "sources"):
+            return list(value.sources) if value.sources else []
+        if hasattr(value, "items"):
+            return list(value.items) if value.items else []
+        # Try to iterate
+        try:
+            return list(value)
+        except (TypeError, ValueError):
+            return []
+
     def _extract_title(self, report: str, prompt: str) -> str:
         """Extract title from first markdown heading, or generate from prompt."""
         heading_match = re.search(r"^#{1,2}\s+(.+?)$", report, re.MULTILINE)
@@ -240,6 +327,24 @@ class GPTResearcherStrategy(ResearchStrategy):
         if len(title) > 100:
             title = title[:97] + "..."
         return f"Research: {title}"
+
+    async def _get_attr_async(self, researcher: Any, method_name: str, default: Any) -> Any:
+        """Safely call a researcher method, handling both sync and async methods."""
+        import asyncio
+        try:
+            if hasattr(researcher, method_name):
+                result = getattr(researcher, method_name)()
+                # Handle coroutines (async methods)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                return result or default
+        except Exception as e:
+            log.warning(
+                "gpt_researcher_method_failed",
+                method=method_name,
+                error=str(e),
+            )
+        return default
 
     def _get_attr(self, researcher: Any, method_name: str, default: Any) -> Any:
         """Safely call a researcher method, returning default on failure."""
@@ -264,7 +369,12 @@ class GPTResearcherStrategy(ResearchStrategy):
         tool_calls: list[dict[str, Any]] = []
 
         if subtopics:
-            subtopics_preview = ", ".join(subtopics[:5])
+            # Convert Subtopic objects to strings (may have .task or other attrs)
+            subtopic_strs = [
+                getattr(s, "task", None) or getattr(s, "name", None) or str(s)
+                for s in subtopics[:5]
+            ]
+            subtopics_preview = ", ".join(subtopic_strs)
             if len(subtopics) > 5:
                 subtopics_preview += "..."
             tool_calls.append({

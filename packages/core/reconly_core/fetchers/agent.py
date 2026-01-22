@@ -44,10 +44,11 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Strategy timeout values in seconds
+# Note: Local LLMs (Ollama) need longer timeouts than cloud APIs
 STRATEGY_TIMEOUTS: dict[str, int] = {
-    "simple": 120,        # 2 minutes
-    "comprehensive": 300,  # 5 minutes
-    "deep": 600,          # 10 minutes
+    "simple": 180,        # 3 minutes
+    "comprehensive": 600,  # 10 minutes (increased for local LLMs)
+    "deep": 900,          # 15 minutes
 }
 
 # Valid strategy names
@@ -244,6 +245,9 @@ class AgentFetcher(BaseFetcher):
             # Pass db to read UI-configured provider/model from database
             summarizer = get_summarizer(enable_fallback=True, db=db)
 
+            # Get embedding settings for GPT Researcher
+            embedding_config = self._get_embedding_config(db)
+
             # Configure max iterations from config or settings default
             max_iterations = config.get(
                 'max_iterations',
@@ -257,7 +261,11 @@ class AgentFetcher(BaseFetcher):
                 db.commit()
 
             # Get the appropriate strategy
-            strategy = get_strategy(strategy_name, summarizer=summarizer)
+            strategy = get_strategy(
+                strategy_name,
+                summarizer=summarizer,
+                embedding_config=embedding_config,
+            )
 
             # Get timeout for this strategy
             timeout = STRATEGY_TIMEOUTS.get(strategy_name, 120)
@@ -489,6 +497,35 @@ class AgentFetcher(BaseFetcher):
             gptr_report_format=os.getenv('AGENT_GPTR_REPORT_FORMAT', 'APA'),
             gptr_max_subtopics=int(os.getenv('AGENT_GPTR_MAX_SUBTOPICS', '3')),
         )
+
+    def _get_embedding_config(self, db: Optional["Session"]) -> dict[str, str]:
+        """Get embedding configuration from settings service.
+
+        Args:
+            db: SQLAlchemy Session for reading settings
+
+        Returns:
+            Dict with 'provider' and 'model' keys
+        """
+        config = {"provider": "ollama", "model": "bge-m3"}  # Defaults
+
+        if db is not None:
+            try:
+                from reconly_core.services.settings_service import SettingsService
+                service = SettingsService(db)
+                provider = service.get("embedding.provider")
+                model = service.get("embedding.model")
+                if provider:
+                    config["provider"] = provider
+                if model:
+                    config["model"] = model
+            except Exception as e:
+                logger.warning(
+                    "Failed to get embedding config from settings",
+                    extra={"error": str(e)},
+                )
+
+        return config
 
     def _extract_gptr_metadata(
         self,

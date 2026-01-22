@@ -844,8 +844,9 @@ class FeedService:
         """Process an AI agent source.
 
         Agent sources use the URL field as a research prompt. The agent fetcher
-        needs db session to resolve provider settings (model, base_url, etc.)
-        from the settings configured in the UI.
+        conducts research and returns a full report as content. We then run
+        summarization using the feed's prompt template to generate a structured
+        summary for display, while keeping the full report for RAG.
         """
         if fetcher is None:
             fetcher = get_fetcher('agent')
@@ -865,33 +866,87 @@ class FeedService:
 
         content_data = content_items[0]
 
-        # Agent results already contain the research report as content,
-        # no additional summarization needed - save directly as digest
-        if not options.dry_run:
-            digest = self._save_digest(
-                content_data, source, feed, feed_run, session
+        # Track agent tokens separately (research phase)
+        agent_metadata = content_data.get('metadata', {})
+        agent_tokens_in = agent_metadata.get('tokens_in', 0)
+        agent_tokens_out = agent_metadata.get('tokens_out', 0)
+
+        # Resolve prompt template for summarization
+        template = None
+        if feed.prompt_template_id:
+            template = session.query(PromptTemplate).filter(
+                PromptTemplate.id == feed.prompt_template_id
+            ).first()
+        if not template:
+            template = get_default_prompt_template(session, language=language)
+
+        # Build prompts from template and run summarization
+        # This generates a structured summary from the research report
+        system_prompt, user_prompt = None, None
+        if template:
+            system_prompt, user_prompt = _build_prompts_from_template(template, content_data)
+            logger.info(
+                "agent_source_summarization_starting",
+                source_id=source.id,
+                template_id=template.id,
+                content_length=len(content_data.get('content', '')),
+            )
+        else:
+            logger.warning(
+                "agent_source_no_template",
+                source_id=source.id,
+                message="No prompt template found, using fallback",
             )
 
-            # Log token usage from agent metadata
-            agent_metadata = content_data.get('metadata', {})
-            if agent_metadata:
-                self._log_llm_usage(
-                    {
-                        'model_info': {
-                            'input_tokens': agent_metadata.get('tokens_in', 0),
-                            'output_tokens': agent_metadata.get('tokens_out', 0),
-                        },
-                        'estimated_cost': 0.0,  # Agent cost tracked in AgentRun
-                    },
-                    source, feed, feed_run, digest, session
-                )
+        result = summarizer.summarize(
+            content_data,
+            language=language,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+        )
+
+        # Log summarization result
+        summary_text = result.get("summary", "")
+        logger.info(
+            "agent_source_summarization_complete",
+            source_id=source.id,
+            has_summary=bool(summary_text),
+            summary_length=len(summary_text) if summary_text else 0,
+        )
+
+        # Get summarization token usage and provider info
+        summary_model_info = result.get("model_info", {})
+        summary_tokens_in = summary_model_info.get("input_tokens", 0)
+        summary_tokens_out = summary_model_info.get("output_tokens", 0)
+        summary_cost = result.get("estimated_cost", 0.0)
+
+        # Save digest with both content (full report) and summary
+        if not options.dry_run:
+            digest = self._save_digest(
+                result, source, feed, feed_run, session
+            )
+
+            # Log combined token usage (agent research + summarization)
+            # Use summarizer's model_info for provider/model, but combine token counts
+            combined_model_info = {
+                **summary_model_info,
+                'input_tokens': agent_tokens_in + summary_tokens_in,
+                'output_tokens': agent_tokens_out + summary_tokens_out,
+            }
+            self._log_llm_usage(
+                {
+                    'model_info': combined_model_info,
+                    'estimated_cost': summary_cost,  # Agent cost tracked separately in AgentRun
+                },
+                source, feed, feed_run, digest, session
+            )
 
         return {
             "success": True,
             "items_count": 1,
-            "tokens_in": content_data.get('metadata', {}).get('tokens_in', 0),
-            "tokens_out": content_data.get('metadata', {}).get('tokens_out', 0),
-            "cost": 0.0,
+            "tokens_in": agent_tokens_in + summary_tokens_in,
+            "tokens_out": agent_tokens_out + summary_tokens_out,
+            "cost": summary_cost,
         }
 
     def _process_imap_source(

@@ -204,6 +204,9 @@ watch(
         agentConfig.value = {
           max_iterations: newSource.config?.max_iterations,
           search_provider: newSource.config?.search_provider,
+          research_strategy: newSource.config?.research_strategy,
+          report_format: newSource.config?.report_format,
+          max_subtopics: newSource.config?.max_subtopics,
         };
         agentPrompt.value = newSource.url; // URL field stores the prompt for agent sources
       } else {
@@ -282,9 +285,9 @@ const saveMutation = useMutation({
     // Build config object based on source type
     let config: SourceConfig | null = null;
     if (data.type === 'agent') {
-      const { max_iterations, search_provider } = agentConfig.value;
-      const hasConfig = max_iterations || search_provider;
-      config = hasConfig ? { max_iterations, search_provider } : null;
+      const { max_iterations, search_provider, research_strategy, report_format, max_subtopics } = agentConfig.value;
+      const hasConfig = max_iterations || search_provider || research_strategy || report_format || max_subtopics;
+      config = hasConfig ? { max_iterations, search_provider, research_strategy, report_format, max_subtopics } : null;
     } else if (maxItems.value) {
       config = { max_items: maxItems.value };
     }

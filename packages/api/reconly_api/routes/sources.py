@@ -618,3 +618,51 @@ async def batch_delete_sources(
         deleted_count=deleted_count,
         failed_ids=failed_ids
     )
+
+
+@router.post("/{source_id}/reset-circuit-breaker")
+async def reset_source_circuit_breaker(
+    source_id: int,
+    db: Session = Depends(get_db)
+):
+    """Reset circuit breaker for a specific source.
+
+    Use this endpoint to manually reset a source's circuit breaker
+    after fixing issues that caused failures.
+    """
+    source = db.query(Source).filter(Source.id == source_id).first()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    source.reset_circuit_breaker()
+    db.commit()
+
+    return {
+        "message": f"Circuit breaker reset for source {source_id}",
+        "source_id": source_id,
+        "source_name": source.name,
+    }
+
+
+@router.post("/reset-all-circuit-breakers")
+async def reset_all_circuit_breakers(
+    db: Session = Depends(get_db)
+):
+    """Reset circuit breakers for all sources.
+
+    Use this endpoint to globally reset all circuit breakers,
+    useful for testing or after resolving systemic issues.
+    """
+    sources = db.query(Source).filter(Source.circuit_open_until.isnot(None)).all()
+    reset_count = 0
+
+    for source in sources:
+        source.reset_circuit_breaker()
+        reset_count += 1
+
+    db.commit()
+
+    return {
+        "message": f"Reset circuit breakers for {reset_count} sources",
+        "reset_count": reset_count,
+    }

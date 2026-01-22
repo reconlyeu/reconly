@@ -8,7 +8,7 @@ import { features } from '@/config/features';
 import { extractPreviewImage } from '@/utils/imageUtils';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
-import { ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
+import { AgentPlaceholder, ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
 
 // Configure marked
 marked.setOptions({ breaks: false, gfm: true });
@@ -41,10 +41,11 @@ const isConsolidated = computed(() => {
   return props.digest.url?.startsWith('consolidated://') || props.digest.consolidated_count > 1;
 });
 
-// Check if we have a real source URL to link to (not for consolidated or email digests)
+// Check if we have a real source URL to link to (not for consolidated, email, or agent digests)
 const hasSourceUrl = computed(() => {
   if (!props.digest.url) return false;
   if (props.digest.url.startsWith('consolidated://')) return false;
+  if (props.digest.url.startsWith('agent://')) return false; // Agent digests have synthetic URLs
   if (props.digest.source_type === 'imap') return false; // Email digests don't have meaningful URLs
   return true;
 });
@@ -52,6 +53,11 @@ const hasSourceUrl = computed(() => {
 // Check if this is an email/IMAP source
 const isEmail = computed(() => {
   return props.digest.source_type?.toLowerCase() === 'imap';
+});
+
+// Check if this is an agent research source
+const isAgent = computed(() => {
+  return props.digest.source_type?.toLowerCase() === 'agent';
 });
 
 const estimatedCost = computed(() => {
@@ -150,6 +156,7 @@ const handleImageError = () => {
       />
       <YoutubePlaceholder v-else-if="isYouTube" />
       <EmailPlaceholder v-else-if="isEmail" />
+      <AgentPlaceholder v-else-if="isAgent" />
       <ArticlePlaceholder v-else />
     </div>
 
