@@ -1,6 +1,6 @@
 [project]
 name = "reconly-core"
-version = "1.0.0"
+version = "0.1.0"
 description = "Reconly Core - CLI and content processing"
 requires-python = ">=3.10"
 authors = [

@@ -1,6 +1,6 @@
 [project]
 name = "reconly-mcp"
-version = "1.0.0"
+version = "0.1.0"
 description = "Reconly MCP Server - Model Context Protocol integration for knowledge base access"
 requires-python = ">=3.10"
 authors = [

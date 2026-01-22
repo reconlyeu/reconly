@@ -1,6 +1,6 @@
 [project]
 name = "reconly-api"
-version = "1.0.0"
+version = "0.1.0"
 description = "Reconly API - FastAPI server (single-user)"
 requires-python = ">=3.10"
 authors = [
