@@ -20,10 +20,8 @@ class FetcherResponse(BaseModel):
     config_schema: FetcherConfigSchemaResponse = Field(
         ..., description="Configuration options"
     )
-    # Activation state fields
-    enabled: bool = Field(default=True, description="Whether fetcher is enabled")
+    # Configuration state
     is_configured: bool = Field(default=True, description="Whether all required config fields have values")
-    can_enable: bool = Field(default=True, description="Whether fetcher can be enabled")
     # Extension flag
     is_extension: bool = Field(default=False, description="Whether this is an external extension")
     # OAuth provider support (for fetchers like IMAP that support OAuth)
@@ -43,9 +41,7 @@ class FetcherResponse(BaseModel):
             "config_schema": {
                 "fields": []
             },
-            "enabled": True,
             "is_configured": True,
-            "can_enable": True,
             "is_extension": False,
             "oauth_providers": None,
             "metadata": {
@@ -75,22 +71,9 @@ class FetcherListResponse(BaseModel):
                     "name": "rss",
                     "description": "RSS/Atom feed fetcher",
                     "config_schema": {"fields": []},
-                    "enabled": True,
                     "is_configured": True,
-                    "can_enable": True,
                     "is_extension": False
                 }
             ]
-        }
-    })
-
-
-class FetcherToggleRequest(BaseModel):
-    """Schema for toggling fetcher enabled state."""
-    enabled: bool = Field(..., description="Whether to enable or disable the fetcher")
-
-    model_config = ConfigDict(json_schema_extra={
-        "example": {
-            "enabled": True
         }
     })

@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ref } from 'vue';
-import { useQuery, useMutation } from '@tanstack/vue-query';
+import { useQuery } from '@tanstack/vue-query';
 import {
   FETCHERS_QUERY_KEY,
   useFetchersList,
   useFetcher,
-  useEnabledFetchers,
-  useToggleFetcher,
   getFetcherSettingsPrefix,
   getFetcherSettingKey,
 } from '../useFetchers';
@@ -16,12 +14,10 @@ import type { Fetcher } from '@/types/entities';
 vi.mock('@/services/api', () => ({
   fetchersApi: {
     list: vi.fn(),
-    setEnabled: vi.fn(),
   },
 }));
 
 const mockUseQuery = vi.mocked(useQuery);
-const mockUseMutation = vi.mocked(useMutation);
 
 describe('useFetchers', () => {
   beforeEach(() => {
@@ -49,8 +45,8 @@ describe('useFetchers', () => {
   describe('useFetcher', () => {
     it('returns fetcher by name from list', () => {
       const mockFetchers: Fetcher[] = [
-        { name: 'rss', enabled: true, config_schema: null },
-        { name: 'web', enabled: false, config_schema: null },
+        { name: 'rss', description: 'RSS fetcher', config_schema: { fields: [] }, is_configured: true, is_extension: false },
+        { name: 'web', description: 'Web fetcher', config_schema: { fields: [] }, is_configured: true, is_extension: false },
       ];
 
       mockUseQuery.mockReturnValue({
@@ -94,83 +90,6 @@ describe('useFetchers', () => {
       const { fetcher } = useFetcher('rss');
 
       expect(fetcher.value).toBeNull();
-    });
-  });
-
-  describe('useEnabledFetchers', () => {
-    it('filters enabled fetchers', () => {
-      const mockFetchers: Fetcher[] = [
-        { name: 'rss', enabled: true, config_schema: null },
-        { name: 'web', enabled: false, config_schema: null },
-        { name: 'imap', enabled: true, config_schema: null },
-      ];
-
-      mockUseQuery.mockReturnValue({
-        data: ref(mockFetchers),
-        isLoading: ref(false),
-        isError: ref(false),
-        error: ref(null),
-        refetch: vi.fn(),
-      } as any);
-
-      const { fetchers } = useEnabledFetchers();
-
-      expect(fetchers.value).toHaveLength(2);
-      expect(fetchers.value.map((f) => f.name)).toEqual(['rss', 'imap']);
-    });
-
-    it('returns empty array when no fetchers are enabled', () => {
-      const mockFetchers: Fetcher[] = [
-        { name: 'rss', enabled: false, config_schema: null },
-        { name: 'web', enabled: false, config_schema: null },
-      ];
-
-      mockUseQuery.mockReturnValue({
-        data: ref(mockFetchers),
-        isLoading: ref(false),
-        isError: ref(false),
-        error: ref(null),
-        refetch: vi.fn(),
-      } as any);
-
-      const { fetchers } = useEnabledFetchers();
-
-      expect(fetchers.value).toHaveLength(0);
-    });
-
-    it('returns empty array when data is not loaded', () => {
-      mockUseQuery.mockReturnValue({
-        data: ref(null),
-        isLoading: ref(true),
-        isError: ref(false),
-        error: ref(null),
-        refetch: vi.fn(),
-      } as any);
-
-      const { fetchers } = useEnabledFetchers();
-
-      expect(fetchers.value).toHaveLength(0);
-    });
-  });
-
-  describe('useToggleFetcher', () => {
-    it('calls useMutation with correct config', () => {
-      useToggleFetcher();
-
-      expect(mockUseMutation).toHaveBeenCalledWith({
-        mutationFn: expect.any(Function),
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
-      });
-    });
-
-    it('accepts optional callbacks', () => {
-      const onSuccess = vi.fn();
-      const onError = vi.fn();
-
-      useToggleFetcher({ onSuccess, onError });
-
-      expect(mockUseMutation).toHaveBeenCalled();
     });
   });
 

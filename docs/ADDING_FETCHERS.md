@@ -535,7 +535,6 @@ fetch.{name}.{field}
 - `fetch.youtube.api_key` - YouTube Data API key
 - `fetch.reddit.client_id` - Reddit client ID
 - `fetch.reddit.user_agent` - Reddit user agent string
-- `fetch.youtube.enabled` - Whether YouTube fetcher is enabled (auto-added)
 
 ### Accessing Configuration
 

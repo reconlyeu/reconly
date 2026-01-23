@@ -9,7 +9,17 @@
 // SOURCE
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type SourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'imap';
+/**
+ * Known built-in source types.
+ * Extensions can add additional types dynamically via the fetchers API.
+ */
+export type KnownSourceType = 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'imap';
+
+/**
+ * Source type - can be a known type or any string for extension-provided types.
+ * Use KnownSourceType when you need to narrow to built-in types only.
+ */
+export type SourceType = KnownSourceType | (string & {});
 export type FilterMode = 'title_only' | 'content' | 'both';
 export type AuthStatus = 'active' | 'pending_oauth' | 'auth_failed';
 export type IMAPProvider = 'gmail' | 'outlook' | 'generic';
@@ -729,16 +739,41 @@ export interface SettingsResetResponse {
 // EXPORTERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type ConfigFieldType = 'string' | 'boolean' | 'integer' | 'path';
+export type ConfigFieldType = 'string' | 'boolean' | 'integer' | 'path' | 'select' | 'secret';
 
+/**
+ * Configuration field schema for dynamic form rendering.
+ * Used by exporters, fetchers, and providers to describe their configurable settings.
+ */
 export interface ConfigField {
+  /** Setting key (e.g., "host", "port") */
   key: string;
+  /** Field type determines the input control */
   type: ConfigFieldType;
+  /** Human-readable label */
   label: string;
+  /** Help text shown below the field */
   description: string;
-  default: unknown;
-  required: boolean;
-  placeholder: string;
+  /** Default value for the field */
+  default?: unknown;
+  /** Whether the field is required */
+  required?: boolean;
+  /** Placeholder text for input fields */
+  placeholder?: string;
+  /** Whether this field contains sensitive data (passwords, API keys) */
+  secret?: boolean;
+  /** For select fields: source of options (e.g., "models") */
+  options_from?: string | null;
+  /** Static options for select fields */
+  options?: Array<{ value: string; label: string }>;
+  /** Whether the field can be edited (false if set via env var) */
+  editable?: boolean;
+  /** Environment variable name (for display purposes) */
+  env_var?: string | null;
+  /** Minimum value for integer fields */
+  min?: number;
+  /** Maximum value for integer fields */
+  max?: number;
 }
 
 export interface ExporterConfigSchema {
@@ -798,10 +833,10 @@ export interface Fetcher {
   name: string;
   description: string;
   config_schema: FetcherConfigSchema;
-  enabled: boolean;
   is_configured: boolean;
-  can_enable: boolean;
   is_extension: boolean;
+  // OAuth providers supported by this fetcher (e.g., ['gmail', 'outlook'] for imap)
+  oauth_providers?: string[] | null;
   // Component metadata
   metadata?: FetcherMetadata | null;
 }

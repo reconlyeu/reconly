@@ -490,12 +490,18 @@ async def toggle_extension_enabled(
         schema = exporter.get_config_schema()
         required_fields = [f.key for f in schema.fields if f.required]
     elif ext_type == ExtensionType.FETCHER:
-        if not is_fetcher_extension(name):
-            raise HTTPException(
-                status_code=404,
-                detail=f"Extension '{name}' not found"
-            )
-        required_fields = []
+        # Fetchers don't have an enabled toggle - they're always active
+        # Return 400 to indicate this operation is not supported
+        raise HTTPException(
+            status_code=400,
+            detail="Fetchers cannot be toggled - they are always active when configured"
+        )
+    elif ext_type == ExtensionType.PROVIDER:
+        # Providers don't have an enabled toggle - they're always available if configured
+        raise HTTPException(
+            status_code=400,
+            detail="Providers cannot be toggled - they are always available when configured"
+        )
     else:
         raise HTTPException(status_code=400, detail=f"Unsupported extension type: {type}")
 

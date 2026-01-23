@@ -1353,6 +1353,29 @@ export const strings = {
       error: 'Error:',
     },
   },
+
+  // Dynamic Config Form
+  dynamicForm: {
+    // Placeholders
+    pathPlaceholder: 'Enter path...',
+    selectPlaceholder: 'Select an option...',
+    secretPlaceholder: 'Enter value...',
+    // Actions
+    showSecret: 'Show value',
+    hideSecret: 'Hide value',
+    // Source indicators
+    setViaEnv: 'ENV',
+    // Validation messages
+    validation: {
+      required: 'This field is required',
+      invalidNumber: 'Please enter a valid number',
+      minValue: 'Value must be at least {min}',
+      maxValue: 'Value must be at most {max}',
+      formInvalid: 'Please fix the validation errors before saving',
+    },
+    // Empty state
+    noFields: 'No configuration fields available.',
+  },
 } as const;
 
 export type Strings = typeof strings;

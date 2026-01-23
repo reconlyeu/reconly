@@ -137,8 +137,6 @@ export function useExportToPath(options?: {
   onSuccess?: (data: ExportToPathResponse) => void;
   onError?: (error: Error) => void;
 }) {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: (request: ExportToPathRequest) => digestsApi.exportToPath(request),
     onSuccess: (data) => {

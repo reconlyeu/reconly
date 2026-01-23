@@ -234,8 +234,8 @@ class TestRegisterComponentSettings:
         assert "provider.test-provider.enabled" not in SETTINGS_REGISTRY
         assert "provider.test-provider.api_key" in SETTINGS_REGISTRY
 
-        # Fetcher type DOES get enabled setting
-        assert "fetch.test-fetcher.enabled" in SETTINGS_REGISTRY
+        # Fetcher type does NOT get enabled setting (fetchers are always active)
+        assert "fetch.test-fetcher.enabled" not in SETTINGS_REGISTRY
         assert "fetch.test-fetcher.api_key" in SETTINGS_REGISTRY
 
     def test_all_fields_are_editable(self):

@@ -3,24 +3,24 @@
  * Configuration panel for a specific exporter.
  *
  * Displays configuration fields based on the exporter's config_schema.
- * Supports field types: path, boolean, string.
+ * Uses DynamicConfigForm to render fields from the schema.
  * Saves configuration to settings API using `export.{exporter_name}.{field_key}` keys.
  */
 import { ref, watch, computed } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { settingsApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { getExporterSettingKey } from '@/composables/useExporters';
 import { strings } from '@/i18n/en';
-import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+import DynamicConfigForm from '@/components/common/DynamicConfigForm.vue';
 import {
   Settings,
   Loader2,
   Save,
   RotateCcw,
-  FolderOpen,
   Check,
 } from 'lucide-vue-next';
-import type { Exporter } from '@/types/entities';
+import type { Exporter, ConfigField } from '@/types/entities';
 
 interface Props {
   exporter: Exporter;
@@ -42,17 +42,20 @@ const { data: settings, isLoading } = useQuery({
 const localConfig = ref<Record<string, unknown>>({});
 const hasChanges = ref(false);
 
+// Track form validity from DynamicConfigForm
+const isFormValid = ref(true);
+
 // Get config fields from exporter
 const configFields = computed(() => {
-  return props.exporter.config_schema.fields || [];
+  return props.exporter.config_schema?.fields || [];
 });
 
 // Check if exporter has any configuration
 const hasConfig = computed(() => configFields.value.length > 0);
 
-// Build setting key for a field
+// Build setting key for a field (using the composable helper)
 const getSettingKey = (fieldKey: string): string => {
-  return `export.${props.exporter.name}.${fieldKey}`;
+  return getExporterSettingKey(props.exporter.name, fieldKey);
 };
 
 // Get stored value for a field from settings
@@ -71,6 +74,17 @@ const getSettingSource = (fieldKey: string): string => {
   return settings.value.categories.export[qualifiedKey]?.source || 'default';
 };
 
+// Compute enhanced schema with editable state based on settings source
+const enhancedSchema = computed((): ConfigField[] => {
+  return configFields.value.map((field) => ({
+    ...field,
+    // Mark field as non-editable if set via environment variable
+    editable: getSettingSource(field.key) !== 'env',
+    // Set env_var for display in DynamicConfigForm
+    env_var: getSettingSource(field.key) === 'env' ? field.env_var || 'ENV' : null,
+  }));
+});
+
 // Update local config from settings
 const updateLocalFromSettings = () => {
   const newConfig: Record<string, unknown> = {};
@@ -86,6 +100,9 @@ const updateLocalFromSettings = () => {
       switch (field.type) {
         case 'boolean':
           newConfig[field.key] = false;
+          break;
+        case 'integer':
+          newConfig[field.key] = 0;
           break;
         case 'path':
         case 'string':
@@ -110,30 +127,22 @@ watch(() => props.exporter.name, () => {
   updateLocalFromSettings();
 });
 
-// Handle field value change
-const handleFieldChange = (fieldKey: string, value: unknown) => {
-  localConfig.value[fieldKey] = value;
+// Handle form values change from DynamicConfigForm
+const handleValuesChange = (newValues: Record<string, unknown>) => {
+  localConfig.value = newValues;
   hasChanges.value = true;
 };
 
-// Validate required fields
-const validateConfig = (): boolean => {
-  for (const field of configFields.value) {
-    if (field.required) {
-      const value = localConfig.value[field.key];
-      if (value === null || value === undefined || value === '') {
-        toast.error(`${field.label} is required`);
-        return false;
-      }
-    }
-  }
-  return true;
+// Handle validation state change from DynamicConfigForm
+const handleValidationChange = (valid: boolean) => {
+  isFormValid.value = valid;
 };
 
 // Save mutation
 const saveMutation = useMutation({
   mutationFn: async () => {
-    if (!validateConfig()) {
+    if (!isFormValid.value) {
+      toast.error(strings.dynamicForm.validation.formInvalid);
       throw new Error('Validation failed');
     }
 
@@ -214,69 +223,12 @@ const displayName = computed(() => {
 
     <!-- Configuration fields -->
     <div v-else class="space-y-5">
-      <div v-for="field in configFields" :key="field.key" class="space-y-2">
-        <!-- Label with source indicator -->
-        <div class="flex items-center justify-between">
-          <label :for="`config-${field.key}`" class="text-sm font-medium text-text-primary">
-            {{ field.label }}
-            <span v-if="field.required" class="text-status-failed">*</span>
-          </label>
-          <span
-            v-if="getSettingSource(field.key) !== 'default'"
-            :class="[
-              'text-xs px-2 py-0.5 rounded-full',
-              getSettingSource(field.key) === 'database'
-                ? 'bg-blue-500/10 text-blue-400'
-                : 'bg-amber-500/10 text-amber-400'
-            ]"
-          >
-            {{ getSettingSource(field.key) === 'database' ? strings.settings.source.saved : strings.settings.source.env }}
-          </span>
-        </div>
-
-        <!-- Path input -->
-        <div v-if="field.type === 'path'" class="relative">
-          <div class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted">
-            <FolderOpen :size="18" />
-          </div>
-          <input
-            :id="`config-${field.key}`"
-            type="text"
-            :value="localConfig[field.key] || ''"
-            :placeholder="field.placeholder || 'Enter path...'"
-            @input="handleFieldChange(field.key, ($event.target as HTMLInputElement).value)"
-            class="w-full rounded-lg border border-border-subtle bg-bg-surface pl-10 pr-4 py-2.5 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20 font-mono text-sm"
-          />
-        </div>
-
-        <!-- Boolean toggle -->
-        <div
-          v-else-if="field.type === 'boolean'"
-          class="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-surface p-3"
-        >
-          <span class="text-sm text-text-secondary">{{ field.description }}</span>
-          <ToggleSwitch
-            :model-value="Boolean(localConfig[field.key])"
-            @update:model-value="handleFieldChange(field.key, $event)"
-          />
-        </div>
-
-        <!-- String input -->
-        <input
-          v-else
-          :id="`config-${field.key}`"
-          type="text"
-          :value="localConfig[field.key] || ''"
-          :placeholder="field.placeholder || ''"
-          @input="handleFieldChange(field.key, ($event.target as HTMLInputElement).value)"
-          class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
-        />
-
-        <!-- Description (for non-boolean fields) -->
-        <p v-if="field.description && field.type !== 'boolean'" class="text-xs text-text-muted">
-          {{ field.description }}
-        </p>
-      </div>
+      <DynamicConfigForm
+        :schema="enhancedSchema"
+        :values="localConfig"
+        @update:values="handleValuesChange"
+        @validation-change="handleValidationChange"
+      />
 
       <!-- Save/Reset Buttons -->
       <div class="flex justify-end gap-3 pt-4 border-t border-border-subtle">
@@ -291,7 +243,7 @@ const displayName = computed(() => {
         </button>
         <button
           type="button"
-          :disabled="!hasChanges || saveMutation.isPending.value"
+          :disabled="!hasChanges || !isFormValid || saveMutation.isPending.value"
           @click="saveMutation.mutate()"
           class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:bg-accent-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
