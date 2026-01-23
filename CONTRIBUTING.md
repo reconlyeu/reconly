@@ -2,10 +2,11 @@
 
 Thank you for your interest in contributing to Reconly!
 
-**Before you start:** Please read the [Where to Contribute](#where-to-contribute) section to understand which contributions are welcome. The best place to contribute is the **[reconly-extensions](https://github.com/reconlyeu/reconly-extensions)** repository where you can add fetchers, exporters, and providers without touching core code.
+**Before you start:** Please read the [Where to Contribute](#where-to-contribute) section below to understand which contributions are welcome. The best place to contribute is the **[reconly-extensions](https://github.com/reconlyeu/reconly-extensions)** repository where you can add fetchers, exporters, and providers without touching core code.
 
 ## 📋 Table of Contents
 
+- [Where to Contribute](#where-to-contribute)
 - [Code of Conduct](#code-of-conduct)
 - [Getting Started](#getting-started)
 - [Development Setup](#development-setup)
@@ -13,7 +14,65 @@ Thank you for your interest in contributing to Reconly!
 - [Testing](#testing)
 - [Submitting Changes](#submitting-changes)
 - [Code Style](#code-style)
-- [Where to Contribute](#where-to-contribute)
+
+## 💡 Where to Contribute
+
+Reconly is maintained by a solo developer with a commercial Enterprise edition built on top of the OSS core. To be transparent about where contributions are welcome and to avoid wasted effort, contributions are organized into tiers:
+
+### ✅ Welcome - Extensions Repository
+
+**The best way to contribute!** The [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) repository is designed for community contributions:
+
+- **Fetchers** - Add support for new content sources (podcasts, newsletters, etc.)
+- **Exporters** - Export to new formats or PKM systems
+- **Providers** - Integrate new LLM or search providers
+
+Extensions follow a registry pattern and don't modify core code. PRs here are reviewed and merged regularly.
+
+👉 **Start here:** [reconly-extensions](https://github.com/reconlyeu/reconly-extensions)
+
+### ✅ Welcome - Documentation & Typos
+
+Low-risk improvements that are always appreciated:
+
+- Fix typos and grammar
+- Improve setup guides and examples
+- Add tutorials or usage examples
+- Translate documentation
+
+### ⚠️ Discuss First - Bug Fixes
+
+Bug fixes to the core are welcome but **require discussion before coding**:
+
+1. Open an issue describing the bug
+2. Wait for maintainer confirmation
+3. Discuss the proposed fix approach
+4. Only then submit a PR
+
+This prevents duplicate effort and ensures fixes align with the codebase direction.
+
+### 🚫 Not Accepting - Core Features
+
+**The core architecture is not open for feature contributions.** This includes:
+
+- New API endpoints
+- Database schema changes
+- New core services or major features
+- Architectural refactoring
+
+**Why?** The OSS core must remain stable as the foundation for [Reconly Enterprise](https://reconly.eu). Feature direction is driven by the roadmap, not community PRs.
+
+**Want a feature?** Open a [Discussion](https://github.com/reconlyeu/reconly/discussions) to share your idea. Good ideas often make it to the roadmap!
+
+### What NOT to Submit
+
+To save everyone's time, these PRs will be closed without review:
+
+- Core feature PRs without prior discussion
+- Enterprise features (teams, multi-user, billing) - these belong in Reconly Enterprise
+- Breaking changes or large refactors
+- Code that doesn't follow style guidelines
+- PRs that ignore this contribution guide
 
 ## 🤝 Code of Conduct
 
@@ -290,65 +349,6 @@ isort packages/
 # Type check
 mypy packages/core --ignore-missing-imports
 ```
-
-## 💡 Where to Contribute
-
-Reconly is maintained by a solo developer with a commercial Enterprise edition built on top of the OSS core. To be transparent about where contributions are welcome and to avoid wasted effort, contributions are organized into tiers:
-
-### ✅ Welcome - Extensions Repository
-
-**The best way to contribute!** The [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) repository is designed for community contributions:
-
-- **Fetchers** - Add support for new content sources (podcasts, newsletters, etc.)
-- **Exporters** - Export to new formats or PKM systems
-- **Providers** - Integrate new LLM or search providers
-
-Extensions follow a registry pattern and don't modify core code. PRs here are reviewed and merged regularly.
-
-👉 **Start here:** [reconly-extensions](https://github.com/reconlyeu/reconly-extensions)
-
-### ✅ Welcome - Documentation & Typos
-
-Low-risk improvements that are always appreciated:
-
-- Fix typos and grammar
-- Improve setup guides and examples
-- Add tutorials or usage examples
-- Translate documentation
-
-### ⚠️ Discuss First - Bug Fixes
-
-Bug fixes to the core are welcome but **require discussion before coding**:
-
-1. Open an issue describing the bug
-2. Wait for maintainer confirmation
-3. Discuss the proposed fix approach
-4. Only then submit a PR
-
-This prevents duplicate effort and ensures fixes align with the codebase direction.
-
-### 🚫 Not Accepting - Core Features
-
-**The core architecture is not open for feature contributions.** This includes:
-
-- New API endpoints
-- Database schema changes
-- New core services or major features
-- Architectural refactoring
-
-**Why?** The OSS core must remain stable as the foundation for [Reconly Enterprise](https://reconly.eu). Feature direction is driven by the roadmap, not community PRs.
-
-**Want a feature?** Open a [Discussion](https://github.com/reconlyeu/reconly/discussions) to share your idea. Good ideas often make it to the roadmap!
-
-### What NOT to Submit
-
-To save everyone's time, these PRs will be closed without review:
-
-- Core feature PRs without prior discussion
-- Enterprise features (teams, multi-user, billing) - these belong in Reconly Enterprise
-- Breaking changes or large refactors
-- Code that doesn't follow style guidelines
-- PRs that ignore this contribution guide
 
 ## 🌱 First-Time Contributors
 
