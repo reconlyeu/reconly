@@ -56,7 +56,10 @@ python -m uvicorn reconly_api.main:app --reload --port 8000
 
 The database schema is created automatically on first startup.
 
-### 5. Populate Sample Data (Optional)
+### 5. Populate Sample Data (Optional - Development Only)
+
+> **Note:** This is a developer convenience script, not used in production Docker deployments.
+> Production images use a separate curated demo seed mechanism.
 
 ```bash
 python packages/api/scripts/populate_sample_data.py

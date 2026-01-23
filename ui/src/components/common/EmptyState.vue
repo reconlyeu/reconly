@@ -3,7 +3,7 @@
  * Reusable empty state component.
  * Displays when a list or collection has no items.
  */
-import { Inbox, type LucideIcon } from 'lucide-vue-next';
+import { Inbox, Lightbulb, type LucideIcon } from 'lucide-vue-next';
 import { type Component } from 'vue';
 import { strings } from '@/i18n/en';
 
@@ -14,12 +14,15 @@ interface Props {
   message?: string;
   /** Icon component to display */
   icon?: LucideIcon | Component;
+  /** Optional tip text shown with lightbulb icon */
+  tip?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   title: strings.common.empty.title,
   message: strings.common.empty.message,
   icon: () => Inbox,
+  tip: undefined,
 });
 </script>
 
@@ -39,6 +42,11 @@ withDefaults(defineProps<Props>(), {
     <!-- Slot for action button -->
     <div v-if="$slots.action" class="mt-6">
       <slot name="action" />
+    </div>
+    <!-- Optional tip with lightbulb icon -->
+    <div v-if="tip" class="mt-6 flex items-center justify-center gap-2 text-xs text-text-muted">
+      <Lightbulb :size="14" :stroke-width="2" class="text-amber-500" />
+      <span>{{ tip }}</span>
     </div>
   </div>
 </template>

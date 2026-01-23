@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     secure_cookies: str = "auto"  # Cookie security: "auto" (detect from request), "true", "false"
 
     # Security Headers
-    csp_policy: str = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'"
+    csp_policy: str = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self'"
 
     # CORS - use str type and parse in validator to avoid JSON parsing issues
     cors_origins: Union[str, list[str]] = "http://localhost:3000,http://localhost:8080"

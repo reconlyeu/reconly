@@ -21,7 +21,7 @@ from reconly_core.logging import configure_logging, get_logger, generate_trace_i
 from reconly_core.database import Base
 from reconly_api.config import settings, validate_secret_key, validate_configuration, SecretKeyValidationError
 from reconly_api.dependencies import SessionLocal, engine, limiter
-from reconly_api.middleware import SecurityHeadersMiddleware
+from reconly_api.middleware import DemoModeMiddleware, SecurityHeadersMiddleware
 from reconly_api.routes import (
     digests, health, sources, feeds, feed_runs, templates,
     analytics, providers, dashboard, auth, exporters, fetchers, tags, bundles,
@@ -225,6 +225,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Demo mode middleware - blocks write operations when RECONLY_DEMO_MODE is enabled
+app.add_middleware(DemoModeMiddleware)
 
 # Security headers middleware
 app.add_middleware(SecurityHeadersMiddleware, csp_policy=settings.csp_policy)

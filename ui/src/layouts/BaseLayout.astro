@@ -11,6 +11,7 @@ import ThemeToggle from '@components/common/ThemeToggle.vue';
 import ToastProvider from '@components/common/ToastProvider.vue';
 import AuthGuard from '@components/auth/AuthGuard.vue';
 import GlobalChat from '@components/chat/GlobalChat.vue';
+import GettingStartedWizard from '@components/onboarding/GettingStartedWizard.vue';
 
 interface Props {
   title?: string;
@@ -64,6 +65,9 @@ const { title = 'Reconly' } = Astro.props;
 
       <!-- Global Chat (Floating Tab + Quick Panel) -->
       <GlobalChat client:load />
+
+      <!-- Getting Started Wizard (first-time users only) -->
+      <GettingStartedWizard client:load />
     </AuthGuard>
 
     <!-- Theme initialization script -->

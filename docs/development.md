@@ -50,7 +50,7 @@ echo "DATABASE_URL=postgresql://reconly:reconly_dev@localhost:5432/reconly" > .e
 cd packages/api
 python -m alembic upgrade head
 
-# Optional: Load sample data
+# Optional: Load sample data (development only - not used in production Docker)
 python scripts/populate_sample_data.py
 ```
 
@@ -281,7 +281,7 @@ CREATE SCHEMA public;
 # Recreate schema
 cd packages/api
 python -m alembic upgrade head
-python scripts/populate_sample_data.py
+python scripts/populate_sample_data.py  # Optional: reload dev sample data
 ```
 
 ### Test Failures
