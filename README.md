@@ -58,6 +58,18 @@ For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https:
 
 ---
 
+## Architecture
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture-light.svg">
+    <img alt="Reconly Architecture" src="docs/images/architecture-light.svg" width="400">
+  </picture>
+</p>
+
+---
+
 ## AI Providers
 
 | Provider | Cost | Privacy | Setup |

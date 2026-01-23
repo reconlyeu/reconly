@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 700" width="500" height="700">
+  <defs>
+    <!-- Arrow marker -->
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#37474f"/>
+    </marker>
+  </defs>
+
+  <!-- Background (transparent for flexibility) -->
+  <rect width="500" height="700" fill="transparent"/>
+
+  <!-- ===== SOURCES (Diamond) ===== -->
+  <g transform="translate(220, 50)">
+    <polygon points="0,-35 50,0 0,35 -50,0" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="14" text-anchor="middle" fill="#37474f">Sources</text>
+  </g>
+
+  <!-- Arrow: Sources to Fetchers -->
+  <line x1="190" y1="85" x2="130" y2="150" stroke="#37474f" stroke-width="2" stroke-dasharray="5,3"/>
+  <!-- Arrow: Sources to Agent -->
+  <line x1="250" y1="85" x2="310" y2="150" stroke="#37474f" stroke-width="2" stroke-dasharray="5,3"/>
+
+  <!-- ===== FETCHERS (left) ===== -->
+  <g transform="translate(120, 190)">
+    <rect x="-80" y="-35" width="160" height="70" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="-5" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#37474f">Fetchers</text>
+    <text x="0" y="15" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle" fill="#546e7a">RSS &#8226; YouTube &#8226; Website &#8226; IMAP</text>
+  </g>
+
+  <!-- ===== AGENT RESEARCHER (right) ===== -->
+  <g transform="translate(320, 190)">
+    <rect x="-80" y="-35" width="160" height="70" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="-8" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#37474f">Agent Researcher</text>
+    <text x="0" y="12" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle" fill="#546e7a">SearXNG &#8226; GPT Researcher</text>
+  </g>
+
+  <!-- Arrow: Fetchers to Core -->
+  <line x1="120" y1="225" x2="180" y2="265" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Arrow: Agent to Core -->
+  <line x1="320" y1="225" x2="260" y2="265" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== CORE ===== -->
+  <g transform="translate(220, 310)">
+    <rect x="-80" y="-35" width="160" height="70" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#37474f">Core</text>
+    <text x="0" y="18" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle" fill="#546e7a">Processing &#8226; LLM &#8226; RAG</text>
+  </g>
+
+  <!-- ===== KNOWLEDGE GRAPH (right of Core) ===== -->
+  <g transform="translate(420, 310)">
+    <rect x="-60" y="-35" width="120" height="70" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="-5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#37474f">Knowledge</text>
+    <text x="0" y="12" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" fill="#37474f">Graph</text>
+  </g>
+
+  <!-- Bidirectional arrow: Core to Knowledge Graph -->
+  <line x1="300" y1="300" x2="350" y2="300" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="350" y1="320" x2="300" y2="320" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Arrow: Core to Exporters (fan out) -->
+  <line x1="165" y1="345" x2="100" y2="395" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="220" y1="345" x2="220" y2="395" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="275" y1="345" x2="340" y2="395" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== EXPORTERS ===== -->
+  <!-- Exporter 1 (Automation Workflow - left) -->
+  <g transform="translate(100, 440)">
+    <rect x="-55" y="-30" width="110" height="60" rx="10" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="-3" font-family="system-ui, -apple-system, sans-serif" font-size="11" text-anchor="middle" fill="#37474f">Automation</text>
+    <text x="0" y="10" font-family="system-ui, -apple-system, sans-serif" font-size="11" text-anchor="middle" fill="#37474f">Workflow</text>
+    <text x="0" y="24" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" fill="#546e7a">(Webhook)</text>
+  </g>
+
+  <!-- Exporter 2 (Digests - center) -->
+  <g transform="translate(220, 440)">
+    <rect x="-55" y="-30" width="110" height="60" rx="10" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle" fill="#37474f">Digests</text>
+  </g>
+
+  <!-- Exporter 3 (PKM - right) -->
+  <g transform="translate(340, 440)">
+    <rect x="-55" y="-30" width="110" height="60" rx="10" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="12" text-anchor="middle" fill="#37474f">PKM</text>
+    <text x="0" y="16" font-family="system-ui, -apple-system, sans-serif" font-size="8" text-anchor="middle" fill="#546e7a">(Obsidian / Logseq)</text>
+  </g>
+
+  <!-- Arrow: Digests to Documents -->
+  <line x1="220" y1="470" x2="220" y2="510" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Doc stack (center, under Digests) -->
+  <g transform="translate(220, 545)">
+    <rect x="-22" y="-25" width="44" height="55" rx="2" fill="transparent" stroke="#37474f" stroke-width="1.5"/>
+    <rect x="-18" y="-28" width="44" height="55" rx="2" fill="transparent" stroke="#37474f" stroke-width="1.5"/>
+    <line x1="-10" y1="-10" x2="18" y2="-10" stroke="#90a4ae" stroke-width="2"/>
+    <line x1="-10" y1="0" x2="18" y2="0" stroke="#90a4ae" stroke-width="2"/>
+    <line x1="-10" y1="10" x2="18" y2="10" stroke="#90a4ae" stroke-width="2"/>
+  </g>
+
+  <!-- Arrows: Documents to Frontend and E-Mail -->
+  <line x1="200" y1="580" x2="150" y2="620" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="580" x2="290" y2="620" stroke="#37474f" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- ===== FRONTEND ===== -->
+  <g transform="translate(120, 660)">
+    <rect x="-70" y="-25" width="140" height="50" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#37474f">Frontend</text>
+  </g>
+
+  <!-- ===== E-MAIL ===== -->
+  <g transform="translate(320, 660)">
+    <rect x="-70" y="-25" width="140" height="50" rx="12" fill="none" stroke="#37474f" stroke-width="2"/>
+    <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#37474f">E-Mail</text>
+  </g>
+
+</svg>
