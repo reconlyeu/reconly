@@ -6,6 +6,7 @@ import BulkActionBar from '@/components/common/BulkActionBar.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 import type { PromptTemplate, ReportTemplate } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
+import { strings } from '@/i18n/en';
 
 type Template = PromptTemplate | ReportTemplate;
 
@@ -42,26 +43,26 @@ const handleSelectionChange = (ids: number[]) => {
 };
 
 const columns = computed<TableColumn<Template>[]>(() => [
-  { key: 'name', label: 'Name', width: 'w-1/4' },
-  { key: 'category', label: 'Category', width: 'w-24' },
-  { key: 'meta', label: props.type === 'prompt' ? 'Language' : 'Format', width: 'w-28' },
-  { key: 'description', label: 'Description', width: 'w-1/3' },
-  { key: 'is_active', label: 'Status', width: 'w-24', align: 'center' as const },
-  { key: 'actions', label: 'Actions', width: 'w-28', align: 'right' as const },
+  { key: 'name', label: strings.templates.table.name, width: 'w-1/4' },
+  { key: 'category', label: strings.templates.table.category, width: 'w-24' },
+  { key: 'meta', label: props.type === 'prompt' ? strings.templates.table.language : strings.templates.table.format, width: 'w-28' },
+  { key: 'description', label: strings.templates.table.description, width: 'w-1/3' },
+  { key: 'is_active', label: strings.templates.table.status, width: 'w-24', align: 'center' as const },
+  { key: 'actions', label: strings.templates.table.actions, width: 'w-28', align: 'right' as const },
 ]);
 
 const typeConfig = computed(() => {
   if (props.type === 'prompt') {
     return {
       icon: Languages,
-      label: 'Prompt',
+      label: strings.templates.tabs.prompt.replace(' Templates', ''),
       color: 'text-purple-400',
       bgColor: 'bg-purple-400/10',
     };
   }
   return {
     icon: Code,
-    label: 'Report',
+    label: strings.templates.tabs.report.replace(' Templates', ''),
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/10',
   };
@@ -70,13 +71,13 @@ const typeConfig = computed(() => {
 const getCategoryConfig = (isSystem: boolean) => {
   if (isSystem) {
     return {
-      label: 'Built-in',
+      label: strings.templates.origin.builtin,
       color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
       icon: Shield,
     };
   }
   return {
-    label: 'Custom',
+    label: strings.templates.origin.custom,
     color: 'bg-green-500/10 text-green-400 border-green-500/20',
     icon: FileText,
   };
@@ -212,14 +213,14 @@ defineExpose({
         <button
           @click="handleEdit(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent-primary"
-          title="Edit template"
+          :title="strings.templates.actions.editTemplate"
         >
           <Edit :size="16" :stroke-width="2" />
         </button>
         <button
           @click="handleDelete(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
-          title="Delete template"
+          :title="strings.templates.actions.deleteTemplate"
         >
           <Trash2 :size="16" :stroke-width="2" />
         </button>

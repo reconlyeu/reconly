@@ -12,6 +12,7 @@ import {
   handleReauthenticate,
   getReauthButtonTitle,
 } from '@/composables/useAuthStatus';
+import { strings } from '@/i18n/en';
 
 interface Props {
   sources: Source[];
@@ -46,21 +47,21 @@ const handleSelectionChange = (ids: number[]) => {
 };
 
 const columns = computed<TableColumn<Source>[]>(() => [
-  { key: 'name', label: 'Name', width: 'w-1/4' },
-  { key: 'type', label: 'Type', width: 'w-28' },
-  { key: 'url', label: 'URL', width: 'w-1/3' },
-  { key: 'enabled', label: 'Status', width: 'w-24', align: 'center' as const },
-  { key: 'actions', label: 'Actions', width: 'w-28', align: 'right' as const },
+  { key: 'name', label: strings.sources.table.name, width: 'w-1/4' },
+  { key: 'type', label: strings.sources.table.type, width: 'w-28' },
+  { key: 'url', label: strings.sources.table.url, width: 'w-1/3' },
+  { key: 'enabled', label: strings.sources.table.status, width: 'w-24', align: 'center' as const },
+  { key: 'actions', label: strings.sources.table.actions, width: 'w-28', align: 'right' as const },
 ]);
 
 const typeConfig = (type: string) => {
   const configs: Record<string, { icon: typeof Rss; label: string; color: string; bgColor: string }> = {
-    rss: { icon: Rss, label: 'RSS', color: 'text-orange-400', bgColor: 'bg-orange-400/10' },
-    youtube: { icon: Youtube, label: 'YouTube', color: 'text-red-500', bgColor: 'bg-red-500/10' },
-    website: { icon: Globe, label: 'Website', color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
-    blog: { icon: BookOpen, label: 'Blog', color: 'text-green-400', bgColor: 'bg-green-400/10' },
-    imap: { icon: Mail, label: 'Email', color: 'text-purple-400', bgColor: 'bg-purple-400/10' },
-    agent: { icon: Bot, label: 'Agent', color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
+    rss: { icon: Rss, label: strings.sources.types.rss, color: 'text-orange-400', bgColor: 'bg-orange-400/10' },
+    youtube: { icon: Youtube, label: strings.sources.types.youtube, color: 'text-red-500', bgColor: 'bg-red-500/10' },
+    website: { icon: Globe, label: strings.sources.types.website, color: 'text-blue-400', bgColor: 'bg-blue-400/10' },
+    blog: { icon: BookOpen, label: strings.sources.types.blog, color: 'text-green-400', bgColor: 'bg-green-400/10' },
+    imap: { icon: Mail, label: strings.sources.types.imap, color: 'text-purple-400', bgColor: 'bg-purple-400/10' },
+    agent: { icon: Bot, label: strings.sources.types.agent, color: 'text-cyan-400', bgColor: 'bg-cyan-400/10' },
   };
   return configs[type] || configs.rss;
 };
@@ -172,7 +173,7 @@ defineExpose({
           rel="noopener noreferrer"
           @click.stop
           class="flex-shrink-0 text-text-muted transition-colors hover:text-accent-primary"
-          title="Open URL"
+          :title="strings.sources.actions.openUrl"
         >
           <ExternalLink :size="14" :stroke-width="2" />
         </a>
@@ -216,14 +217,14 @@ defineExpose({
         <button
           @click="handleEdit(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent-primary"
-          title="Edit source"
+          :title="strings.sources.actions.edit"
         >
           <Edit :size="16" :stroke-width="2" />
         </button>
         <button
           @click="handleDelete(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
-          title="Delete source"
+          :title="strings.sources.actions.delete"
         >
           <Trash2 :size="16" :stroke-width="2" />
         </button>

@@ -18,6 +18,15 @@
 
 <p align="center">
   <img src="docs/images/demo.gif" alt="Reconly Demo" width="700"/>
+  <br/>
+  <sub>
+    <a href="docs/images/Dashboard.png">Dashboard</a> ·
+    <a href="docs/images/Create%20Feed.png">Create Feed</a> ·
+    <a href="docs/images/Digests.png">Digests</a> ·
+    <a href="docs/images/Chat.png">Chat</a> ·
+    <a href="docs/images/Knowledge.png">Knowledge Graph</a> ·
+    <a href="docs/images/E-Mail.png">E-Mail Digest</a>
+  </sub>
 </p>
 
 ---

@@ -9,6 +9,7 @@ import { AgentPlaceholder, ArticlePlaceholder, EmailPlaceholder, YoutubePlacehol
 import TagInput from '@/components/common/TagInput.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import { digestsApi } from '@/services/api';
+import { strings } from '@/i18n/en';
 
 // Configure marked for safe rendering
 // breaks: false so single \n doesn't become <br> (YouTube transcripts have many line breaks)
@@ -173,15 +174,8 @@ const isAgent = computed(() => {
 const sourceLabel = computed(() => {
   if (!props.digest?.source_type) return 'Article';
   const type = props.digest.source_type;
-  const labels: Record<string, string> = {
-    youtube: 'YouTube',
-    rss: 'RSS Feed',
-    website: 'Website',
-    blog: 'Blog',
-    imap: 'Email',
-    agent: 'AI Research',
-  };
-  return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+  const labels = strings.digests.sourceTypes;
+  return labels[type as keyof typeof labels] || type.charAt(0).toUpperCase() + type.slice(1);
 });
 
 // Render markdown content (with normalization for LLM output patterns)
@@ -290,7 +284,7 @@ const toggleContent = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   class="rounded-lg p-2 text-blue-400 transition-all hover:bg-blue-400/10 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-bg-base"
-                  title="View original"
+                  :title="strings.digests.card.viewOriginal"
                 >
                   <ExternalLink :size="18" :stroke-width="2" />
                 </a>
@@ -340,14 +334,14 @@ const toggleContent = () => {
 
               <!-- Original Publication Date (for individual items) -->
               <div v-if="formattedPublishedDate && !digest.url?.startsWith('consolidated://')" class="flex items-center gap-2 text-text-secondary" title="Original publication date">
-                <span class="text-text-muted">Published:</span>
+                <span class="text-text-muted">{{ strings.digests.modal.published }}</span>
                 {{ formattedPublishedDate }}
               </div>
 
               <!-- Tokens -->
               <div class="flex items-center gap-2">
                 <Coins :size="16" :stroke-width="2" />
-                {{ tokenCount.toLocaleString() }} tokens
+                {{ tokenCount.toLocaleString() }} {{ strings.digests.modal.tokens }}
               </div>
             </div>
 

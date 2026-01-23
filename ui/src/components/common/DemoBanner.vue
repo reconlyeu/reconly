@@ -9,6 +9,7 @@
 import { onMounted, ref } from 'vue';
 import { X, Info } from 'lucide-vue-next';
 import { useDemoStore } from '@/stores/demo';
+import { strings } from '@/i18n/en';
 
 const demoStore = useDemoStore();
 const isAnimatingOut = ref(false);
@@ -49,8 +50,8 @@ function handleDismiss() {
           <div class="flex items-center gap-2 sm:gap-3">
             <Info :size="18" class="shrink-0" aria-hidden="true" />
             <p class="text-sm font-medium">
-              <span class="hidden sm:inline">You're exploring Reconly in demo mode with sample data.</span>
-              <span class="sm:hidden">Demo mode with sample data.</span>
+              <span class="hidden sm:inline">{{ strings.demo.bannerFull }}</span>
+              <span class="sm:hidden">{{ strings.demo.bannerShort }}</span>
             </p>
           </div>
 
@@ -62,7 +63,7 @@ function handleDismiss() {
               rel="noopener noreferrer"
               class="text-sm font-medium underline underline-offset-2 hover:no-underline transition-all"
             >
-              Learn how to set up your own instance
+              {{ strings.demo.learnMore }}
               <span aria-hidden="true"> &rarr;</span>
             </a>
 
@@ -71,7 +72,7 @@ function handleDismiss() {
               type="button"
               @click="handleDismiss"
               class="rounded-md p-1 hover:bg-amber-700/20 focus:outline-none focus:ring-2 focus:ring-amber-800 focus:ring-offset-1 focus:ring-offset-amber-500 transition-colors"
-              aria-label="Dismiss demo mode banner"
+              :aria-label="strings.demo.dismiss"
             >
               <X :size="18" aria-hidden="true" />
             </button>

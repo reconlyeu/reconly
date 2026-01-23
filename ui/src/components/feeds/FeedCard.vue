@@ -5,6 +5,7 @@ import type { Feed } from '@/types/entities';
 import cronstrue from 'cronstrue';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   feed: Feed;
@@ -29,7 +30,7 @@ const handleToggle = (value: boolean) => {
 const sourceCount = computed(() => props.feed.feed_sources?.length || 0);
 
 const scheduleText = computed(() => {
-  if (!props.feed.schedule_cron) return 'No schedule set';
+  if (!props.feed.schedule_cron) return strings.feeds.schedulePresets.noScheduleSet;
   try {
     return cronstrue.toString(props.feed.schedule_cron);
   } catch {
@@ -39,7 +40,7 @@ const scheduleText = computed(() => {
 
 const lastRunConfig = computed(() => {
   if (!props.feed.last_run_at) {
-    return { text: 'Never run', icon: Clock, color: 'text-text-muted' };
+    return { text: strings.feeds.status.neverRun, icon: Clock, color: 'text-text-muted' };
   }
 
   const date = new Date(props.feed.last_run_at);
@@ -49,9 +50,9 @@ const lastRunConfig = computed(() => {
   const diffHours = Math.floor(diffMs / 3600000);
 
   let timeText = '';
-  if (diffMins < 1) timeText = 'just now';
-  else if (diffMins < 60) timeText = `${diffMins}m ago`;
-  else if (diffHours < 24) timeText = `${diffHours}h ago`;
+  if (diffMins < 1) timeText = strings.time.justNow;
+  else if (diffMins < 60) timeText = strings.time.minutesAgo.replace('{count}', String(diffMins));
+  else if (diffHours < 24) timeText = strings.time.hoursAgo.replace('{count}', String(diffHours));
   else timeText = date.toLocaleDateString();
 
   return { text: timeText, icon: CheckCircle2, color: 'text-status-success' };
@@ -80,7 +81,7 @@ const lastRunConfig = computed(() => {
               : 'bg-text-muted/10 text-text-muted'
           "
         >
-          {{ feed.schedule_enabled ? 'Active' : 'Paused' }}
+          {{ feed.schedule_enabled ? strings.feeds.status.active : strings.feeds.status.paused }}
         </div>
       </div>
     </template>
@@ -93,7 +94,7 @@ const lastRunConfig = computed(() => {
           <div class="text-xs font-bold text-blue-400">{{ sourceCount }}</div>
         </div>
         <span class="text-text-secondary">
-          {{ sourceCount === 1 ? 'source' : 'sources' }} assigned
+          {{ sourceCount === 1 ? strings.feeds.sourceUnit : strings.feeds.sourcesUnit }} {{ strings.feeds.assigned }}
         </span>
       </div>
 
@@ -110,7 +111,7 @@ const lastRunConfig = computed(() => {
         <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-bg-hover">
           <component :is="lastRunConfig.icon" :size="16" :class="lastRunConfig.color" :stroke-width="2" />
         </div>
-        <span class="text-text-secondary">Last run: {{ lastRunConfig.text }}</span>
+        <span class="text-text-secondary">{{ strings.feeds.status.lastRun }}: {{ lastRunConfig.text }}</span>
       </div>
     </div>
 
@@ -120,7 +121,7 @@ const lastRunConfig = computed(() => {
         <ToggleSwitch
           :model-value="feed.schedule_enabled"
           @update:model-value="handleToggle"
-          label="Toggle feed schedule"
+          :label="strings.feeds.actions.toggleFeedSchedule"
         />
 
         <!-- Run Now Button (centered) -->
@@ -128,14 +129,14 @@ const lastRunConfig = computed(() => {
           @click="emit('run', feed.id)"
           :disabled="isRunning"
           class="group/run flex items-center justify-center gap-1.5 rounded-lg bg-status-success/10 px-3 py-1.5 text-sm font-medium text-status-success transition-all hover:bg-status-success hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Run feed now"
+          :title="strings.feeds.actions.runFeedNow"
         >
           <PlayCircle
             :size="16"
             :stroke-width="2"
             :class="isRunning ? 'animate-spin' : 'transition-transform group-hover/run:scale-110'"
           />
-          {{ isRunning ? 'Running...' : 'Run Now' }}
+          {{ isRunning ? strings.feeds.running : strings.feeds.runNow }}
         </button>
 
         <!-- Export, Edit & Delete Buttons -->
@@ -143,7 +144,7 @@ const lastRunConfig = computed(() => {
           <button
             @click="emit('export', feed.id)"
             class="rounded-lg p-2 text-text-muted transition-all hover:bg-accent-primary/10 hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Export feed bundle"
+            :title="strings.feeds.actions.exportFeedBundle"
           >
             <Download :size="18" :stroke-width="2" />
           </button>
@@ -151,7 +152,7 @@ const lastRunConfig = computed(() => {
           <button
             @click="emit('edit', feed)"
             class="rounded-lg p-2 text-text-muted transition-all hover:bg-bg-hover hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Edit feed"
+            :title="strings.feeds.actions.editFeed"
           >
             <Edit :size="18" :stroke-width="2" />
           </button>
@@ -159,7 +160,7 @@ const lastRunConfig = computed(() => {
           <button
             @click="emit('delete', feed.id)"
             class="rounded-lg p-2 text-text-muted transition-all hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Delete feed"
+            :title="strings.feeds.actions.deleteFeed"
           >
             <Trash2 :size="18" :stroke-width="2" />
           </button>

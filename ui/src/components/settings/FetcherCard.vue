@@ -13,6 +13,7 @@ import {
   Settings,
   Puzzle,
 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 import type { Fetcher } from '@/types/entities';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 
@@ -55,19 +56,19 @@ const status = computed<StatusType>(() => {
 const statusConfig = computed(() => {
   const configs = {
     active: {
-      label: 'Active',
+      label: strings.settings.fetchers.status.active,
       color: 'bg-green-500/10 text-green-400 border-green-500/20',
       icon: Check,
       dotColor: 'bg-green-500',
     },
     needs_config: {
-      label: 'Needs Config',
+      label: strings.settings.fetchers.status.needsConfig,
       color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
       icon: AlertCircle,
       dotColor: 'bg-amber-500',
     },
     disabled: {
-      label: 'Disabled',
+      label: strings.settings.fetchers.status.disabled,
       color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
       icon: X,
       dotColor: 'bg-gray-500',
@@ -85,9 +86,9 @@ const displayName = computed(() => {
 // Tooltip for disabled toggle
 const toggleTooltip = computed(() => {
   if (!props.fetcher.can_enable && !props.fetcher.enabled) {
-    return 'Configure required fields first';
+    return strings.settings.fetchers.configureRequired;
   }
-  return props.fetcher.enabled ? 'Disable fetcher' : 'Enable fetcher';
+  return props.fetcher.enabled ? strings.settings.fetchers.disableFetcher : strings.settings.fetchers.enableFetcher;
 });
 
 // Has configurable fields
@@ -147,7 +148,7 @@ const hasConfig = computed(() => {
           <div class="text-base font-semibold text-text-primary transition-colors group-hover:text-accent-primary">
             {{ displayName }}
           </div>
-          <div class="text-xs text-text-muted">Fetcher</div>
+          <div class="text-xs text-text-muted">{{ strings.settings.fetchers.fetcher }}</div>
         </div>
       </div>
 
@@ -178,14 +179,14 @@ const hasConfig = computed(() => {
             class="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-400"
           >
             <Puzzle :size="12" />
-            Extension
+            {{ strings.settings.fetchers.extension }}
           </span>
           <span
             v-if="hasConfig"
             class="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400"
           >
             <Settings :size="12" />
-            Configurable
+            {{ strings.settings.exports.features.configurable }}
           </span>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { extractPreviewImage } from '@/utils/imageUtils';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import { AgentPlaceholder, ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
+import { strings } from '@/i18n/en';
 
 // Configure marked
 marked.setOptions({ breaks: false, gfm: true });
@@ -137,7 +138,7 @@ const handleImageError = () => {
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-400">
           <FileText :size="12" :stroke-width="2" />
-          {{ digest.source_type || 'article' }}
+          {{ digest.source_type || strings.digests.card.article }}
         </div>
         <div v-if="digest.provider" class="flex items-center gap-1.5 rounded-full bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-400">
           {{ digest.provider }}
@@ -213,7 +214,7 @@ const handleImageError = () => {
             rel="noopener noreferrer"
             @click.stop
             class="rounded-lg p-2 text-blue-400 opacity-0 transition-all hover:bg-blue-400/10 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="View original"
+            :title="strings.digests.card.viewOriginal"
           >
             <ExternalLink :size="16" :stroke-width="2" />
           </a>
@@ -228,7 +229,7 @@ const handleImageError = () => {
           <button
             @click="handleDelete"
             class="rounded-lg p-2 text-text-muted opacity-0 transition-all hover:bg-status-failed/10 hover:text-status-failed group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Delete digest"
+            :title="strings.digests.card.deleteDigest"
           >
             <Trash2 :size="16" :stroke-width="2" />
           </button>

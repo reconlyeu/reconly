@@ -5,6 +5,7 @@
  */
 import { Inbox, type LucideIcon } from 'lucide-vue-next';
 import { type Component } from 'vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   /** Main title text */
@@ -16,8 +17,8 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  title: 'No items found',
-  message: 'Items will appear here once they are created.',
+  title: strings.common.empty.title,
+  message: strings.common.empty.message,
   icon: () => Inbox,
 });
 </script>

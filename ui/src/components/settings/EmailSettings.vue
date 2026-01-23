@@ -5,6 +5,7 @@ import { settingsApi, apiClient } from '@/services/api';
 import SettingField from './SettingField.vue';
 import { useToast } from '@/composables/useToast';
 import { Loader2, Save, RotateCcw, Mail, Send } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 import type { SettingValue } from '@/types/entities';
 
 const queryClient = useQueryClient();
@@ -79,12 +80,12 @@ const saveMutation = useMutation({
     });
   },
   onSuccess: () => {
-    toast.success('Email settings saved');
+    toast.success(strings.settings.email.settingsSaved);
     hasChanges.value = false;
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to save settings');
+    toast.error(err.detail || strings.settings.failedToSave);
   },
 });
 
@@ -96,18 +97,18 @@ const resetMutation = useMutation({
     });
   },
   onSuccess: () => {
-    toast.success('Email settings reset to defaults');
+    toast.success(strings.settings.email.settingsReset);
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to reset settings');
+    toast.error(err.detail || strings.settings.failedToReset);
   },
 });
 
 // Test email connection
 const testConnection = async () => {
   if (!testEmail.value) {
-    toast.warning('Please enter a test email address');
+    toast.warning(strings.settings.email.enterTestEmail);
     return;
   }
 
@@ -118,9 +119,9 @@ const testConnection = async () => {
       subject: 'Reconly Test Email',
       body: 'This is a test email from Reconly. If you receive this, your email configuration is working correctly!',
     });
-    toast.success(`Test email sent to ${testEmail.value}`);
+    toast.success(strings.settings.email.testEmailSent.replace('{email}', testEmail.value));
   } catch (error: any) {
-    toast.error(error.response?.data?.detail || 'Failed to send test email');
+    toast.error(error.response?.data?.detail || strings.settings.email.testFailed);
   } finally {
     testing.value = false;
   }
@@ -143,7 +144,7 @@ const getEmailSetting = (key: string): SettingValue => {
         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-primary/10">
           <Mail :size="20" class="text-accent-primary" />
         </div>
-        <h2 class="text-lg font-semibold text-text-primary">SMTP Configuration</h2>
+        <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.email.smtpConfiguration }}</h2>
       </div>
 
       <div v-if="isLoading" class="flex items-center justify-center py-12">
@@ -157,9 +158,9 @@ const getEmailSetting = (key: string): SettingValue => {
           <SettingField
             setting-key="smtp_host"
             :setting="{ value: localSettings.smtp_host, source: getEmailSetting('smtp_host').source, editable: true }"
-            label="SMTP Host"
+            :label="strings.settings.email.fields.smtpHost"
             type="text"
-            description="SMTP server hostname (e.g., smtp.gmail.com)"
+            :description="strings.settings.email.fields.smtpHostDescription"
             @update="handleUpdate('smtp_host', $event)"
           />
 
@@ -167,9 +168,9 @@ const getEmailSetting = (key: string): SettingValue => {
           <SettingField
             setting-key="smtp_port"
             :setting="{ value: localSettings.smtp_port, source: getEmailSetting('smtp_port').source, editable: true }"
-            label="SMTP Port"
+            :label="strings.settings.email.fields.smtpPort"
             type="number"
-            description="Common: 587 (TLS), 465 (SSL), 25 (unencrypted)"
+            :description="strings.settings.email.fields.smtpPortDescription"
             @update="handleUpdate('smtp_port', $event)"
           />
 
@@ -177,9 +178,9 @@ const getEmailSetting = (key: string): SettingValue => {
           <SettingField
             setting-key="from_address"
             :setting="{ value: localSettings.from_address, source: getEmailSetting('from_address').source, editable: true }"
-            label="From Email Address"
+            :label="strings.settings.email.fields.fromAddress"
             type="text"
-            description="Sender email address"
+            :description="strings.settings.email.fields.fromAddressDescription"
             @update="handleUpdate('from_address', $event)"
           />
 
@@ -187,9 +188,9 @@ const getEmailSetting = (key: string): SettingValue => {
           <SettingField
             setting-key="from_name"
             :setting="{ value: localSettings.from_name, source: getEmailSetting('from_name').source, editable: true }"
-            label="From Name"
+            :label="strings.settings.email.fields.fromName"
             type="text"
-            description="Sender display name"
+            :description="strings.settings.email.fields.fromNameDescription"
             @update="handleUpdate('from_name', $event)"
           />
         </div>
@@ -203,7 +204,7 @@ const getEmailSetting = (key: string): SettingValue => {
             class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw :size="16" />
-            Reset to Defaults
+            {{ strings.settings.resetToDefaults }}
           </button>
           <button
             type="button"
@@ -213,7 +214,7 @@ const getEmailSetting = (key: string): SettingValue => {
           >
             <Loader2 v-if="saveMutation.isPending.value" :size="16" class="animate-spin" />
             <Save v-else :size="16" />
-            Save Changes
+            {{ strings.settings.saveChanges }}
           </button>
         </div>
       </div>
@@ -225,19 +226,19 @@ const getEmailSetting = (key: string): SettingValue => {
         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-green-500/10">
           <Send :size="20" class="text-green-500" />
         </div>
-        <h2 class="text-lg font-semibold text-text-primary">Test Email Connection</h2>
+        <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.email.testEmailConnection }}</h2>
       </div>
 
       <div class="space-y-4">
         <div>
           <label for="test_email" class="block text-sm font-medium text-text-primary mb-2">
-            Test Email Address
+            {{ strings.settings.email.testEmailAddress }}
           </label>
           <input
             id="test_email"
             v-model="testEmail"
             type="email"
-            placeholder="test@example.com"
+            :placeholder="strings.settings.email.testEmailPlaceholder"
             class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-2.5 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
           />
         </div>
@@ -250,10 +251,10 @@ const getEmailSetting = (key: string): SettingValue => {
           >
             <Loader2 v-if="testing" :size="16" class="animate-spin" />
             <Send v-else :size="16" />
-            <span>{{ testing ? 'Sending...' : 'Send Test Email' }}</span>
+            <span>{{ testing ? strings.settings.email.sending : strings.settings.email.sendTestEmail }}</span>
           </button>
           <p class="text-sm text-text-muted">
-            Send a test email to verify your SMTP configuration.
+            {{ strings.settings.email.testEmailHint }}
           </p>
         </div>
       </div>

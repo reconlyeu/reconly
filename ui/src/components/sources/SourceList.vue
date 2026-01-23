@@ -9,6 +9,7 @@ import type { Source } from '@/types/entities';
 import { Rss } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { strings } from '@/i18n/en';
 
 interface Props {
   filterType?: string;
@@ -73,9 +74,9 @@ const sourcesList = computed(() => sources.value || []);
 
 const emptyMessage = computed(() => {
   if (props.filterType === 'all') {
-    return 'No sources yet. Create your first source to get started.';
+    return strings.sources.empty.noSourcesYet;
   }
-  return `No ${props.filterType} sources found.`;
+  return strings.sources.empty.noTypeSourcesFound.replace('{type}', props.filterType);
 });
 
 const handleToggle = (sourceId: number, enabled: boolean) => {
@@ -107,7 +108,7 @@ const handleDelete = (sourceId: number) => {
     :grid-cols="3"
     :skeleton-count="6"
     skeleton-height="h-64"
-    empty-title="No sources found"
+    :empty-title="strings.sources.empty.title"
     :empty-message="emptyMessage"
     :empty-icon="Rss"
     @retry="refetch"

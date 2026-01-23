@@ -13,6 +13,14 @@ export const strings = {
     tagline: 'Privacy-First Research Intelligence',
   },
 
+  // Demo mode
+  demo: {
+    bannerFull: "You're exploring Reconly in demo mode with sample data.",
+    bannerShort: 'Demo mode with sample data.',
+    learnMore: 'Learn how to set up your own instance',
+    dismiss: 'Dismiss demo mode banner',
+  },
+
   // Navigation
   nav: {
     dashboard: 'Dashboard',
@@ -40,6 +48,15 @@ export const strings = {
     },
     recentRuns: 'Recent Feed Runs',
     recentDigests: 'Recent Digests',
+    recentFeeds: {
+      title: 'Recent Feeds',
+      noFeeds: 'No feeds run recently',
+      active: 'Active',
+      paused: 'Paused',
+      noSchedule: 'No schedule',
+      source: 'source',
+      sources: 'sources',
+    },
     noRuns: 'No recent feed runs',
     noDigests: 'No recent digests',
     digestFilters: {
@@ -76,6 +93,28 @@ export const strings = {
     addSource: 'Add Source',
     editSource: 'Edit Source',
     deleteSource: 'Delete Source',
+    status: {
+      active: 'Active',
+      disabled: 'Disabled',
+    },
+    actions: {
+      toggle: 'Toggle source',
+      edit: 'Edit source',
+      delete: 'Delete source',
+      openUrl: 'Open URL',
+    },
+    table: {
+      name: 'Name',
+      type: 'Type',
+      url: 'URL',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    empty: {
+      title: 'No sources found',
+      noSourcesYet: 'No sources yet. Create your first source to get started.',
+      noTypeSourcesFound: 'No {type} sources found.',
+    },
     types: {
       all: 'All',
       rss: 'RSS',
@@ -101,6 +140,106 @@ export const strings = {
     },
     usedBy: 'Used by {count} feeds',
     confirmDelete: 'Are you sure you want to delete this source?',
+    // Agent source form
+    agent: {
+      fields: {
+        researchTopic: 'Research Topic',
+        researchStrategy: 'Research Strategy',
+        maxIterations: 'Max Research Iterations',
+        searchProvider: 'Search Provider',
+        reportFormat: 'Report Format',
+        maxSubtopics: 'Max Subtopics',
+      },
+      hints: {
+        researchTopic: 'Describe what the AI agent should research. Be specific for better results.',
+        researchStrategy: 'Choose how thoroughly the agent should research the topic',
+        maxIterations: 'How many search and fetch cycles the agent can perform (default: 5)',
+        searchProvider: 'Override the global search provider for this source (optional)',
+        reportFormat: 'Citation style for the research report',
+        maxSubtopics: 'Maximum number of subtopics to explore (1-10)',
+      },
+      placeholders: {
+        prompt: 'Research the latest developments in AI language models...',
+      },
+      strategies: {
+        simple: 'Simple',
+        comprehensive: 'Comprehensive',
+        deep: 'Deep',
+      },
+      strategyDescriptions: {
+        simple: 'Quick lookup using search and summarization',
+        comprehensive: 'Multi-step research with subtopic exploration',
+        deep: 'Exhaustive analysis with detailed research plan',
+      },
+      advancedOptions: 'Advanced Options',
+      unavailable: 'Unavailable',
+      defaultOption: 'Default',
+      searchProviders: {
+        default: 'Default (global setting)',
+        duckduckgo: 'DuckDuckGo (free, no API key)',
+        searxng: 'SearXNG (self-hosted)',
+        tavily: 'Tavily (AI-optimized, requires API key)',
+      },
+      providerHints: {
+        tavily: 'Note: Requires TAVILY_API_KEY environment variable',
+        searxng: 'Note: Requires SearXNG instance configured via SEARXNG_URL',
+      },
+      gptResearcherWarning: {
+        title: 'GPT Researcher not installed',
+        message: 'Comprehensive and Deep strategies require the gpt-researcher package.',
+        installHint: 'Install with:',
+      },
+      errors: {
+        loadCapabilities: 'Could not load agent capabilities',
+      },
+      usingDefaultOptions: 'Using default options',
+    },
+    // IMAP source form
+    imap: {
+      fields: {
+        provider: 'Email Provider',
+        host: 'IMAP Server',
+        port: 'Port',
+        ssl: 'SSL/TLS',
+        username: 'Username',
+        password: 'Password',
+        folders: 'Folders',
+        senderFilter: 'Sender Filter',
+        subjectFilter: 'Subject Filter',
+      },
+      placeholders: {
+        host: 'imap.example.com',
+        username: 'user@example.com',
+        password: 'Enter password',
+        folders: 'INBOX, Newsletters',
+        senderFilter: '@newsletter.com',
+        subjectFilter: 'Weekly Report',
+      },
+      hints: {
+        folders: 'Comma-separated. Leave empty for INBOX only.',
+        passwordEncrypted: 'Encrypted before storage.',
+      },
+      providers: {
+        gmail: 'Gmail',
+        outlook: 'Outlook',
+        generic: 'IMAP',
+      },
+      providerDescriptions: {
+        gmail: 'Connect using Google OAuth. Supports personal and Google Workspace accounts.',
+        outlook: 'Connect using Microsoft OAuth. Supports Outlook.com and Microsoft 365 accounts.',
+        generic: 'Connect to any IMAP server using traditional credentials.',
+      },
+      sections: {
+        serverSettings: 'Server Settings',
+        emailFilters: 'Email Filters',
+      },
+      configured: 'configured',
+      oauthNotConfigured: 'OAuth providers not configured',
+      oauth: {
+        title: 'Secure OAuth Authentication',
+        message: 'After creating this source, you\'ll be redirected to {provider} to authorize access. Your password is never stored - we use secure OAuth tokens.',
+      },
+    },
   },
 
   // Feeds
@@ -110,7 +249,10 @@ export const strings = {
     editFeed: 'Edit Feed',
     deleteFeed: 'Delete Feed',
     runNow: 'Run Now',
+    running: 'Running...',
     viewHistory: 'View History',
+    importBundle: 'Import Bundle',
+    exportBundle: 'Export Bundle',
     fields: {
       name: 'Name',
       description: 'Description',
@@ -134,6 +276,8 @@ export const strings = {
       twiceDaily: 'Twice daily',
       weekly: 'Weekly on Sunday',
       custom: 'Custom cron',
+      noSchedule: 'No schedule',
+      noScheduleSet: 'No schedule set',
     },
     outputs: {
       database: 'Save to Database',
@@ -141,12 +285,75 @@ export const strings = {
       obsidian: 'Export to Obsidian',
     },
     status: {
+      active: 'Active',
+      paused: 'Paused',
       lastRun: 'Last Run',
       nextRun: 'Next Run',
       never: 'Never',
+      neverRun: 'Never run',
+    },
+    table: {
+      name: 'Name',
+      sources: 'Sources',
+      schedule: 'Schedule',
+      lastRun: 'Last Run',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    actions: {
+      runFeedNow: 'Run feed now',
+      toggleFeedSchedule: 'Toggle feed schedule',
+      editFeed: 'Edit feed',
+      deleteFeed: 'Delete feed',
+      exportFeedBundle: 'Export feed bundle',
+    },
+    sourceUnit: 'source',
+    sourcesUnit: 'sources',
+    assigned: 'assigned',
+    empty: {
+      title: 'No feeds configured',
+      message: 'Create your first feed to start orchestrating content from your sources.',
     },
     confirmDelete: 'Are you sure you want to delete this feed?',
     runStarted: 'Feed run started',
+    // Import bundle modal
+    import: {
+      title: 'Import Feed Bundle',
+      description: 'Upload a feed bundle JSON file to import a pre-configured feed with sources and templates.',
+      dropZone: {
+        title: 'Drop your bundle file here',
+        subtitle: 'or click to browse',
+      },
+      validating: 'Validating bundle...',
+      importing: 'Importing feed bundle...',
+      errors: {
+        selectJson: 'Please select a JSON file',
+        invalidJson: 'Invalid JSON file. Please ensure the file is a valid feed bundle.',
+        title: 'Error',
+      },
+      preview: {
+        errors: 'Errors',
+        warnings: 'Warnings',
+        feedExists: {
+          title: 'Feed Already Exists',
+          message: 'A feed with the name "{name}" already exists. Please rename or delete it before importing.',
+        },
+        willBeCreated: 'Will be created',
+        sources: 'Sources',
+        promptTemplate: 'Prompt Template',
+        reportTemplate: 'Report Template',
+        schedule: 'Schedule',
+        new: 'new',
+        existing: 'existing',
+        none: 'None',
+      },
+      actions: {
+        back: 'Back',
+        import: 'Import Feed',
+      },
+      success: 'Feed "{name}" imported successfully',
+      failed: 'Import failed: {error}',
+    },
   },
 
   // Feed Runs
@@ -200,6 +407,8 @@ export const strings = {
     noRuns: 'No agent runs yet',
     noRunsDescription: 'This agent source hasn\'t been run yet. Add it to a feed and run the feed to see results here.',
     refresh: 'Refresh',
+    runs: 'runs',
+    failedToLoad: 'Failed to load agent runs. Please try again.',
     details: {
       title: 'Agent Run Details',
       prompt: 'Research Prompt',
@@ -207,12 +416,22 @@ export const strings = {
       sourcesConsulted: 'Sources Consulted',
       result: 'Result',
       errorLog: 'Error Log',
+      subtopics: 'Subtopics',
+      researchPlan: 'Research Plan',
+      reportFormat: 'Report Format:',
+      traceId: 'Trace ID:',
+      created: 'Created:',
+      started: 'Started:',
+      completed: 'Completed:',
+      input: 'Input:',
+      output: 'Output:',
     },
     stats: {
       duration: 'Duration',
       iterations: 'Iterations',
       tokens: 'Tokens',
       cost: 'Est. Cost',
+      sources: 'Sources',
     },
   },
 
@@ -229,6 +448,15 @@ export const strings = {
     duplicateTemplate: 'Duplicate',
     systemTemplate: 'System Template',
     userTemplate: 'User Template',
+    // Form-specific labels
+    createPromptTemplate: 'Create Prompt Template',
+    editPromptTemplate: 'Edit Prompt Template',
+    createReportTemplate: 'Create Report Template',
+    editReportTemplate: 'Edit Report Template',
+    templateName: 'Template Name',
+    templateContent: 'Template Content',
+    jinja2TemplateContent: 'Jinja2 Template Content',
+    outputFormat: 'Output Format',
     fields: {
       name: 'Name',
       description: 'Description',
@@ -239,9 +467,89 @@ export const strings = {
       userPrompt: 'User Prompt',
       template: 'Template',
     },
+    placeholders: {
+      name: 'Brief Tech Summary',
+      reportName: 'Clean Markdown Report',
+      description: 'Concise technical summaries for developers',
+      reportDescription: 'Clean markdown format suitable for email and documentation',
+    },
+    // Target length options
+    targetLengths: {
+      brief: 'Brief (~100 words)',
+      standard: 'Standard (~150 words)',
+      detailed: 'Detailed (~300 words)',
+      comprehensive: 'Comprehensive (~500 words)',
+    },
+    // Format options
+    formats: {
+      markdown: 'Markdown (.md)',
+      html: 'HTML (.html)',
+      text: 'Plain Text (.txt)',
+    },
+    // Origin badges
+    origin: {
+      builtin: 'Built-in',
+      imported: 'Imported',
+      custom: 'Custom',
+    },
+    // Type labels
+    types: {
+      prompt: 'Prompt Template',
+      report: 'Report Template',
+    },
+    // Status
+    status: {
+      active: 'Active',
+      inactive: 'Inactive',
+    },
+    // Section headers
+    sections: {
+      systemTemplates: 'System Templates',
+      userTemplates: 'User Templates',
+    },
+    // Empty states
+    empty: {
+      noSystemTemplates: 'No system templates',
+      systemTemplatesMessage: 'System templates will be available after initialization.',
+      noUserTemplates: 'No user templates yet',
+      promptTemplatesMessage: 'Create your first prompt template to customize content summarization',
+      reportTemplatesMessage: 'Create your first report template to customize digest formatting',
+    },
+    // Actions
+    actions: {
+      createCopy: 'Create a Copy',
+      editTemplate: 'Edit template',
+      deleteTemplate: 'Delete template',
+      enableTemplate: 'Enable template',
+      disableTemplate: 'Disable template',
+    },
+    // Hints
+    hints: {
+      templateVariables: 'Use {language}, {target_length}, and {content} as variables',
+      jinja2Syntax: 'Use Jinja2 syntax with variables like {{ digest.title }}, {{ digest.summary }}, and {% for %} loops',
+    },
+    // Meta text
+    meta: {
+      words: '~{count} words',
+      noSettings: 'No settings',
+      noFormat: 'No format',
+    },
+    // Button labels
+    saving: 'Saving...',
+    updateTemplate: 'Update Template',
     preview: 'Preview',
     usedBy: 'Used by {count} feeds',
     confirmDelete: 'Are you sure you want to delete this template?',
+    // Table columns
+    table: {
+      name: 'Name',
+      category: 'Category',
+      language: 'Language',
+      format: 'Format',
+      description: 'Description',
+      status: 'Status',
+      actions: 'Actions',
+    },
   },
 
   // Knowledge Graph
@@ -338,6 +646,49 @@ export const strings = {
     deleteDigest: 'Delete Digest',
     confirmDelete: 'Are you sure you want to delete this digest?',
     noDigests: 'No digests found',
+    // Card labels
+    card: {
+      viewOriginal: 'View original',
+      deleteDigest: 'Delete digest',
+      article: 'article',
+    },
+    // List labels
+    list: {
+      emptyTitle: 'No digests found',
+      noFiltersMessage: 'Digests will appear here once feeds start running',
+      filterMessage: 'Try adjusting your filters or search query',
+    },
+    // Modal labels
+    modal: {
+      published: 'Published:',
+      tokens: 'tokens',
+      summaryTitle: 'Summary',
+      fullContentTitle: 'Full Content',
+      tagsTitle: 'Tags',
+      noTagsYet: 'No tags yet. Click Edit to add tags.',
+      addTagsPlaceholder: 'Add tags...',
+    },
+    // Table labels
+    table: {
+      title: 'Title',
+      type: 'Type',
+      provider: 'Provider',
+      tags: 'Tags',
+      date: 'Date',
+      actions: 'Actions',
+      untitled: 'Untitled',
+      viewDigest: 'View digest',
+      deleteDigest: 'Delete digest',
+    },
+    // Source types
+    sourceTypes: {
+      youtube: 'YouTube',
+      rss: 'RSS Feed',
+      website: 'Website',
+      blog: 'Blog',
+      imap: 'Email',
+      agent: 'AI Research',
+    },
   },
 
   // Analytics
@@ -357,6 +708,27 @@ export const strings = {
     byFeed: 'Tokens by Feed',
     overTime: 'Usage Over Time',
     export: 'Export Data',
+    // Provider chart
+    providerChart: {
+      title: 'Tokens by Provider',
+      failedToLoad: 'Failed to load provider data',
+      noData: 'No provider usage data available',
+      tokens: 'tokens',
+      models: 'models',
+      totalUsage: 'Total Usage',
+    },
+    // Usage over time chart
+    usageChart: {
+      title: 'Cumulative Token Usage',
+      failedToLoad: 'Failed to load usage data',
+      noData: 'No usage data available for this period',
+      cumulative: 'Cumulative',
+      total: 'Total:',
+      in: 'In:',
+      out: 'Out:',
+      thisDay: 'This Day',
+      daily: 'Daily:',
+    },
   },
 
   // Settings
@@ -373,6 +745,18 @@ export const strings = {
       title: 'Fetchers',
       description: 'Configure content fetchers for retrieving articles, videos, and web pages.',
       configure: 'Configure',
+      contentFetchers: 'Content Fetchers',
+      selectFetcher: 'Select a fetcher to configure its settings',
+      noFetchers: 'No fetchers available',
+      noFetchersDescription: 'Content fetchers will appear here once they are registered.',
+      checkInstallation: 'Check your installation or contact support if fetchers are missing.',
+      fetcher: 'Fetcher',
+      extension: 'Extension',
+      configureRequired: 'Configure required fields first',
+      disableFetcher: 'Disable fetcher',
+      enableFetcher: 'Enable fetcher',
+      noConfigNeeded: 'No additional configuration needed for {name} fetcher.',
+      settingsSaved: '{name} settings saved',
       status: {
         active: 'Active',
         needsConfig: 'Needs Config',
@@ -382,10 +766,56 @@ export const strings = {
     providers: {
       title: 'LLM Providers',
       description: 'Provider configuration is managed via environment variables.',
+      fallbackChain: 'LLM Fallback Chain',
+      fallbackChainDescription: 'Drag to reorder. First available provider will be used.',
+      noProvidersInChain: 'No providers in chain. Add a provider to get started.',
+      add: 'Add',
+      ready: 'Ready',
+      notReady: 'Not Ready',
+      saveOrder: 'Save Order',
+      refresh: 'Refresh',
+      refreshStatus: 'Refresh provider status and models',
+      statusRefreshed: 'Provider status refreshed',
+      local: 'Local',
+      cloud: 'Cloud',
+      configureProvider: 'Configure provider',
+      removeFromChain: 'Remove from chain',
+      fallbackChainSaved: 'Fallback chain saved',
+      failedToLoadProviders: 'Failed to load providers',
+      // Embedding settings
+      embedding: {
+        title: 'Embedding',
+        description: 'For RAG & semantic search',
+        provider: 'Provider',
+        model: 'Model',
+        dimension: 'Dimension',
+        source: 'Source',
+        warning: 'Changing embedding model requires re-embedding all content. Configure via',
+        and: 'and',
+        inEnvFile: 'in your .env file.',
+      },
+      // Environment configuration info
+      envConfig: {
+        title: 'Environment Configuration',
+        description: 'API keys and embedding settings must be configured via environment variables in your',
+        file: 'file. Click the gear icon on a provider to configure its default model.',
+      },
+      // Provider config panel
+      configPanel: {
+        configuration: '{name} Configuration',
+        configureSettings: 'Configure settings for {name}',
+        envVariables: 'Environment Variables',
+        envVariablesDescription: 'The following settings are configured via environment variables and cannot be changed here:',
+        noConfigNeeded: 'No additional configuration needed for this provider.',
+        configureApiKey: 'Configure API key via environment variables to enable this provider.',
+        selectModel: 'Select {label}...',
+        settingsSaved: '{name} settings saved',
+      },
       status: {
         available: 'Available',
         configured: 'Configured',
         notConfigured: 'Not Configured',
+        unavailable: 'Not Running',
       },
       defaultProvider: 'Default Provider',
       defaultModel: 'Default Model',
@@ -395,16 +825,32 @@ export const strings = {
     },
     email: {
       title: 'Email Settings',
+      smtpConfiguration: 'SMTP Configuration',
+      testEmailConnection: 'Test Email Connection',
+      testEmailAddress: 'Test Email Address',
+      testEmailPlaceholder: 'test@example.com',
+      sendTestEmail: 'Send Test Email',
+      sending: 'Sending...',
+      testEmailHint: 'Send a test email to verify your SMTP configuration.',
+      testEmailSent: 'Test email sent to {email}',
+      enterTestEmail: 'Please enter a test email address',
       fields: {
         smtpHost: 'SMTP Host',
+        smtpHostDescription: 'SMTP server hostname (e.g., smtp.gmail.com)',
         smtpPort: 'SMTP Port',
+        smtpPortDescription: 'Common: 587 (TLS), 465 (SSL), 25 (unencrypted)',
         username: 'Username',
         password: 'Password',
-        fromAddress: 'From Address',
+        fromAddress: 'From Email Address',
+        fromAddressDescription: 'Sender email address',
+        fromName: 'From Name',
+        fromNameDescription: 'Sender display name',
       },
       testConnection: 'Test Connection',
       testSuccess: 'Connection successful',
       testFailed: 'Connection failed',
+      settingsSaved: 'Email settings saved',
+      settingsReset: 'Email settings reset to defaults',
     },
     exports: {
       title: 'Export Settings',
@@ -420,11 +866,21 @@ export const strings = {
       targetPath: 'Target Path',
       noPathConfigured: 'No export path configured',
       noPathConfiguredDescription: 'Configure the vault/export path in the exporter settings above to enable direct export.',
+      exportToVault: 'Export to Vault',
+      exportToPath: 'Export to Path',
       exportButton: 'Export All Digests to {name}',
       exporting: 'Exporting...',
       exportSuccess: 'Exported {count} files to {path}',
       exportEmpty: 'No digests to export',
       exportError: 'Export failed',
+      exporterNotEnabled: 'Exporter is not enabled',
+      enableExporterFirst: 'Enable the exporter using the toggle above before exporting.',
+      noExporters: 'No exporters available',
+      noExportersDescription: 'Export formats will appear here once they are registered.',
+      checkInstallation: 'Check your installation or contact support if exporters are missing.',
+      settingsSaved: 'Export settings saved',
+      settingsReset: 'Export settings reset to defaults',
+      exporterSettingsSaved: '{name} settings saved',
       formats: {
         json: 'JSON',
         csv: 'CSV',
@@ -435,6 +891,15 @@ export const strings = {
         directExport: 'Direct Export',
         configurable: 'Configurable',
       },
+      status: {
+        active: 'Active',
+        misconfigured: 'Misconfigured',
+        disabled: 'Disabled',
+        notConfigured: 'Not Configured',
+      },
+      configureRequired: 'Configure required fields first',
+      disableExporter: 'Disable exporter',
+      enableExporter: 'Enable exporter',
       obsidian: {
         title: 'Obsidian Export',
         vaultPath: 'Vault Path',
@@ -447,8 +912,25 @@ export const strings = {
         oneFilePerDigestDescription: 'Create separate files for each digest',
       },
     },
+    // Common settings actions
     save: 'Save Settings',
     saved: 'Settings saved',
+    saveChanges: 'Save Changes',
+    saveConfiguration: 'Save Configuration',
+    resetToDefaults: 'Reset to Defaults',
+    settingsResetToDefaults: 'Settings reset to defaults',
+    failedToSave: 'Failed to save settings',
+    failedToReset: 'Failed to reset settings',
+    // Source indicators
+    source: {
+      saved: 'Saved',
+      env: 'ENV',
+      default: 'Default',
+      database: 'DB',
+      environment: 'ENV',
+      setViaEnv: 'Set via environment variable',
+      valueFrom: 'Value from: {source}',
+    },
     extensions: {
       title: 'Extensions',
       description: 'Installed extensions add new exporters, fetchers, and providers.',
@@ -522,10 +1004,80 @@ export const strings = {
     yes: 'Yes',
     no: 'No',
     none: 'None',
+    optional: 'optional',
     all: 'All',
     noResults: 'No results found',
     darkMode: 'Dark Mode',
     lightMode: 'Light Mode',
+    // Reusable labels
+    labels: {
+      status: 'Status',
+      duration: 'Duration',
+      tokens: 'Tokens',
+      items: 'Items',
+      cost: 'Cost',
+      version: 'Version',
+    },
+    // Reusable actions
+    actions: {
+      refresh: 'Refresh',
+      configure: 'Configure',
+      test: 'Test',
+      submit: 'Submit',
+      clear: 'Clear',
+    },
+    // Pagination
+    pagination: {
+      previous: 'Previous',
+      next: 'Next',
+      pageOf: 'Page {page} of {total}',
+    },
+    // Bulk actions
+    bulk: {
+      selected: '{count} {entity} selected',
+      clear: 'Clear',
+      delete: 'Delete',
+      deleting: 'Deleting...',
+    },
+    // Empty state
+    empty: {
+      title: 'No items found',
+      message: 'Items will appear here once they are created.',
+    },
+    // Error state
+    errorState: {
+      loadFailed: 'Failed to load {entity}',
+      unknownError: 'An unknown error occurred',
+      tryAgain: 'Try Again',
+    },
+    // Tag input
+    tagInput: {
+      placeholder: 'Add tag...',
+      create: 'Create "{value}"',
+      digests: '{count} digests',
+    },
+    // Export dropdown
+    exportDropdown: {
+      button: 'Export',
+      exporting: 'Exporting...',
+      title: 'Export digest',
+    },
+    // View mode
+    viewMode: {
+      card: 'Card view',
+      table: 'Table view',
+    },
+    // Tag filter
+    tagFilter: {
+      allTags: 'All Tags',
+      loading: 'Loading...',
+      noTags: 'No tags found',
+      confirmDelete: 'Remove from {count} digests?',
+      yes: 'Yes',
+      no: 'No',
+      deleteUnused: 'Delete unused ({count})',
+      deleting: 'Deleting...',
+    },
   },
 
   // Status
@@ -545,12 +1097,27 @@ export const strings = {
     unauthorized: 'You are not authorized to perform this action.',
   },
 
+  // Authentication
+  auth: {
+    login: {
+      title: 'Sign In',
+      subtitle: 'Enter your password to continue',
+      password: 'Password',
+      submit: 'Sign In',
+      submitting: 'Signing in...',
+      passwordRequired: 'Please enter a password',
+      failed: 'Login failed. Please try again.',
+      protected: 'This instance is password protected.',
+    },
+    logout: 'Sign Out',
+  },
+
   // Time
   time: {
     justNow: 'Just now',
-    minutesAgo: '{count} minutes ago',
-    hoursAgo: '{count} hours ago',
-    daysAgo: '{count} days ago',
+    minutesAgo: '{count}m ago',
+    hoursAgo: '{count}h ago',
+    daysAgo: '{count}d ago',
     never: 'Never',
   },
 
@@ -582,6 +1149,12 @@ export const strings = {
     deleteConfirm: 'Delete this conversation? This cannot be undone.',
     thinking: 'Thinking...',
     calling: 'Calling {tool}...',
+    // Tool call labels
+    toolCall: {
+      arguments: 'Arguments:',
+      result: 'Result:',
+      error: 'Error:',
+    },
   },
 } as const;
 

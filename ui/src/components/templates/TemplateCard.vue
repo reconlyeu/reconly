@@ -4,6 +4,7 @@ import { Shield, Edit, Trash2, FileText, Languages, Code, Download, User } from 
 import type { TemplateOrigin } from '@/types/entities';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   template: {
@@ -34,7 +35,7 @@ const typeConfig = computed(() => {
   if (props.type === 'prompt') {
     return {
       icon: Languages,
-      label: 'Prompt Template',
+      label: strings.templates.types.prompt,
       color: 'text-purple-400',
       bgColor: 'bg-purple-400/10',
       glow: 'purple' as const,
@@ -42,7 +43,7 @@ const typeConfig = computed(() => {
   }
   return {
     icon: Code,
-    label: 'Report Template',
+    label: strings.templates.types.report,
     color: 'text-orange-400',
     bgColor: 'bg-orange-400/10',
     glow: 'orange' as const,
@@ -55,21 +56,21 @@ const badgeConfig = computed(() => {
 
   if (origin === 'builtin') {
     return {
-      label: 'Built-in',
+      label: strings.templates.origin.builtin,
       color: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
       icon: Shield,
     };
   }
   if (origin === 'imported') {
     return {
-      label: 'Imported',
+      label: strings.templates.origin.imported,
       color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
       icon: Download,
     };
   }
   // 'user' origin
   return {
-    label: 'Custom',
+    label: strings.templates.origin.custom,
     color: 'bg-green-500/10 text-green-400 border-green-500/20',
     icon: User,
   };
@@ -79,10 +80,10 @@ const metaText = computed(() => {
   if (props.type === 'prompt') {
     const parts = [];
     if (props.template.language) parts.push(props.template.language);
-    if (props.template.target_length) parts.push(`~${props.template.target_length} words`);
-    return parts.join(' · ') || 'No settings';
+    if (props.template.target_length) parts.push(strings.templates.meta.words.replace('{count}', String(props.template.target_length)));
+    return parts.join(' · ') || strings.templates.meta.noSettings;
   } else {
-    return props.template.format || 'No format';
+    return props.template.format || strings.templates.meta.noFormat;
   }
 });
 
@@ -136,7 +137,7 @@ const handleDelete = () => {
               : 'bg-text-muted/10 text-text-muted'
           "
         >
-          {{ template.is_active ? 'Active' : 'Inactive' }}
+          {{ template.is_active ? strings.templates.status.active : strings.templates.status.inactive }}
         </div>
       </div>
     </template>
@@ -162,7 +163,7 @@ const handleDelete = () => {
         <ToggleSwitch
           :model-value="template.is_active"
           @update:model-value="handleToggle"
-          :label="template.is_active ? 'Disable template' : 'Enable template'"
+          :label="template.is_active ? strings.templates.actions.disableTemplate : strings.templates.actions.enableTemplate"
         />
 
         <!-- Edit & Delete Buttons -->
@@ -170,14 +171,14 @@ const handleDelete = () => {
           <button
             @click="handleEdit"
             class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-bg-hover hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Edit template"
+            :title="strings.templates.actions.editTemplate"
           >
             <Edit :size="18" :stroke-width="2" />
           </button>
           <button
             @click="handleDelete"
             class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Delete template"
+            :title="strings.templates.actions.deleteTemplate"
           >
             <Trash2 :size="18" :stroke-width="2" />
           </button>

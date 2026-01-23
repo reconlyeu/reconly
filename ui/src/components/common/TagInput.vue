@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { tagsApi } from '@/services/api';
 import { X, Plus } from 'lucide-vue-next';
 import type { TagSuggestion } from '@/types/entities';
+import { strings } from '@/i18n/en';
 
 interface Props {
   modelValue: string[];
@@ -17,7 +18,7 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  placeholder: 'Add tag...',
+  placeholder: strings.common.tagInput.placeholder,
   disabled: false,
   maxTags: 10,
 });
@@ -225,7 +226,7 @@ const handleCreateClick = () => {
             @mouseenter="selectedIndex = index"
           >
             <span>{{ suggestion.name }}</span>
-            <span class="text-xs text-text-muted">{{ suggestion.digest_count }} digests</span>
+            <span class="text-xs text-text-muted">{{ strings.common.tagInput.digests.replace('{count}', String(suggestion.digest_count)) }}</span>
           </li>
 
           <!-- Create new tag option -->
@@ -241,7 +242,7 @@ const handleCreateClick = () => {
             @mouseenter="selectedIndex = suggestions.length"
           >
             <Plus :size="14" />
-            <span>Create "{{ inputValue.trim() }}"</span>
+            <span>{{ strings.common.tagInput.create.replace('{value}', inputValue.trim()) }}</span>
           </li>
         </ul>
       </div>

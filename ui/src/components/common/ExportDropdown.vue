@@ -7,6 +7,7 @@ import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { Download, ChevronDown, FileJson, FileSpreadsheet, FileText, Folder } from 'lucide-vue-next';
 import { useEnabledExporters } from '@/composables/useExporters';
 import type { Exporter } from '@/types/entities';
+import { strings } from '@/i18n/en';
 
 // Map exporter names to icons
 const exporterIcons: Record<string, any> = {
@@ -149,7 +150,7 @@ onUnmounted(() => {
           : 'flex items-center gap-1.5 rounded-lg bg-amber-400/10 px-3 py-1.5 text-sm font-medium text-amber-400 transition-all hover:bg-amber-400/20 disabled:opacity-50 disabled:cursor-not-allowed'),
         { 'cursor-wait': loading }
       ]"
-      :title="iconOnly ? 'Export digest' : undefined"
+      :title="iconOnly ? strings.common.exportDropdown.title : undefined"
       @click.stop="toggleDropdown"
     >
       <Download
@@ -158,7 +159,7 @@ onUnmounted(() => {
         :class="{ 'animate-pulse': loading }"
       />
       <template v-if="!iconOnly">
-        <span>{{ loading ? 'Exporting...' : 'Export' }}</span>
+        <span>{{ loading ? strings.common.exportDropdown.exporting : strings.common.exportDropdown.button }}</span>
         <ChevronDown
           :size="14"
           class="transition-transform"

@@ -7,6 +7,7 @@ import BaseList from '@/components/common/BaseList.vue';
 import DigestCard from './DigestCard.vue';
 import type { Digest, Exporter } from '@/types/entities';
 import { FileText } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   searchQuery?: string;
@@ -92,9 +93,9 @@ const hasPrevPage = computed(() => props.page > 1);
 
 const emptyMessage = computed(() => {
   if (props.searchQuery || props.feedFilter || props.sourceFilter || props.tagFilter) {
-    return 'Try adjusting your filters or search query';
+    return strings.digests.list.filterMessage;
   }
-  return 'Digests will appear here once feeds start running';
+  return strings.digests.list.noFiltersMessage;
 });
 
 const handleView = (digest: Digest) => {
@@ -132,7 +133,7 @@ const prevPage = () => {
     :grid-cols="2"
     :skeleton-count="pageSize"
     skeleton-height="h-80"
-    empty-title="No digests found"
+    :empty-title="strings.digests.list.emptyTitle"
     :empty-message="emptyMessage"
     :empty-icon="FileText"
     :show-pagination="totalPages > 1"

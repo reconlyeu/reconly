@@ -11,6 +11,7 @@ import { ref, watch, computed } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { settingsApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 import {
   Settings,
@@ -196,14 +197,14 @@ const saveMutation = useMutation({
     return settingsApi.update({ settings: settingsToUpdate });
   },
   onSuccess: () => {
-    toast.success(`${displayName.value} settings saved`);
+    toast.success(strings.settings.providers.configPanel.settingsSaved.replace('{name}', displayName.value));
     queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['provider-status'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
   onError: (err: any) => {
     if (err.message !== 'Validation failed') {
-      toast.error(err.detail || 'Failed to save settings');
+      toast.error(err.detail || strings.settings.failedToSave);
     }
   },
 });
@@ -215,13 +216,13 @@ const resetMutation = useMutation({
     return settingsApi.reset({ keys: keysToReset });
   },
   onSuccess: () => {
-    toast.success('Settings reset to defaults');
+    toast.success(strings.settings.settingsResetToDefaults);
     queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['provider-status'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to reset settings');
+    toast.error(err.detail || strings.settings.failedToReset);
   },
 });
 
@@ -246,8 +247,8 @@ const displayName = computed(() => {
         <Settings :size="20" class="text-accent-primary" />
       </div>
       <div>
-        <h2 class="text-lg font-semibold text-text-primary">{{ displayName }} Configuration</h2>
-        <p class="text-sm text-text-muted">Configure settings for {{ displayName }}</p>
+        <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.providers.configPanel.configuration.replace('{name}', displayName) }}</h2>
+        <p class="text-sm text-text-muted">{{ strings.settings.providers.configPanel.configureSettings.replace('{name}', displayName) }}</p>
       </div>
     </div>
 
@@ -265,9 +266,9 @@ const displayName = computed(() => {
         <div class="flex items-start gap-3">
           <Lock :size="18" class="text-amber-400 mt-0.5 flex-shrink-0" />
           <div>
-            <p class="text-sm font-medium text-amber-400 mb-1">Environment Variables</p>
+            <p class="text-sm font-medium text-amber-400 mb-1">{{ strings.settings.providers.configPanel.envVariables }}</p>
             <p class="text-xs text-text-secondary mb-2">
-              The following settings are configured via environment variables and cannot be changed here:
+              {{ strings.settings.providers.configPanel.envVariablesDescription }}
             </p>
             <div class="flex flex-wrap gap-2">
               <code
@@ -289,8 +290,8 @@ const displayName = computed(() => {
           <Info :size="18" class="text-blue-400" />
           <span>
             {{ provider.config_schema.requires_api_key
-              ? 'Configure API key via environment variables to enable this provider.'
-              : 'No additional configuration needed for this provider.'
+              ? strings.settings.providers.configPanel.configureApiKey
+              : strings.settings.providers.configPanel.noConfigNeeded
             }}
           </span>
         </div>
@@ -314,7 +315,7 @@ const displayName = computed(() => {
                   : 'bg-amber-500/10 text-amber-400'
               ]"
             >
-              {{ getSettingSource(field.key) === 'database' ? 'Saved' : 'ENV' }}
+              {{ getSettingSource(field.key) === 'database' ? strings.settings.source.saved : strings.settings.source.env }}
             </span>
           </div>
 
@@ -326,7 +327,7 @@ const displayName = computed(() => {
             @change="handleFieldChange(field.key, ($event.target as HTMLSelectElement).value)"
             class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-2.5 text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
           >
-            <option value="" disabled>Select {{ field.label.toLowerCase() }}...</option>
+            <option value="" disabled>{{ strings.settings.providers.configPanel.selectModel.replace('{label}', field.label.toLowerCase()) }}</option>
             <option
               v-for="option in getFieldOptions(field)"
               :key="option.value"
@@ -400,7 +401,7 @@ const displayName = computed(() => {
             class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw :size="16" />
-            Reset to Defaults
+            {{ strings.settings.resetToDefaults }}
           </button>
           <button
             type="button"
@@ -410,7 +411,7 @@ const displayName = computed(() => {
           >
             <Loader2 v-if="saveMutation.isPending.value" :size="16" class="animate-spin" />
             <Save v-else :size="16" />
-            Save Configuration
+            {{ strings.settings.saveConfiguration }}
           </button>
         </div>
       </div>

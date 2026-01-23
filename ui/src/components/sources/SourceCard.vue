@@ -12,6 +12,7 @@ import {
 } from '@/composables/useAuthStatus';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   source: Source;
@@ -44,7 +45,7 @@ const typeConfig = computed(() => {
     const isChannel = isYouTubeChannel(props.source.url);
     return {
       icon: Youtube,
-      label: isChannel ? 'YouTube Channel' : 'YouTube Video',
+      label: isChannel ? `${strings.sources.types.youtube} Channel` : `${strings.sources.types.youtube} Video`,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       glow: 'error' as const,
@@ -54,42 +55,42 @@ const typeConfig = computed(() => {
   const configs = {
     rss: {
       icon: Rss,
-      label: 'RSS Feed',
+      label: `${strings.sources.types.rss} Feed`,
       color: 'text-orange-400',
       bgColor: 'bg-orange-400/10',
       glow: 'orange' as const,
     },
     youtube: {
       icon: Youtube,
-      label: 'YouTube',
+      label: strings.sources.types.youtube,
       color: 'text-red-500',
       bgColor: 'bg-red-500/10',
       glow: 'error' as const,
     },
     website: {
       icon: Globe,
-      label: 'Website',
+      label: strings.sources.types.website,
       color: 'text-blue-400',
       bgColor: 'bg-blue-400/10',
       glow: 'blue' as const,
     },
     blog: {
       icon: BookOpen,
-      label: 'Blog',
+      label: strings.sources.types.blog,
       color: 'text-green-400',
       bgColor: 'bg-green-400/10',
       glow: 'success' as const,
     },
     imap: {
       icon: Mail,
-      label: 'Email (IMAP)',
+      label: `${strings.sources.types.imap} (IMAP)`,
       color: 'text-purple-400',
       bgColor: 'bg-purple-400/10',
       glow: 'purple' as const,
     },
     agent: {
       icon: Bot,
-      label: 'AI Agent',
+      label: strings.sources.types.agent,
       color: 'text-cyan-400',
       bgColor: 'bg-cyan-400/10',
       glow: 'blue' as const,
@@ -170,7 +171,7 @@ const handleDelete = () => {
                 : 'bg-text-muted/10 text-text-muted'
             "
           >
-            {{ source.enabled ? 'Active' : 'Disabled' }}
+            {{ source.enabled ? strings.sources.status.active : strings.sources.status.disabled }}
           </div>
         </div>
       </div>
@@ -194,7 +195,7 @@ const handleDelete = () => {
         <ToggleSwitch
           :model-value="source.enabled"
           @update:model-value="handleToggle"
-          label="Toggle source"
+          :label="strings.sources.actions.toggle"
         />
 
         <!-- Action Buttons -->
@@ -216,14 +217,14 @@ const handleDelete = () => {
           <button
             @click="handleEdit"
             class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-bg-hover hover:text-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Edit source"
+            :title="strings.sources.actions.edit"
           >
             <Edit :size="18" :stroke-width="2" />
           </button>
           <button
             @click="handleDelete"
             class="rounded-lg p-2 text-text-muted transition-all duration-300 hover:bg-status-failed/10 hover:text-status-failed focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-base"
-            title="Delete source"
+            :title="strings.sources.actions.delete"
           >
             <Trash2 :size="18" :stroke-width="2" />
           </button>

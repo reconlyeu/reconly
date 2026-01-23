@@ -16,6 +16,7 @@ import FetcherConfigPanel from './FetcherConfigPanel.vue';
 import { useFetchersList, useToggleFetcher } from '@/composables/useFetchers';
 import { useSettingsNavigation } from '@/composables/useSettingsNavigation';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 import type { Fetcher } from '@/types/entities';
 
 // Get deep-link target from navigation composable
@@ -102,8 +103,8 @@ const handleToggle = (fetcherName: string, enabled: boolean) => {
           <ArrowRightToLine :size="20" class="text-purple-400" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Content Fetchers</h2>
-          <p class="text-sm text-text-muted">Select a fetcher to configure its settings</p>
+          <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.fetchers.contentFetchers }}</h2>
+          <p class="text-sm text-text-muted">{{ strings.settings.fetchers.selectFetcher }}</p>
         </div>
       </div>
 
@@ -116,8 +117,8 @@ const handleToggle = (fetcherName: string, enabled: boolean) => {
         :grid-cols="2"
         :skeleton-count="4"
         skeleton-height="h-48"
-        empty-title="No fetchers available"
-        empty-message="Content fetchers will appear here once they are registered."
+        :empty-title="strings.settings.fetchers.noFetchers"
+        :empty-message="strings.settings.fetchers.noFetchersDescription"
         :empty-icon="ArrowRightToLine"
         @retry="refetch"
       >
@@ -135,7 +136,7 @@ const handleToggle = (fetcherName: string, enabled: boolean) => {
 
         <template #empty-action>
           <p class="text-sm text-text-muted">
-            Check your installation or contact support if fetchers are missing.
+            {{ strings.settings.fetchers.checkInstallation }}
           </p>
         </template>
       </BaseList>

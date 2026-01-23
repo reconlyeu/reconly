@@ -12,6 +12,7 @@ import { ref, computed, watch } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { providersApi, settingsApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 import ProviderChainItem from './ProviderChainItem.vue';
 import ProviderConfigPanel from './ProviderConfigPanel.vue';
 import {
@@ -240,13 +241,13 @@ const saveMutation = useMutation({
     });
   },
   onSuccess: () => {
-    toast.success('Fallback chain saved');
+    toast.success(strings.settings.providers.fallbackChainSaved);
     hasChanges.value = false;
     queryClient.invalidateQueries({ queryKey: ['settings'] });
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to save fallback chain');
+    toast.error(err.detail || strings.settings.failedToSave);
   },
 });
 
@@ -256,11 +257,11 @@ const refreshMutation = useMutation({
     return providersApi.refreshModels();
   },
   onSuccess: () => {
-    toast.success('Provider status refreshed');
+    toast.success(strings.settings.providers.statusRefreshed);
     queryClient.invalidateQueries({ queryKey: ['providers'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to refresh providers');
+    toast.error(err.detail || strings.settings.failedToReset);
   },
 });
 
@@ -289,8 +290,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
         <!-- Header -->
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="font-semibold text-text-primary">LLM Fallback Chain</h3>
-            <p class="text-sm text-text-muted">Drag to reorder. First available provider will be used.</p>
+            <h3 class="font-semibold text-text-primary">{{ strings.settings.providers.fallbackChain }}</h3>
+            <p class="text-sm text-text-muted">{{ strings.settings.providers.fallbackChainDescription }}</p>
           </div>
           <div class="flex items-center gap-2">
             <!-- Refresh Button -->
@@ -299,13 +300,13 @@ const handleKeyDown = (event: KeyboardEvent) => {
               :disabled="refreshMutation.isPending.value"
               @click="refreshMutation.mutate()"
               class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Refresh provider status and models"
+              :title="strings.settings.providers.refreshStatus"
             >
               <RefreshCw
                 :size="14"
                 :class="{ 'animate-spin': refreshMutation.isPending.value }"
               />
-              <span class="sr-only sm:not-sr-only">Refresh</span>
+              <span class="sr-only sm:not-sr-only">{{ strings.settings.providers.refresh }}</span>
             </button>
 
             <!-- Save Button -->
@@ -318,7 +319,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
             >
               <Loader2 v-if="saveMutation.isPending.value" :size="14" class="animate-spin" />
               <Save v-else :size="14" />
-              Save Order
+              {{ strings.settings.providers.saveOrder }}
             </button>
 
             <!-- Add Provider Button -->
@@ -330,7 +331,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
                 class="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus :size="14" />
-                Add
+                {{ strings.settings.providers.add }}
                 <ChevronDown
                   :size="14"
                   class="transition-transform"
@@ -361,7 +362,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
                         : 'text-text-muted'
                     ]"
                   >
-                    {{ provider.status === 'available' || provider.status === 'configured' ? 'Ready' : 'Not Ready' }}
+                    {{ provider.status === 'available' || provider.status === 'configured' ? strings.settings.providers.ready : strings.settings.providers.notReady }}
                   </span>
                 </button>
               </div>
@@ -378,7 +379,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
         <div v-else-if="isError" class="rounded-lg border border-status-failed/20 bg-status-failed/5 p-4">
           <div class="flex items-center gap-2 text-status-failed">
             <AlertCircle :size="18" />
-            <span class="text-sm">Failed to load providers: {{ error?.message || 'Unknown error' }}</span>
+            <span class="text-sm">{{ strings.settings.providers.failedToLoadProviders }}: {{ error?.message || 'Unknown error' }}</span>
           </div>
         </div>
 
@@ -387,7 +388,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
           v-else-if="chainProviders.length === 0"
           class="rounded-lg border border-dashed border-border-subtle bg-bg-surface/50 p-8 text-center"
         >
-          <p class="text-sm text-text-muted">No providers in chain. Add a provider to get started.</p>
+          <p class="text-sm text-text-muted">{{ strings.settings.providers.noProvidersInChain }}</p>
         </div>
 
         <!-- Chain List -->
@@ -418,8 +419,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
             <Database :size="20" class="text-purple-400" />
           </div>
           <div>
-            <h3 class="font-semibold text-text-primary">Embedding</h3>
-            <p class="text-sm text-text-muted">For RAG & semantic search</p>
+            <h3 class="font-semibold text-text-primary">{{ strings.settings.providers.embedding.title }}</h3>
+            <p class="text-sm text-text-muted">{{ strings.settings.providers.embedding.description }}</p>
           </div>
         </div>
 
@@ -433,7 +434,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <!-- Provider & Model -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-muted">Provider</span>
+              <span class="text-sm text-text-muted">{{ strings.settings.providers.embedding.provider }}</span>
               <div class="flex items-center gap-2">
                 <component
                   :is="embeddingConfig.provider === 'ollama' ? Server : Cloud"
@@ -447,35 +448,35 @@ const handleKeyDown = (event: KeyboardEvent) => {
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-muted">Model</span>
+              <span class="text-sm text-text-muted">{{ strings.settings.providers.embedding.model }}</span>
               <span class="text-sm font-mono text-text-primary">
                 {{ embeddingConfig.model }}
               </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-muted">Dimension</span>
+              <span class="text-sm text-text-muted">{{ strings.settings.providers.embedding.dimension }}</span>
               <span class="text-sm font-mono text-text-secondary">
                 {{ embeddingConfig.dimension }}
               </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-muted">Status</span>
+              <span class="text-sm text-text-muted">{{ strings.common.labels.status }}</span>
               <div class="flex items-center gap-1.5">
                 <div
                   class="h-2 w-2 rounded-full"
                   :class="embeddingStatus === 'available' ? 'bg-status-success' : embeddingStatus === 'configured' ? 'bg-blue-500' : 'bg-amber-500'"
                 />
                 <span class="text-sm text-text-secondary capitalize">
-                  {{ embeddingStatus === 'available' ? 'Available' : embeddingStatus === 'configured' ? 'Configured' : 'Not Running' }}
+                  {{ embeddingStatus === 'available' ? strings.settings.providers.status.available : embeddingStatus === 'configured' ? strings.settings.providers.status.configured : strings.settings.providers.status.unavailable }}
                 </span>
               </div>
             </div>
 
             <!-- Source indicator -->
             <div class="flex items-center justify-between">
-              <span class="text-sm text-text-muted">Source</span>
+              <span class="text-sm text-text-muted">{{ strings.settings.providers.embedding.source }}</span>
               <span
                 :class="[
                   'text-xs px-2 py-0.5 rounded-full',
@@ -486,7 +487,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
                     : 'bg-bg-hover text-text-muted'
                 ]"
               >
-                {{ embeddingConfig.source === 'env' ? 'ENV' : embeddingConfig.source === 'database' ? 'Saved' : 'Default' }}
+                {{ embeddingConfig.source === 'env' ? strings.settings.source.env : embeddingConfig.source === 'database' ? strings.settings.source.saved : strings.settings.source.default }}
               </span>
             </div>
           </div>
@@ -494,9 +495,9 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <!-- Warning about changing embeddings -->
           <div class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 mt-4">
             <p class="text-xs text-amber-400/90 leading-relaxed">
-              Changing embedding model requires re-embedding all content. Configure via
-              <code class="font-mono bg-bg-hover px-1 rounded">EMBEDDING_PROVIDER</code> and
-              <code class="font-mono bg-bg-hover px-1 rounded">EMBEDDING_MODEL</code> in your .env file.
+              {{ strings.settings.providers.embedding.warning }}
+              <code class="font-mono bg-bg-hover px-1 rounded">EMBEDDING_PROVIDER</code> {{ strings.settings.providers.embedding.and }}
+              <code class="font-mono bg-bg-hover px-1 rounded">EMBEDDING_MODEL</code> {{ strings.settings.providers.embedding.inEnvFile }}
             </p>
           </div>
         </div>
@@ -510,11 +511,11 @@ const handleKeyDown = (event: KeyboardEvent) => {
           <Info :size="20" class="text-blue-400" :stroke-width="2" />
         </div>
         <div>
-          <h3 class="mb-2 font-semibold text-text-primary">Environment Configuration</h3>
+          <h3 class="mb-2 font-semibold text-text-primary">{{ strings.settings.providers.envConfig.title }}</h3>
           <p class="text-sm leading-relaxed text-text-secondary">
-            API keys and embedding settings must be configured via environment variables in your
+            {{ strings.settings.providers.envConfig.description }}
             <code class="rounded bg-bg-hover px-1.5 py-0.5 font-mono text-xs text-accent-primary">.env</code>
-            file. Click the gear icon on a provider to configure its default model.
+            {{ strings.settings.providers.envConfig.file }}
           </p>
         </div>
       </div>
