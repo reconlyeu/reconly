@@ -71,7 +71,7 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 </p>
 
 1. **Sources** — Define what to monitor: RSS feeds, YouTube channels, websites, email inboxes, or research topics
-2. **Fetchers & Agents** — Fetchers pull content on schedule; [GPT Researcher](https://gptr.dev) agents autonomously investigate topics via SearXNG or Tavily
+2. **Fetchers & Agents** — Fetchers pull content on schedule; [GPT Researcher](https://gptr.dev) agents autonomously investigate topics via [SearXNG](https://searxng.org) or Tavily
 3. **Core Processing** — Summarize with your LLM of choice, generate embeddings for RAG, extract entities for the knowledge graph
 4. **Export** — Trigger webhooks for automation, generate digests for the frontend or email, sync to your PKM (Obsidian/Logseq)
 
