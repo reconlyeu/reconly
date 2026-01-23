@@ -10,6 +10,7 @@ import { ref, watch, computed } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { settingsApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 import {
   Settings,
@@ -144,7 +145,7 @@ const saveMutation = useMutation({
     return settingsApi.update({ settings: settingsToUpdate });
   },
   onSuccess: () => {
-    toast.success(`${props.exporter.name.charAt(0).toUpperCase() + props.exporter.name.slice(1)} settings saved`);
+    toast.success(strings.settings.exports.exporterSettingsSaved.replace('{name}', displayName.value));
     hasChanges.value = false;
     queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate exporters to refresh is_configured state
@@ -152,7 +153,7 @@ const saveMutation = useMutation({
   },
   onError: (err: any) => {
     if (err.message !== 'Validation failed') {
-      toast.error(err.detail || 'Failed to save settings');
+      toast.error(err.detail || strings.settings.failedToSave);
     }
   },
 });
@@ -164,13 +165,13 @@ const resetMutation = useMutation({
     return settingsApi.reset({ keys: keysToReset });
   },
   onSuccess: () => {
-    toast.success('Settings reset to defaults');
+    toast.success(strings.settings.settingsResetToDefaults);
     queryClient.invalidateQueries({ queryKey: ['settings'] });
     // Also invalidate exporters to refresh is_configured state
     queryClient.invalidateQueries({ queryKey: ['exporters'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to reset settings');
+    toast.error(err.detail || strings.settings.failedToReset);
   },
 });
 
@@ -193,8 +194,8 @@ const displayName = computed(() => {
         <Settings :size="20" class="text-blue-400" />
       </div>
       <div>
-        <h2 class="text-lg font-semibold text-text-primary">{{ displayName }} Configuration</h2>
-        <p class="text-sm text-text-muted">Configure settings for the {{ displayName }} exporter</p>
+        <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.exports.configuration.replace('{name}', displayName) }}</h2>
+        <p class="text-sm text-text-muted">{{ strings.settings.exports.configurationDescription.replace('{name}', displayName) }}</p>
       </div>
     </div>
 
@@ -207,7 +208,7 @@ const displayName = computed(() => {
     <div v-else-if="!hasConfig" class="rounded-xl border border-border-subtle bg-bg-surface p-6 text-center">
       <div class="flex items-center justify-center gap-2 text-text-muted">
         <Check :size="18" class="text-status-success" />
-        <span>No additional configuration needed for {{ displayName }} export.</span>
+        <span>{{ strings.settings.exports.noConfigNeeded.replace('{name}', displayName) }}</span>
       </div>
     </div>
 
@@ -229,7 +230,7 @@ const displayName = computed(() => {
                 : 'bg-amber-500/10 text-amber-400'
             ]"
           >
-            {{ getSettingSource(field.key) === 'database' ? 'Saved' : 'ENV' }}
+            {{ getSettingSource(field.key) === 'database' ? strings.settings.source.saved : strings.settings.source.env }}
           </span>
         </div>
 
@@ -286,7 +287,7 @@ const displayName = computed(() => {
           class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <RotateCcw :size="16" />
-          Reset to Defaults
+          {{ strings.settings.resetToDefaults }}
         </button>
         <button
           type="button"
@@ -296,7 +297,7 @@ const displayName = computed(() => {
         >
           <Loader2 v-if="saveMutation.isPending.value" :size="16" class="animate-spin" />
           <Save v-else :size="16" />
-          Save Configuration
+          {{ strings.settings.saveConfiguration }}
         </button>
       </div>
     </div>

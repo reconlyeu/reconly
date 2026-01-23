@@ -5,6 +5,7 @@ import { X, Upload, FileText, AlertTriangle, CheckCircle2, AlertCircle, Rss, Fil
 import { bundlesApi } from '@/services/api';
 import type { BundlePreviewResponse, BundleImportResponse, FeedBundle } from '@/types/entities';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 
 interface Props {
   show: boolean;
@@ -100,7 +101,7 @@ const processFile = async (file: File) => {
   parseError.value = null;
 
   if (!file.name.endsWith('.json')) {
-    parseError.value = 'Please select a JSON file';
+    parseError.value = strings.feeds.import.errors.selectJson;
     return;
   }
 
@@ -110,7 +111,7 @@ const processFile = async (file: File) => {
     bundleJson.value = data;
     previewMutation.mutate(data);
   } catch (e) {
-    parseError.value = 'Invalid JSON file. Please ensure the file is a valid feed bundle.';
+    parseError.value = strings.feeds.import.errors.invalidJson;
   }
 };
 
@@ -170,7 +171,7 @@ const feedAlreadyExists = computed(() => {
                 <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-accent-primary/10">
                   <Upload :size="20" class="text-accent-primary" :stroke-width="2" />
                 </div>
-                <h2 class="text-xl font-semibold text-text-primary">Import Feed Bundle</h2>
+                <h2 class="text-xl font-semibold text-text-primary">{{ strings.feeds.import.title }}</h2>
               </div>
               <button
                 @click="emit('close')"
@@ -186,7 +187,7 @@ const feedAlreadyExists = computed(() => {
             <!-- Upload Step -->
             <div v-if="step === 'upload'">
               <p class="mb-4 text-sm text-text-secondary">
-                Upload a feed bundle JSON file to import a pre-configured feed with sources and templates.
+                {{ strings.feeds.import.description }}
               </p>
 
               <!-- Drop Zone -->
@@ -205,10 +206,10 @@ const feedAlreadyExists = computed(() => {
                   <FileText :size="24" class="text-text-muted" :stroke-width="2" />
                 </div>
                 <p class="mb-1 text-sm font-medium text-text-primary">
-                  Drop your bundle file here
+                  {{ strings.feeds.import.dropZone.title }}
                 </p>
                 <p class="text-xs text-text-muted">
-                  or click to browse
+                  {{ strings.feeds.import.dropZone.subtitle }}
                 </p>
               </div>
 
@@ -225,7 +226,7 @@ const feedAlreadyExists = computed(() => {
                 <div class="flex items-start gap-3">
                   <AlertCircle :size="20" class="mt-0.5 text-status-failed" :stroke-width="2" />
                   <div>
-                    <p class="font-medium text-status-failed">Error</p>
+                    <p class="font-medium text-status-failed">{{ strings.feeds.import.errors.title }}</p>
                     <p class="text-sm text-status-failed/80">{{ parseError }}</p>
                   </div>
                 </div>
@@ -234,7 +235,7 @@ const feedAlreadyExists = computed(() => {
               <!-- Loading -->
               <div v-if="previewMutation.isPending.value" class="flex items-center justify-center py-4">
                 <Loader2 :size="24" class="animate-spin text-accent-primary" :stroke-width="2" />
-                <span class="ml-2 text-sm text-text-secondary">Validating bundle...</span>
+                <span class="ml-2 text-sm text-text-secondary">{{ strings.feeds.import.validating }}</span>
               </div>
             </div>
 
@@ -258,7 +259,7 @@ const feedAlreadyExists = computed(() => {
               <div v-if="hasErrors" class="mb-4 rounded-lg bg-status-failed/10 p-4">
                 <div class="mb-2 flex items-center gap-2">
                   <AlertCircle :size="18" class="text-status-failed" :stroke-width="2" />
-                  <span class="font-medium text-status-failed">Errors</span>
+                  <span class="font-medium text-status-failed">{{ strings.feeds.import.preview.errors }}</span>
                 </div>
                 <ul class="list-inside list-disc text-sm text-status-failed/80">
                   <li v-for="error in preview.errors" :key="error">{{ error }}</li>
@@ -270,9 +271,9 @@ const feedAlreadyExists = computed(() => {
                 <div class="flex items-start gap-3">
                   <AlertTriangle :size="18" class="mt-0.5 text-status-warning" :stroke-width="2" />
                   <div>
-                    <p class="font-medium text-status-warning">Feed Already Exists</p>
+                    <p class="font-medium text-status-warning">{{ strings.feeds.import.preview.feedExists.title }}</p>
                     <p class="text-sm text-status-warning/80">
-                      A feed with the name "{{ preview.feed?.name }}" already exists. Please rename or delete it before importing.
+                      {{ strings.feeds.import.preview.feedExists.message.replace('{name}', preview.feed?.name || '') }}
                     </p>
                   </div>
                 </div>
@@ -282,7 +283,7 @@ const feedAlreadyExists = computed(() => {
               <div v-if="hasWarnings && !feedAlreadyExists" class="mb-4 rounded-lg bg-status-warning/10 p-4">
                 <div class="mb-2 flex items-center gap-2">
                   <AlertTriangle :size="18" class="text-status-warning" :stroke-width="2" />
-                  <span class="font-medium text-status-warning">Warnings</span>
+                  <span class="font-medium text-status-warning">{{ strings.feeds.import.preview.warnings }}</span>
                 </div>
                 <ul class="list-inside list-disc text-sm text-status-warning/80">
                   <li v-for="warning in preview.warnings" :key="warning">{{ warning }}</li>
@@ -292,19 +293,19 @@ const feedAlreadyExists = computed(() => {
               <!-- What will be created -->
               <div class="mb-4 rounded-lg border border-border-subtle p-4">
                 <h4 class="mb-3 text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  Will be created
+                  {{ strings.feeds.import.preview.willBeCreated }}
                 </h4>
                 <div class="space-y-2">
                   <!-- Sources -->
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <Rss :size="16" class="text-blue-400" :stroke-width="2" />
-                      <span class="text-sm text-text-secondary">Sources</span>
+                      <span class="text-sm text-text-secondary">{{ strings.feeds.import.preview.sources }}</span>
                     </div>
                     <span class="text-sm font-medium text-text-primary">
-                      {{ preview.sources?.new.length || 0 }} new
+                      {{ preview.sources?.new.length || 0 }} {{ strings.feeds.import.preview.new }}
                       <span v-if="preview.sources?.existing.length" class="text-text-muted">
-                        ({{ preview.sources?.existing.length }} existing)
+                        ({{ preview.sources?.existing.length }} {{ strings.feeds.import.preview.existing }})
                       </span>
                     </span>
                   </div>
@@ -313,11 +314,11 @@ const feedAlreadyExists = computed(() => {
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <FileCode :size="16" class="text-purple-400" :stroke-width="2" />
-                      <span class="text-sm text-text-secondary">Prompt Template</span>
+                      <span class="text-sm text-text-secondary">{{ strings.feeds.import.preview.promptTemplate }}</span>
                     </div>
                     <span class="text-sm text-text-primary">
                       <CheckCircle2 v-if="preview.prompt_template?.included" :size="16" class="text-status-success" :stroke-width="2" />
-                      <span v-else class="text-text-muted">None</span>
+                      <span v-else class="text-text-muted">{{ strings.feeds.import.preview.none }}</span>
                     </span>
                   </div>
 
@@ -325,11 +326,11 @@ const feedAlreadyExists = computed(() => {
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <FileText :size="16" class="text-orange-400" :stroke-width="2" />
-                      <span class="text-sm text-text-secondary">Report Template</span>
+                      <span class="text-sm text-text-secondary">{{ strings.feeds.import.preview.reportTemplate }}</span>
                     </div>
                     <span class="text-sm text-text-primary">
                       <CheckCircle2 v-if="preview.report_template?.included" :size="16" class="text-status-success" :stroke-width="2" />
-                      <span v-else class="text-text-muted">None</span>
+                      <span v-else class="text-text-muted">{{ strings.feeds.import.preview.none }}</span>
                     </span>
                   </div>
 
@@ -337,13 +338,13 @@ const feedAlreadyExists = computed(() => {
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                       <Calendar :size="16" class="text-green-400" :stroke-width="2" />
-                      <span class="text-sm text-text-secondary">Schedule</span>
+                      <span class="text-sm text-text-secondary">{{ strings.feeds.import.preview.schedule }}</span>
                     </div>
                     <span class="text-sm text-text-primary">
                       <template v-if="preview.schedule?.included">
                         {{ preview.schedule?.cron }}
                       </template>
-                      <span v-else class="text-text-muted">None</span>
+                      <span v-else class="text-text-muted">{{ strings.feeds.import.preview.none }}</span>
                     </span>
                   </div>
                 </div>
@@ -355,14 +356,14 @@ const feedAlreadyExists = computed(() => {
                   @click="step = 'upload'; bundleJson = null; preview = null"
                   class="rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
                 >
-                  Back
+                  {{ strings.feeds.import.actions.back }}
                 </button>
                 <button
                   @click="handleImport"
                   :disabled="!canImport"
                   class="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Import Feed
+                  {{ strings.feeds.import.actions.import }}
                 </button>
               </div>
             </div>
@@ -370,7 +371,7 @@ const feedAlreadyExists = computed(() => {
             <!-- Importing Step -->
             <div v-else-if="step === 'importing'" class="flex flex-col items-center justify-center py-8">
               <Loader2 :size="32" class="animate-spin text-accent-primary" :stroke-width="2" />
-              <p class="mt-4 text-text-secondary">Importing feed bundle...</p>
+              <p class="mt-4 text-text-secondary">{{ strings.feeds.import.importing }}</p>
             </div>
           </div>
         </div>

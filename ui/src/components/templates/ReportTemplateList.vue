@@ -10,6 +10,7 @@ import type { ReportTemplate } from '@/types/entities';
 import { Plus, FileText } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { strings } from '@/i18n/en';
 
 interface Emits {
   (e: 'edit', template: ReportTemplate): void;
@@ -118,7 +119,7 @@ const handleDelete = (templateId: number) => {
     <template v-else>
       <!-- System Templates -->
       <div>
-        <h2 class="mb-4 text-lg font-semibold text-text-primary">System Templates</h2>
+        <h2 class="mb-4 text-lg font-semibold text-text-primary">{{ strings.templates.sections.systemTemplates }}</h2>
         <div v-if="systemTemplates.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           <TemplateCard
             v-for="(template, index) in systemTemplates"
@@ -133,8 +134,8 @@ const handleDelete = (templateId: number) => {
         </div>
         <EmptyState
           v-else
-          title="No system templates"
-          message="System templates will be available after initialization."
+          :title="strings.templates.empty.noSystemTemplates"
+          :message="strings.templates.empty.systemTemplatesMessage"
           :icon="FileText"
         />
       </div>
@@ -142,13 +143,13 @@ const handleDelete = (templateId: number) => {
       <!-- User Templates -->
       <div>
         <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-text-primary">User Templates</h2>
+          <h2 class="text-lg font-semibold text-text-primary">{{ strings.templates.sections.userTemplates }}</h2>
           <button
             @click="emit('create')"
             class="group flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-all hover:bg-accent-primary-hover hover:shadow-lg hover:shadow-accent-primary/20"
           >
             <Plus :size="16" class="transition-transform group-hover:rotate-90" />
-            Create Template
+            {{ strings.templates.createTemplate }}
           </button>
         </div>
 
@@ -166,8 +167,8 @@ const handleDelete = (templateId: number) => {
         </div>
         <EmptyState
           v-else
-          title="No user templates yet"
-          message="Create your first report template to customize digest formatting"
+          :title="strings.templates.empty.noUserTemplates"
+          :message="strings.templates.empty.reportTemplatesMessage"
           :icon="Plus"
         >
           <template #action>
@@ -175,7 +176,7 @@ const handleDelete = (templateId: number) => {
               @click="emit('create')"
               class="rounded-lg bg-accent-primary px-4 py-2 text-sm font-medium text-white transition-all hover:bg-accent-primary-hover"
             >
-              Create Template
+              {{ strings.templates.createTemplate }}
             </button>
           </template>
         </EmptyState>

@@ -10,6 +10,7 @@ import type { Feed } from '@/types/entities';
 import { Layers, Upload } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { strings } from '@/i18n/en';
 
 interface Emits {
   (e: 'edit', feed: Feed): void;
@@ -159,7 +160,7 @@ const handleImportSuccess = () => {
         class="inline-flex items-center gap-2 rounded-lg bg-accent-primary/10 px-4 py-2 text-sm font-medium text-accent-primary transition-all hover:bg-accent-primary hover:text-white focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
       >
         <Upload :size="18" :stroke-width="2" />
-        Import Bundle
+        {{ strings.feeds.importBundle }}
       </button>
     </div>
 
@@ -172,8 +173,8 @@ const handleImportSuccess = () => {
       :grid-cols="3"
       :skeleton-count="4"
       skeleton-height="h-80"
-      empty-title="No feeds configured"
-      empty-message="Create your first feed to start orchestrating content from your sources."
+      :empty-title="strings.feeds.empty.title"
+      :empty-message="strings.feeds.empty.message"
       :empty-icon="Layers"
       @retry="refetch"
     >

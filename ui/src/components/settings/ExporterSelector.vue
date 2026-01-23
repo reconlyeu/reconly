@@ -9,6 +9,7 @@ import BaseList from '@/components/common/BaseList.vue';
 import ExporterCard from './ExporterCard.vue';
 import { useExportersList, useToggleExporter } from '@/composables/useExporters';
 import { useToast } from '@/composables/useToast';
+import { strings } from '@/i18n/en';
 import type { Exporter } from '@/types/entities';
 
 interface Props {
@@ -57,8 +58,8 @@ const handleToggle = (exporterName: string, enabled: boolean) => {
     :grid-cols="2"
     :skeleton-count="4"
     skeleton-height="h-48"
-    empty-title="No exporters available"
-    empty-message="Export formats will appear here once they are registered."
+    :empty-title="strings.settings.exports.noExporters"
+    :empty-message="strings.settings.exports.noExportersDescription"
     :empty-icon="FileDown"
     @retry="refetch"
   >
@@ -76,7 +77,7 @@ const handleToggle = (exporterName: string, enabled: boolean) => {
 
     <template #empty-action>
       <p class="text-sm text-text-muted">
-        Check your installation or contact support if exporters are missing.
+        {{ strings.settings.exports.checkInstallation }}
       </p>
     </template>
   </BaseList>

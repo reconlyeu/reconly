@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { reportTemplatesApi } from '@/services/api';
 import type { ReportTemplate } from '@/types/entities';
 import { X, Loader2, Code, FileType, Copy } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   isOpen: boolean;
@@ -207,7 +208,7 @@ Key Points:
                   <Code :size="20" class="text-orange-400" :stroke-width="2" />
                 </div>
                 <h2 class="text-2xl font-bold text-text-primary">
-                  {{ isEditMode ? 'Edit Report Template' : 'Create Report Template' }}
+                  {{ isEditMode ? strings.templates.editReportTemplate : strings.templates.createReportTemplate }}
                 </h2>
               </div>
               <button
@@ -225,14 +226,14 @@ Key Points:
             <!-- Name -->
             <div>
               <label for="name" class="mb-2 block text-sm font-medium text-text-primary">
-                Template Name
+                {{ strings.templates.templateName }}
               </label>
               <input
                 id="name"
                 v-model="name"
                 v-bind="nameAttrs"
                 type="text"
-                placeholder="Clean Markdown Report"
+                :placeholder="strings.templates.placeholders.reportName"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                 :class="
                   errors.name
@@ -248,14 +249,14 @@ Key Points:
             <!-- Description -->
             <div>
               <label for="description" class="mb-2 block text-sm font-medium text-text-primary">
-                Description <span class="text-text-muted">(optional)</span>
+                {{ strings.templates.fields.description }} <span class="text-text-muted">({{ strings.common.optional }})</span>
               </label>
               <textarea
                 id="description"
                 v-model="description"
                 v-bind="descriptionAttrs"
                 rows="2"
-                placeholder="Clean markdown format suitable for email and documentation"
+                :placeholder="strings.templates.placeholders.reportDescription"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all resize-none"
                 :class="
                   errors.description
@@ -271,7 +272,7 @@ Key Points:
             <!-- Format -->
             <div>
               <label for="format" class="mb-2 block text-sm font-medium text-text-primary">
-                Output Format
+                {{ strings.templates.outputFormat }}
               </label>
               <div class="relative">
                 <FileType class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
@@ -286,9 +287,9 @@ Key Points:
                       : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                   "
                 >
-                  <option value="markdown">Markdown (.md)</option>
-                  <option value="html">HTML (.html)</option>
-                  <option value="text">Plain Text (.txt)</option>
+                  <option value="markdown">{{ strings.templates.formats.markdown }}</option>
+                  <option value="html">{{ strings.templates.formats.html }}</option>
+                  <option value="text">{{ strings.templates.formats.text }}</option>
                 </select>
               </div>
               <Transition name="error">
@@ -299,7 +300,7 @@ Key Points:
             <!-- Template Content -->
             <div>
               <label for="template_content" class="mb-2 block text-sm font-medium text-text-primary">
-                Jinja2 Template Content
+                {{ strings.templates.jinja2TemplateContent }}
               </label>
               <textarea
                 id="template_content"
@@ -333,7 +334,7 @@ Key Points:
                 :disabled="isSaving"
                 class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
               >
-                Cancel
+                {{ strings.common.cancel }}
               </button>
               <button
                 type="submit"
@@ -345,7 +346,7 @@ Key Points:
                   :size="18"
                   class="animate-spin"
                 />
-                {{ isSaving ? 'Saving...' : (isEditMode ? 'Update Template' : 'Create Template') }}
+                {{ isSaving ? strings.templates.saving : (isEditMode ? strings.templates.updateTemplate : strings.templates.createTemplate) }}
               </button>
             </div>
 
@@ -358,7 +359,7 @@ Key Points:
                 class="inline-flex items-center gap-1.5 text-sm text-text-muted transition-all hover:text-accent-primary hover:underline underline-offset-2 disabled:opacity-50"
               >
                 <Copy :size="14" />
-                Create a Copy
+                {{ strings.templates.actions.createCopy }}
               </button>
             </div>
           </form>

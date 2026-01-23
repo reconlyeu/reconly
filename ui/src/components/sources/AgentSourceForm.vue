@@ -8,6 +8,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import type { SourceConfig, AgentCapabilities, ResearchStrategy, ResearchReportFormat } from '@/types/entities';
 import { agentRunsApi } from '@/services/api';
 import { Clock, AlertTriangle, Info } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 const config = defineModel<SourceConfig>('config', { default: () => ({}) });
 const prompt = defineModel<string>('prompt', { required: true });
@@ -22,7 +23,7 @@ onMounted(async () => {
   try {
     capabilities.value = await agentRunsApi.getCapabilities();
   } catch (error) {
-    capabilitiesError.value = 'Could not load agent capabilities';
+    capabilitiesError.value = strings.sources.agent.errors.loadCapabilities;
     console.error('Failed to load agent capabilities:', error);
   } finally {
     capabilitiesLoading.value = false;
@@ -82,14 +83,14 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
     <!-- Prompt (research topic) -->
     <div>
       <label class="mb-2 block text-sm font-medium text-text-primary">
-        Research Topic
+        {{ strings.sources.agent.fields.researchTopic }}
       </label>
       <p class="mb-2 text-xs text-text-muted">
-        Describe what the AI agent should research. Be specific for better results.
+        {{ strings.sources.agent.hints.researchTopic }}
       </p>
       <textarea
         v-model="prompt"
-        placeholder="Research the latest developments in AI language models..."
+        :placeholder="strings.sources.agent.placeholders.prompt"
         class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
         rows="4"
       />
@@ -98,10 +99,10 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
     <!-- Research Strategy -->
     <div>
       <label class="mb-2 block text-sm font-medium text-text-primary">
-        Research Strategy
+        {{ strings.sources.agent.fields.researchStrategy }}
       </label>
       <p class="mb-2 text-xs text-text-muted">
-        Choose how thoroughly the agent should research the topic
+        {{ strings.sources.agent.hints.researchStrategy }}
       </p>
 
       <!-- Loading state -->
@@ -112,15 +113,15 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
       <!-- Error state -->
       <div v-else-if="capabilitiesError" class="rounded-lg border border-border-subtle bg-bg-surface p-4">
         <p class="text-sm text-text-muted">{{ capabilitiesError }}</p>
-        <p class="mt-1 text-xs text-text-muted">Using default options</p>
+        <p class="mt-1 text-xs text-text-muted">{{ strings.sources.agent.usingDefaultOptions }}</p>
         <select
           v-model="config.research_strategy"
           class="mt-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
         >
-          <option :value="undefined">Simple (default)</option>
-          <option value="simple">Simple</option>
-          <option value="comprehensive">Comprehensive</option>
-          <option value="deep">Deep</option>
+          <option :value="undefined">{{ strings.sources.agent.strategies.simple }} ({{ strings.sources.agent.defaultOption.toLowerCase() }})</option>
+          <option value="simple">{{ strings.sources.agent.strategies.simple }}</option>
+          <option value="comprehensive">{{ strings.sources.agent.strategies.comprehensive }}</option>
+          <option value="deep">{{ strings.sources.agent.strategies.deep }}</option>
         </select>
       </div>
 
@@ -143,7 +144,7 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
           />
           <div class="flex-1">
             <div class="flex items-center gap-2">
-              <span class="font-medium text-text-primary">Simple</span>
+              <span class="font-medium text-text-primary">{{ strings.sources.agent.strategies.simple }}</span>
               <span
                 v-if="getStrategyInfo('simple')"
                 class="inline-flex items-center gap-1 rounded-full bg-bg-hover px-2 py-0.5 text-xs text-text-muted"
@@ -154,7 +155,7 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
               </span>
             </div>
             <p class="mt-1 text-sm text-text-muted">
-              {{ getStrategyInfo('simple')?.description || 'Quick lookup using search and summarization' }}
+              {{ getStrategyInfo('simple')?.description || strings.sources.agent.strategyDescriptions.simple }}
             </p>
           </div>
         </label>
@@ -179,7 +180,7 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
           />
           <div class="flex-1">
             <div class="flex items-center gap-2">
-              <span class="font-medium text-text-primary">Comprehensive</span>
+              <span class="font-medium text-text-primary">{{ strings.sources.agent.strategies.comprehensive }}</span>
               <span
                 v-if="getStrategyInfo('comprehensive')"
                 class="inline-flex items-center gap-1 rounded-full bg-bg-hover px-2 py-0.5 text-xs text-text-muted"
@@ -192,11 +193,11 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
                 v-if="!isStrategyAvailable('comprehensive')"
                 class="inline-flex items-center gap-1 rounded-full bg-status-failed/10 px-2 py-0.5 text-xs text-status-failed"
               >
-                Unavailable
+                {{ strings.sources.agent.unavailable }}
               </span>
             </div>
             <p class="mt-1 text-sm text-text-muted">
-              {{ getStrategyInfo('comprehensive')?.description || 'Multi-step research with subtopic exploration' }}
+              {{ getStrategyInfo('comprehensive')?.description || strings.sources.agent.strategyDescriptions.comprehensive }}
             </p>
           </div>
         </label>
@@ -221,7 +222,7 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
           />
           <div class="flex-1">
             <div class="flex items-center gap-2">
-              <span class="font-medium text-text-primary">Deep</span>
+              <span class="font-medium text-text-primary">{{ strings.sources.agent.strategies.deep }}</span>
               <span
                 v-if="getStrategyInfo('deep')"
                 class="inline-flex items-center gap-1 rounded-full bg-bg-hover px-2 py-0.5 text-xs text-text-muted"
@@ -234,11 +235,11 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
                 v-if="!isStrategyAvailable('deep')"
                 class="inline-flex items-center gap-1 rounded-full bg-status-failed/10 px-2 py-0.5 text-xs text-status-failed"
               >
-                Unavailable
+                {{ strings.sources.agent.unavailable }}
               </span>
             </div>
             <p class="mt-1 text-sm text-text-muted">
-              {{ getStrategyInfo('deep')?.description || 'Exhaustive analysis with detailed research plan' }}
+              {{ getStrategyInfo('deep')?.description || strings.sources.agent.strategyDescriptions.deep }}
             </p>
           </div>
         </label>
@@ -250,10 +251,10 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
         >
           <AlertTriangle :size="16" class="mt-0.5 flex-shrink-0 text-yellow-500" />
           <div>
-            <p class="text-sm font-medium text-yellow-500">GPT Researcher not installed</p>
+            <p class="text-sm font-medium text-yellow-500">{{ strings.sources.agent.gptResearcherWarning.title }}</p>
             <p class="mt-0.5 text-xs text-text-muted">
-              Comprehensive and Deep strategies require the gpt-researcher package.
-              Install with: <code class="rounded bg-bg-hover px-1 py-0.5 text-xs">pip install gpt-researcher</code>
+              {{ strings.sources.agent.gptResearcherWarning.message }}
+              {{ strings.sources.agent.gptResearcherWarning.installHint }} <code class="rounded bg-bg-hover px-1 py-0.5 text-xs">pip install gpt-researcher</code>
             </p>
           </div>
         </div>
@@ -264,22 +265,22 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
     <div v-if="isAdvancedStrategy && !capabilitiesLoading" class="space-y-4 rounded-lg border border-border-subtle bg-bg-surface/50 p-4">
       <h4 class="flex items-center gap-2 text-sm font-medium text-text-primary">
         <Info :size="14" class="text-text-muted" />
-        Advanced Options
+        {{ strings.sources.agent.advancedOptions }}
       </h4>
 
       <!-- Report Format -->
       <div>
         <label class="mb-2 block text-sm font-medium text-text-primary">
-          Report Format
+          {{ strings.sources.agent.fields.reportFormat }}
         </label>
         <p class="mb-2 text-xs text-text-muted">
-          Citation style for the research report
+          {{ strings.sources.agent.hints.reportFormat }}
         </p>
         <select
           v-model="config.report_format"
           class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
         >
-          <option :value="undefined">Default (APA)</option>
+          <option :value="undefined">{{ strings.sources.agent.defaultOption }} (APA)</option>
           <option v-for="format in reportFormats" :key="format.value" :value="format.value">
             {{ format.label }}
           </option>
@@ -289,10 +290,10 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
       <!-- Max Subtopics -->
       <div>
         <label class="mb-2 block text-sm font-medium text-text-primary">
-          Max Subtopics
+          {{ strings.sources.agent.fields.maxSubtopics }}
         </label>
         <p class="mb-2 text-xs text-text-muted">
-          Maximum number of subtopics to explore (1-10)
+          {{ strings.sources.agent.hints.maxSubtopics }}
         </p>
         <div class="flex items-center gap-4">
           <input
@@ -312,16 +313,16 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
     <!-- Max Iterations -->
     <div>
       <label class="mb-2 block text-sm font-medium text-text-primary">
-        Max Research Iterations
+        {{ strings.sources.agent.fields.maxIterations }}
       </label>
       <p class="mb-2 text-xs text-text-muted">
-        How many search and fetch cycles the agent can perform (default: 5)
+        {{ strings.sources.agent.hints.maxIterations }}
       </p>
       <select
         v-model.number="config.max_iterations"
         class="rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
       >
-        <option :value="undefined">Default (5)</option>
+        <option :value="undefined">{{ strings.sources.agent.defaultOption }} (5)</option>
         <option v-for="n in 10" :key="n" :value="n">{{ n }}</option>
       </select>
     </div>
@@ -329,27 +330,27 @@ const reportFormats: { value: ResearchReportFormat; label: string }[] = [
     <!-- Search Provider Override -->
     <div>
       <label class="mb-2 block text-sm font-medium text-text-primary">
-        Search Provider
+        {{ strings.sources.agent.fields.searchProvider }}
       </label>
       <p class="mb-2 text-xs text-text-muted">
-        Override the global search provider for this source (optional)
+        {{ strings.sources.agent.hints.searchProvider }}
       </p>
       <select
         v-model="config.search_provider"
         class="rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary"
       >
-        <option :value="undefined">Default (global setting)</option>
-        <option value="duckduckgo">DuckDuckGo (free, no API key)</option>
-        <option value="searxng">SearXNG (self-hosted)</option>
-        <option value="tavily">Tavily (AI-optimized, requires API key)</option>
+        <option :value="undefined">{{ strings.sources.agent.searchProviders.default }}</option>
+        <option value="duckduckgo">{{ strings.sources.agent.searchProviders.duckduckgo }}</option>
+        <option value="searxng">{{ strings.sources.agent.searchProviders.searxng }}</option>
+        <option value="tavily">{{ strings.sources.agent.searchProviders.tavily }}</option>
       </select>
 
       <!-- Provider hints -->
       <p v-if="config.search_provider === 'tavily'" class="mt-2 text-xs text-accent-primary">
-        Note: Requires TAVILY_API_KEY environment variable
+        {{ strings.sources.agent.providerHints.tavily }}
       </p>
       <p v-if="config.search_provider === 'searxng'" class="mt-2 text-xs text-text-muted">
-        Note: Requires SearXNG instance configured via SEARXNG_URL
+        {{ strings.sources.agent.providerHints.searxng }}
       </p>
     </div>
   </div>

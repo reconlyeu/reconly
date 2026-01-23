@@ -94,7 +94,7 @@ Demo mode is read-only with static data. To use Reconly for real:
 
 1. **Stop demo**: `docker compose down -v`
 2. **Set up production**: Follow the [Setup Guide](setup.md)
-3. **Configure LLM**: Add Ollama locally or cloud API keys
+3. **Configure LLM**: Add Ollama/LM Studio locally or cloud API keys
 4. **Add your sources**: Create feeds with your RSS/YouTube/email sources
 
 ### Production Setup

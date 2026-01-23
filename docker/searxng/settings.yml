@@ -30,8 +30,8 @@ search:
     - rss
 
 server:
-  # Development secret key - regenerate for production!
-  secret_key: "b9e8f7a6d5c4e3b2a1f0e9d8c7b6a5948372615049382716054839271605483a"
+  # CHANGE FOR PRODUCTION: Generate with: openssl rand -hex 32
+  secret_key: "dev-only-CHANGE-THIS-IN-PRODUCTION-run-openssl-rand-hex-32"
   # Bind to all interfaces for Docker
   bind_address: "0.0.0.0"
   port: 8080

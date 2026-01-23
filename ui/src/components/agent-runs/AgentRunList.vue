@@ -12,6 +12,7 @@ import { Loader2, RefreshCw, Bot } from 'lucide-vue-next';
 import AgentRunCard from './AgentRunCard.vue';
 import AgentRunModal from './AgentRunModal.vue';
 import EmptyState from '@/components/common/EmptyState.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   sourceId: number;
@@ -54,10 +55,10 @@ const closeModal = () => {
       <div class="flex items-center gap-2">
         <Bot :size="20" class="text-accent-primary" />
         <h3 class="text-lg font-semibold text-text-primary">
-          Agent Run History
+          {{ strings.agentRuns.title }}
         </h3>
         <span v-if="total > 0" class="rounded-full bg-bg-hover px-2 py-0.5 text-xs text-text-muted">
-          {{ total }} runs
+          {{ total }} {{ strings.agentRuns.runs }}
         </span>
       </div>
       <button
@@ -66,7 +67,7 @@ const closeModal = () => {
         class="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-3 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-hover disabled:opacity-50"
       >
         <RefreshCw :size="14" :class="isFetching ? 'animate-spin' : ''" />
-        Refresh
+        {{ strings.agentRuns.refresh }}
       </button>
     </div>
 
@@ -77,14 +78,14 @@ const closeModal = () => {
 
     <!-- Error State -->
     <div v-else-if="isError" class="rounded-lg bg-status-failed/10 p-4 text-center text-status-failed">
-      Failed to load agent runs. Please try again.
+      {{ strings.agentRuns.failedToLoad }}
     </div>
 
     <!-- Empty State -->
     <EmptyState
       v-else-if="runs.length === 0"
-      title="No agent runs yet"
-      message="This agent source hasn't been run yet. Add it to a feed and run the feed to see results here."
+      :title="strings.agentRuns.noRuns"
+      :message="strings.agentRuns.noRunsDescription"
       :icon="Bot"
     />
 

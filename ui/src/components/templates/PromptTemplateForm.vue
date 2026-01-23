@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { promptTemplatesApi } from '@/services/api';
 import type { PromptTemplate } from '@/types/entities';
 import { X, Loader2, Languages, AlignLeft, MessageSquare, Copy } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   isOpen: boolean;
@@ -167,7 +168,7 @@ const languages = [
                   <Languages :size="20" class="text-purple-400" :stroke-width="2" />
                 </div>
                 <h2 class="text-2xl font-bold text-text-primary">
-                  {{ isEditMode ? 'Edit Prompt Template' : 'Create Prompt Template' }}
+                  {{ isEditMode ? strings.templates.editPromptTemplate : strings.templates.createPromptTemplate }}
                 </h2>
               </div>
               <button
@@ -185,14 +186,14 @@ const languages = [
             <!-- Name -->
             <div>
               <label for="name" class="mb-2 block text-sm font-medium text-text-primary">
-                Template Name
+                {{ strings.templates.templateName }}
               </label>
               <input
                 id="name"
                 v-model="name"
                 v-bind="nameAttrs"
                 type="text"
-                placeholder="Brief Tech Summary"
+                :placeholder="strings.templates.placeholders.name"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                 :class="
                   errors.name
@@ -208,14 +209,14 @@ const languages = [
             <!-- Description -->
             <div>
               <label for="description" class="mb-2 block text-sm font-medium text-text-primary">
-                Description <span class="text-text-muted">(optional)</span>
+                {{ strings.templates.fields.description }} <span class="text-text-muted">({{ strings.common.optional }})</span>
               </label>
               <textarea
                 id="description"
                 v-model="description"
                 v-bind="descriptionAttrs"
                 rows="2"
-                placeholder="Concise technical summaries for developers"
+                :placeholder="strings.templates.placeholders.description"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all resize-none"
                 :class="
                   errors.description
@@ -233,7 +234,7 @@ const languages = [
               <!-- Language -->
               <div>
                 <label for="language" class="mb-2 block text-sm font-medium text-text-primary">
-                  Language
+                  {{ strings.templates.fields.language }}
                 </label>
                 <div class="relative">
                   <Languages class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
@@ -259,7 +260,7 @@ const languages = [
               <!-- Target Length -->
               <div>
                 <label for="target_length" class="mb-2 block text-sm font-medium text-text-primary">
-                  Target Length
+                  {{ strings.templates.fields.targetLength }}
                 </label>
                 <div class="relative">
                   <AlignLeft class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
@@ -274,10 +275,10 @@ const languages = [
                         : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                     "
                   >
-                    <option :value="100">Brief (~100 words)</option>
-                    <option :value="150">Standard (~150 words)</option>
-                    <option :value="300">Detailed (~300 words)</option>
-                    <option :value="500">Comprehensive (~500 words)</option>
+                    <option :value="100">{{ strings.templates.targetLengths.brief }}</option>
+                    <option :value="150">{{ strings.templates.targetLengths.standard }}</option>
+                    <option :value="300">{{ strings.templates.targetLengths.detailed }}</option>
+                    <option :value="500">{{ strings.templates.targetLengths.comprehensive }}</option>
                   </select>
                 </div>
                 <Transition name="error">
@@ -289,7 +290,7 @@ const languages = [
             <!-- Template Content -->
             <div>
               <label for="user_prompt_template" class="mb-2 block text-sm font-medium text-text-primary">
-                Template Content
+                {{ strings.templates.templateContent }}
               </label>
               <textarea
                 id="user_prompt_template"
@@ -331,7 +332,7 @@ Content to summarize:
                 :disabled="isSaving"
                 class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
               >
-                Cancel
+                {{ strings.common.cancel }}
               </button>
               <button
                 type="submit"
@@ -343,7 +344,7 @@ Content to summarize:
                   :size="18"
                   class="animate-spin"
                 />
-                {{ isSaving ? 'Saving...' : (isEditMode ? 'Update Template' : 'Create Template') }}
+                {{ isSaving ? strings.templates.saving : (isEditMode ? strings.templates.updateTemplate : strings.templates.createTemplate) }}
               </button>
             </div>
 
@@ -356,7 +357,7 @@ Content to summarize:
                 class="inline-flex items-center gap-1.5 text-sm text-text-muted transition-all hover:text-accent-primary hover:underline underline-offset-2 disabled:opacity-50"
               >
                 <Copy :size="14" />
-                Create a Copy
+                {{ strings.templates.actions.createCopy }}
               </button>
             </div>
           </form>

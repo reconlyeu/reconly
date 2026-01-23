@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { oauthApi } from '@/services/api';
 import type { IMAPProvider, SourceConfig } from '@/types/entities';
 import { Mail, Lock, Server, Folder, User, Eye, EyeOff, Loader2, ChevronDown, Filter } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   /** Whether the form is in loading/saving state */
@@ -69,19 +70,19 @@ const isOutlookConfigured = computed(() => {
 const providerInfo = computed(() => {
   const providers: Record<IMAPProvider, { name: string; icon: string; description: string }> = {
     gmail: {
-      name: 'Gmail',
+      name: strings.sources.imap.providers.gmail,
       icon: 'https://www.google.com/gmail/about/static-2.0/images/logo-gmail.png',
-      description: 'Connect using Google OAuth. Supports personal and Google Workspace accounts.',
+      description: strings.sources.imap.providerDescriptions.gmail,
     },
     outlook: {
-      name: 'Outlook / Microsoft 365',
+      name: strings.sources.imap.providers.outlook,
       icon: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Microsoft_Office_Outlook_%282018%E2%80%93present%29.svg',
-      description: 'Connect using Microsoft OAuth. Supports Outlook.com and Microsoft 365 accounts.',
+      description: strings.sources.imap.providerDescriptions.outlook,
     },
     generic: {
-      name: 'Generic IMAP',
+      name: strings.sources.imap.providers.generic,
       icon: '',
-      description: 'Connect to any IMAP server using traditional credentials.',
+      description: strings.sources.imap.providerDescriptions.generic,
     },
   };
   return providers[provider.value] || providers.generic;
@@ -121,7 +122,7 @@ watch(oauthProviders, (providers) => {
     <!-- Provider Selection (compact) -->
     <div>
       <label class="mb-2 block text-sm font-medium text-text-primary">
-        Email Provider
+        {{ strings.sources.imap.fields.provider }}
       </label>
 
       <div class="flex gap-2">
@@ -139,7 +140,7 @@ watch(oauthProviders, (providers) => {
           :disabled="!isGmailConfigured"
         >
           <Mail :size="16" class="text-red-500" />
-          <span class="text-sm font-medium text-text-primary">Gmail</span>
+          <span class="text-sm font-medium text-text-primary">{{ strings.sources.imap.providers.gmail }}</span>
         </button>
 
         <!-- Outlook Option -->
@@ -156,7 +157,7 @@ watch(oauthProviders, (providers) => {
           :disabled="!isOutlookConfigured"
         >
           <Mail :size="16" class="text-blue-500" />
-          <span class="text-sm font-medium text-text-primary">Outlook</span>
+          <span class="text-sm font-medium text-text-primary">{{ strings.sources.imap.providers.outlook }}</span>
         </button>
 
         <!-- Generic IMAP Option -->
@@ -169,7 +170,7 @@ watch(oauthProviders, (providers) => {
             : 'border-border-subtle bg-bg-surface hover:border-border-default hover:bg-bg-hover'"
         >
           <Server :size="16" class="text-text-muted" />
-          <span class="text-sm font-medium text-text-primary">IMAP</span>
+          <span class="text-sm font-medium text-text-primary">{{ strings.sources.imap.providers.generic }}</span>
         </button>
       </div>
 
@@ -177,7 +178,7 @@ watch(oauthProviders, (providers) => {
       <div class="mt-2 flex items-center gap-3 text-xs text-text-muted">
         <Loader2 v-if="isLoadingProviders" :size="14" class="animate-spin" />
         <span v-else-if="!isGmailConfigured && !isOutlookConfigured">
-          OAuth providers not configured
+          {{ strings.sources.imap.oauthNotConfigured }}
         </span>
         <span v-else>{{ providerInfo.description }}</span>
       </div>
@@ -188,10 +189,9 @@ watch(oauthProviders, (providers) => {
       <div class="flex items-start gap-3">
         <Lock :size="20" class="mt-0.5 flex-shrink-0 text-accent-primary" />
         <div>
-          <h4 class="text-sm font-medium text-text-primary">Secure OAuth Authentication</h4>
+          <h4 class="text-sm font-medium text-text-primary">{{ strings.sources.imap.oauth.title }}</h4>
           <p class="mt-1 text-xs text-text-muted">
-            After creating this source, you'll be redirected to {{ provider === 'gmail' ? 'Google' : 'Microsoft' }}
-            to authorize access. Your password is never stored - we use secure OAuth tokens.
+            {{ strings.sources.imap.oauth.message.replace('{provider}', provider === 'gmail' ? 'Google' : 'Microsoft') }}
           </p>
         </div>
       </div>
@@ -207,9 +207,9 @@ watch(oauthProviders, (providers) => {
       >
         <div class="flex items-center gap-2">
           <Server :size="16" class="text-text-muted" />
-          <span class="text-sm font-medium text-text-primary">Server Settings</span>
+          <span class="text-sm font-medium text-text-primary">{{ strings.sources.imap.sections.serverSettings }}</span>
           <span v-if="hasServerSettings && !showServerSettings" class="rounded-full bg-accent-primary/20 px-2 py-0.5 text-xs text-accent-primary">
-            configured
+            {{ strings.sources.imap.configured }}
           </span>
         </div>
         <ChevronDown
@@ -225,12 +225,12 @@ watch(oauthProviders, (providers) => {
           <!-- IMAP Server -->
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
-              IMAP Server
+              {{ strings.sources.imap.fields.host }}
             </label>
             <input
               v-model="imapHost"
               type="text"
-              placeholder="imap.example.com"
+              :placeholder="strings.sources.imap.placeholders.host"
               class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
             />
           </div>
@@ -239,7 +239,7 @@ watch(oauthProviders, (providers) => {
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="mb-1.5 block text-sm font-medium text-text-primary">
-                Port
+                {{ strings.sources.imap.fields.port }}
               </label>
               <input
                 v-model.number="imapPort"
@@ -251,7 +251,7 @@ watch(oauthProviders, (providers) => {
             </div>
             <div>
               <label class="mb-1.5 block text-sm font-medium text-text-primary">
-                SSL/TLS
+                {{ strings.sources.imap.fields.ssl }}
               </label>
               <button
                 type="button"
@@ -261,7 +261,7 @@ watch(oauthProviders, (providers) => {
                   ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
                   : 'border-border-subtle bg-bg-base text-text-muted'"
               >
-                <span>{{ imapUseSsl ? 'Enabled' : 'Disabled' }}</span>
+                <span>{{ imapUseSsl ? strings.common.enabled : strings.common.disabled }}</span>
                 <Lock :size="14" />
               </button>
             </div>
@@ -271,12 +271,12 @@ watch(oauthProviders, (providers) => {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
               <User :size="14" class="mr-1 inline" />
-              Username
+              {{ strings.sources.imap.fields.username }}
             </label>
             <input
               v-model="imapUsername"
               type="text"
-              placeholder="user@example.com"
+              :placeholder="strings.sources.imap.placeholders.username"
               autocomplete="username"
               class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
             />
@@ -286,13 +286,13 @@ watch(oauthProviders, (providers) => {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
               <Lock :size="14" class="mr-1 inline" />
-              Password
+              {{ strings.sources.imap.fields.password }}
             </label>
             <div class="relative">
               <input
                 v-model="imapPassword"
                 :type="showPassword ? 'text' : 'password'"
-                placeholder="Enter password"
+                :placeholder="strings.sources.imap.placeholders.password"
                 autocomplete="current-password"
                 class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 pr-10 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
               />
@@ -306,7 +306,7 @@ watch(oauthProviders, (providers) => {
               </button>
             </div>
             <p class="mt-1 text-xs text-text-muted">
-              Encrypted before storage.
+              {{ strings.sources.imap.hints.passwordEncrypted }}
             </p>
           </div>
         </div>
@@ -323,9 +323,9 @@ watch(oauthProviders, (providers) => {
       >
         <div class="flex items-center gap-2">
           <Filter :size="16" class="text-text-muted" />
-          <span class="text-sm font-medium text-text-primary">Email Filters</span>
+          <span class="text-sm font-medium text-text-primary">{{ strings.sources.imap.sections.emailFilters }}</span>
           <span v-if="hasFilters" class="rounded-full bg-accent-primary/20 px-2 py-0.5 text-xs text-accent-primary">
-            configured
+            {{ strings.sources.imap.configured }}
           </span>
         </div>
         <ChevronDown
@@ -342,28 +342,28 @@ watch(oauthProviders, (providers) => {
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
               <Folder :size="14" class="mr-1 inline" />
-              Folders
+              {{ strings.sources.imap.fields.folders }}
             </label>
             <input
               v-model="folders"
               type="text"
-              placeholder="INBOX, Newsletters"
+              :placeholder="strings.sources.imap.placeholders.folders"
               class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
             />
             <p class="mt-1 text-xs text-text-muted">
-              Comma-separated. Leave empty for INBOX only.
+              {{ strings.sources.imap.hints.folders }}
             </p>
           </div>
 
           <!-- From Filter -->
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
-              Sender Filter
+              {{ strings.sources.imap.fields.senderFilter }}
             </label>
             <input
               v-model="fromFilter"
               type="text"
-              placeholder="@newsletter.com"
+              :placeholder="strings.sources.imap.placeholders.senderFilter"
               class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
             />
           </div>
@@ -371,12 +371,12 @@ watch(oauthProviders, (providers) => {
           <!-- Subject Filter -->
           <div>
             <label class="mb-1.5 block text-sm font-medium text-text-primary">
-              Subject Filter
+              {{ strings.sources.imap.fields.subjectFilter }}
             </label>
             <input
               v-model="subjectFilter"
               type="text"
-              placeholder="Weekly Report"
+              :placeholder="strings.sources.imap.placeholders.subjectFilter"
               class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
             />
           </div>

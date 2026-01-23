@@ -2,7 +2,7 @@
 
 > **Status:** Available in v1.5+
 > **Source Type:** `agent`
-> **Requires:** LLM provider configured (Ollama, OpenAI, or Anthropic)
+> **Requires:** LLM provider configured (Ollama, LM Studio, OpenAI, or Anthropic)
 
 This guide explains how to use Reconly's AI Agent source for autonomous web research.
 
@@ -145,6 +145,7 @@ GPT Researcher automatically uses your configured LLM provider:
 | OpenAI | Uses `OPENAI_API_KEY`, model as `SMART_LLM` |
 | Anthropic | Uses `ANTHROPIC_API_KEY`, model as `SMART_LLM` |
 | Ollama | Uses `OLLAMA_BASE_URL`, model as `SMART_LLM` |
+| LM Studio | Uses `OPENAI_BASE_URL` (OpenAI-compatible API) |
 
 ---
 
@@ -186,7 +187,7 @@ Costs vary by strategy and LLM provider. Estimates using GPT-4o:
 
 **Cost-Saving Tips:**
 
-1. Use **Ollama** with local models for unlimited free research
+1. Use **Ollama** or **LM Studio** with local models for unlimited free research
 2. Start with **Simple** strategy and upgrade only when needed
 3. Use **SearXNG** instead of Tavily to avoid API costs
 4. Set lower `max_subtopics` for comprehensive strategies
@@ -233,12 +234,12 @@ Increase the timeout or reduce scope:
 - Wait a few minutes and try again
 - Consider self-hosting SearXNG for unlimited searches
 
-### Ollama models produce poor results
+### Local models produce poor results
 
-GPT Researcher works best with capable models. For Ollama:
+GPT Researcher works best with capable models. For Ollama or LM Studio:
 - Use `llama3.1:70b` or larger for best results
-- `llama3.1:8b` works but may miss nuances
-- Ensure adequate RAM/VRAM for the model
+- `llama3.2` or `qwen2.5:7b` work for simpler research but may miss nuances
+- Ensure adequate RAM/VRAM for the model (8GB+ for 7B models, 16GB+ for larger)
 
 ---
 

@@ -8,6 +8,7 @@
  * - Source indicator: Badge showing where the value comes from (database/environment/default)
  */
 import { computed } from 'vue';
+import { strings } from '@/i18n/en';
 import type { SettingValue, SettingSource } from '@/types/entities';
 
 interface Props {
@@ -48,9 +49,9 @@ const sourceBadgeClass = computed(() => {
 
 const sourceLabel = computed(() => {
   const labels: Record<SettingSource, string> = {
-    database: 'DB',
-    environment: 'ENV',
-    default: 'Default',
+    database: strings.settings.source.database,
+    environment: strings.settings.source.environment,
+    default: strings.settings.source.default,
   };
   return labels[props.setting.source];
 });
@@ -86,12 +87,12 @@ const handleInput = (event: Event) => {
         <!-- Source badge -->
         <span
           :class="['text-xs px-2 py-0.5 rounded-full', sourceBadgeClass]"
-          :title="`Value from: ${setting.source}`"
+          :title="strings.settings.source.valueFrom.replace('{source}', setting.source)"
         >
           {{ sourceLabel }}
         </span>
         <!-- Lock icon for non-editable -->
-        <span v-if="isLocked" class="text-gray-400" title="Set via environment variable">
+        <span v-if="isLocked" class="text-gray-400" :title="strings.settings.source.setViaEnv">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
@@ -114,7 +115,7 @@ const handleInput = (event: Event) => {
         class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400 cursor-not-allowed"
       />
       <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-        Set via environment variable
+        {{ strings.settings.source.setViaEnv }}
       </span>
     </div>
 

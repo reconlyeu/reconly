@@ -16,6 +16,7 @@ import {
   HardDrive,
   Settings,
 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 import type { Exporter } from '@/types/entities';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 
@@ -59,25 +60,25 @@ const status = computed<StatusType>(() => {
 const statusConfig = computed(() => {
   const configs = {
     active: {
-      label: 'Active',
+      label: strings.settings.exports.status.active,
       color: 'bg-green-500/10 text-green-400 border-green-500/20',
       icon: Check,
       dotColor: 'bg-green-500',
     },
     misconfigured: {
-      label: 'Misconfigured',
+      label: strings.settings.exports.status.misconfigured,
       color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
       icon: AlertCircle,
       dotColor: 'bg-amber-500',
     },
     disabled: {
-      label: 'Disabled',
+      label: strings.settings.exports.status.disabled,
       color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
       icon: X,
       dotColor: 'bg-gray-500',
     },
     not_configured: {
-      label: 'Not Configured',
+      label: strings.settings.exports.status.notConfigured,
       color: 'bg-red-500/10 text-red-400 border-red-500/20',
       icon: X,
       dotColor: 'bg-red-500',
@@ -134,9 +135,9 @@ const displayName = computed(() => {
 // Tooltip for disabled toggle
 const toggleTooltip = computed(() => {
   if (!props.exporter.can_enable && !props.exporter.enabled) {
-    return 'Configure required fields first';
+    return strings.settings.exports.configureRequired;
   }
-  return props.exporter.enabled ? 'Disable exporter' : 'Enable exporter';
+  return props.exporter.enabled ? strings.settings.exports.disableExporter : strings.settings.exports.enableExporter;
 });
 </script>
 
@@ -224,14 +225,14 @@ const toggleTooltip = computed(() => {
             class="inline-flex items-center gap-1.5 rounded-full bg-status-success/10 px-2.5 py-1 text-xs font-medium text-status-success"
           >
             <HardDrive :size="12" />
-            Direct Export
+            {{ strings.settings.exports.features.directExport }}
           </span>
           <span
             v-if="exporter.config_schema.fields.length > 0"
             class="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400"
           >
             <Settings :size="12" />
-            Configurable
+            {{ strings.settings.exports.features.configurable }}
           </span>
         </div>
       </div>

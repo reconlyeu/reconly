@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/vue-query';
 import { analyticsApi } from '@/services/api';
 import { Loader2, ChevronRight, ChevronDown } from 'lucide-vue-next';
 import type { TokensByProvider } from '@/types/entities';
+import { strings } from '@/i18n/en';
 
 interface Props {
   period: string;
@@ -66,7 +67,7 @@ const chartData = computed(() => {
       <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-accent-primary/10">
         <div class="h-3 w-3 rounded-full bg-accent-primary" />
       </div>
-      Tokens by Provider
+      {{ strings.analytics.providerChart.title }}
     </h2>
 
     <!-- Loading State -->
@@ -76,12 +77,12 @@ const chartData = computed(() => {
 
     <!-- Error State -->
     <div v-else-if="isError" class="flex h-64 items-center justify-center">
-      <p class="text-sm text-status-failed">Failed to load provider data</p>
+      <p class="text-sm text-status-failed">{{ strings.analytics.providerChart.failedToLoad }}</p>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!chartData || chartData.length === 0" class="flex h-64 items-center justify-center">
-      <p class="text-sm text-text-muted">No provider usage data available</p>
+      <p class="text-sm text-text-muted">{{ strings.analytics.providerChart.noData }}</p>
     </div>
 
     <!-- Chart -->
@@ -108,7 +109,7 @@ const chartData = computed(() => {
               {{ provider.provider }}
             </span>
             <span v-if="provider.hasModels" class="text-xs text-text-muted">
-              ({{ provider.models.length }} models)
+              ({{ provider.models.length }} {{ strings.analytics.providerChart.models }})
             </span>
             <!-- Expand/Collapse Icon -->
             <component
@@ -120,7 +121,7 @@ const chartData = computed(() => {
           </div>
           <div class="flex items-center gap-3 text-sm">
             <span class="text-text-secondary">
-              {{ provider.total_tokens.toLocaleString() }} tokens
+              {{ provider.total_tokens.toLocaleString() }} {{ strings.analytics.providerChart.tokens }}
             </span>
             <span class="font-mono font-semibold" :class="provider.color.text">
               {{ provider.percentage.toFixed(1) }}%
@@ -158,7 +159,7 @@ const chartData = computed(() => {
             </div>
             <div class="flex items-center gap-3">
               <span class="text-text-muted text-xs">
-                {{ model.total_tokens.toLocaleString() }} tokens
+                {{ model.total_tokens.toLocaleString() }} {{ strings.analytics.providerChart.tokens }}
               </span>
               <span class="font-mono text-xs" :class="provider.color.text">
                 {{ model.percentage.toFixed(1) }}%
@@ -171,9 +172,9 @@ const chartData = computed(() => {
       <!-- Total -->
       <div class="border-t border-border-subtle pt-4 mt-6">
         <div class="flex items-center justify-between text-sm">
-          <span class="font-medium text-text-primary">Total Usage</span>
+          <span class="font-medium text-text-primary">{{ strings.analytics.providerChart.totalUsage }}</span>
           <span class="font-mono font-semibold text-accent-primary">
-            {{ totalTokens.toLocaleString() }} tokens
+            {{ totalTokens.toLocaleString() }} {{ strings.analytics.providerChart.tokens }}
           </span>
         </div>
       </div>

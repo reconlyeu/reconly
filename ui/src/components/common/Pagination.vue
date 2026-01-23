@@ -4,6 +4,7 @@
  * Displays prev/next buttons and page indicator.
  */
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   /** Current page number (1-based) */
@@ -43,11 +44,11 @@ const canGoPrev = () => props.hasPrev ?? props.page > 1;
       class="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-all hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
     >
       <ChevronLeft :size="16" :stroke-width="2" />
-      Previous
+      {{ strings.common.pagination.previous }}
     </button>
 
     <div v-if="showPageInfo" class="text-sm text-text-secondary">
-      Page {{ page }} of {{ totalPages }}
+      {{ strings.common.pagination.pageOf.replace('{page}', String(page)).replace('{total}', String(totalPages)) }}
     </div>
 
     <button
@@ -55,7 +56,7 @@ const canGoPrev = () => props.hasPrev ?? props.page > 1;
       :disabled="!canGoNext()"
       class="flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-all hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
     >
-      Next
+      {{ strings.common.pagination.next }}
       <ChevronRight :size="16" :stroke-width="2" />
     </button>
   </div>

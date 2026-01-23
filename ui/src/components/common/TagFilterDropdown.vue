@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { tagsApi } from '@/services/api';
 import { Tag, X, Trash2, ChevronDown } from 'lucide-vue-next';
 import type { Tag as TagType } from '@/types/entities';
+import { strings } from '@/i18n/en';
 
 interface Props {
   modelValue: string | null;
@@ -131,7 +132,7 @@ onUnmounted(() => {
         <span v-if="selectedTag" class="truncate">
           {{ selectedTag.name }}
         </span>
-        <span v-else class="text-text-secondary">All Tags</span>
+        <span v-else class="text-text-secondary">{{ strings.common.tagFilter.allTags }}</span>
       </span>
       <ChevronDown
         :size="16"
@@ -159,13 +160,13 @@ onUnmounted(() => {
           :class="{ 'bg-bg-hover': !modelValue }"
           @click="selectTag(null)"
         >
-          <span class="font-medium text-text-primary">All Tags</span>
+          <span class="font-medium text-text-primary">{{ strings.common.tagFilter.allTags }}</span>
         </div>
 
         <!-- Tags list -->
         <ul class="max-h-64 overflow-y-auto overflow-x-hidden py-1">
-          <li v-if="isLoading" class="px-3 py-2 text-sm text-text-muted">Loading...</li>
-          <li v-else-if="!tags?.length" class="px-3 py-2 text-sm text-text-muted">No tags found</li>
+          <li v-if="isLoading" class="px-3 py-2 text-sm text-text-muted">{{ strings.common.tagFilter.loading }}</li>
+          <li v-else-if="!tags?.length" class="px-3 py-2 text-sm text-text-muted">{{ strings.common.tagFilter.noTags }}</li>
           <template v-else>
             <li
               v-for="tag in tags"
@@ -177,21 +178,21 @@ onUnmounted(() => {
                 v-if="confirmingDelete === tag.id"
                 class="flex items-center justify-between bg-status-error/10 px-3 py-2"
               >
-                <span class="text-sm text-status-error">Remove from {{ tag.digest_count }} digests?</span>
+                <span class="text-sm text-status-error">{{ strings.common.tagFilter.confirmDelete.replace('{count}', String(tag.digest_count)) }}</span>
                 <div class="flex items-center gap-1">
                   <button
                     type="button"
                     class="rounded px-2 py-1 text-xs font-medium text-text-secondary hover:bg-bg-surface"
                     @click="cancelDelete"
                   >
-                    No
+                    {{ strings.common.tagFilter.no }}
                   </button>
                   <button
                     type="button"
                     class="rounded bg-status-error px-2 py-1 text-xs font-medium text-white hover:bg-status-error/80"
                     @click="confirmDelete(tag.id, $event)"
                   >
-                    Yes
+                    {{ strings.common.tagFilter.yes }}
                   </button>
                 </div>
               </div>
@@ -234,7 +235,7 @@ onUnmounted(() => {
           >
             <Trash2 :size="14" />
             <span>
-              {{ deleteUnusedMutation.isPending.value ? 'Deleting...' : `Delete unused (${unusedCount})` }}
+              {{ deleteUnusedMutation.isPending.value ? strings.common.tagFilter.deleting : strings.common.tagFilter.deleteUnused.replace('{count}', String(unusedCount)) }}
             </span>
           </button>
         </div>

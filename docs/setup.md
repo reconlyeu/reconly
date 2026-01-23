@@ -78,11 +78,12 @@ Reconly supports multiple AI providers with intelligent fallback:
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
 | **Ollama** | Free | 100% Local | 5 min |
+| **LM Studio** | Free | 100% Local | 5 min |
 | **HuggingFace** | Free tier | Cloud | API key |
 | **OpenAI** | ~$0.02/article | Cloud | API key |
 | **Anthropic** | ~$0.04/article | Cloud | API key |
 
-**Recommendation**: Start with **Ollama** for free, private, offline summarization.
+**Recommendation**: Start with **[Ollama](https://ollama.com)** or **[LM Studio](https://lmstudio.ai)** for free, private, offline summarization.
 
 #### Option A: Ollama (Local, Free, Private)
 
@@ -90,14 +91,28 @@ Reconly supports multiple AI providers with intelligent fallback:
 # Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull a model
-ollama pull llama3.2
+# Pull a model (choose based on your hardware)
+ollama pull llama3.2      # Recommended: good balance of speed and quality
+ollama pull qwen2.5:7b    # Lighter alternative for less powerful machines
 
 # Configure (optional)
 echo "DEFAULT_PROVIDER=ollama" >> .env
 ```
 
-#### Option B: Cloud Providers
+#### Option B: LM Studio (Local, Free, Private)
+
+1. Download and install [LM Studio](https://lmstudio.ai)
+2. Download a model (e.g., Llama 3.2, Qwen 2.5 7B for lighter hardware)
+3. Start the local server (Developer tab → Start Server)
+4. Configure Reconly:
+
+```bash
+# .env file
+DEFAULT_PROVIDER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+#### Option C: Cloud Providers
 
 ```bash
 # .env file

@@ -7,6 +7,7 @@
  */
 import { computed } from 'vue';
 import { GripVertical, Settings, X, Cloud, Server } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 import type { Provider, ProviderStatus } from '@/types/entities';
 
 interface Props {
@@ -37,19 +38,19 @@ const emit = defineEmits<{
 const statusConfig = computed(() => {
   const configs: Record<ProviderStatus, { label: string; dotClass: string }> = {
     available: {
-      label: 'Available',
+      label: strings.settings.providers.status.available,
       dotClass: 'bg-status-success',
     },
     configured: {
-      label: 'Configured',
+      label: strings.settings.providers.status.configured,
       dotClass: 'bg-blue-500',
     },
     not_configured: {
-      label: 'Not Configured',
+      label: strings.settings.providers.status.notConfigured,
       dotClass: 'bg-status-failed',
     },
     unavailable: {
-      label: 'Not Running',
+      label: strings.settings.providers.status.unavailable,
       dotClass: 'bg-amber-500',
     },
   };
@@ -78,7 +79,7 @@ const currentModel = computed(() => {
 
 // Type label (Local or Cloud)
 const typeLabel = computed(() => {
-  return props.provider.is_local ? 'Local' : 'Cloud';
+  return props.provider.is_local ? strings.settings.providers.local : strings.settings.providers.cloud;
 });
 
 // Handle drag start
@@ -167,7 +168,7 @@ const handleDrop = (event: DragEvent) => {
             ? 'bg-accent-primary text-white'
             : 'text-text-muted hover:bg-bg-hover hover:text-text-primary',
         ]"
-        title="Configure provider"
+        :title="strings.settings.providers.configureProvider"
       >
         <Settings :size="16" />
       </button>
@@ -175,7 +176,7 @@ const handleDrop = (event: DragEvent) => {
         type="button"
         @click.stop="emit('remove', provider)"
         class="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-status-failed/10 hover:text-status-failed transition-colors"
-        title="Remove from chain"
+        :title="strings.settings.providers.removeFromChain"
       >
         <X :size="16" />
       </button>

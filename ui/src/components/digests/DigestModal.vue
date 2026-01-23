@@ -9,6 +9,7 @@ import { AgentPlaceholder, ArticlePlaceholder, EmailPlaceholder, YoutubePlacehol
 import TagInput from '@/components/common/TagInput.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import { digestsApi } from '@/services/api';
+import { strings } from '@/i18n/en';
 
 // Configure marked for safe rendering
 // breaks: false so single \n doesn't become <br> (YouTube transcripts have many line breaks)
@@ -173,15 +174,8 @@ const isAgent = computed(() => {
 const sourceLabel = computed(() => {
   if (!props.digest?.source_type) return 'Article';
   const type = props.digest.source_type;
-  const labels: Record<string, string> = {
-    youtube: 'YouTube',
-    rss: 'RSS Feed',
-    website: 'Website',
-    blog: 'Blog',
-    imap: 'Email',
-    agent: 'AI Research',
-  };
-  return labels[type] || type.charAt(0).toUpperCase() + type.slice(1);
+  const labels = strings.digests.sourceTypes;
+  return labels[type as keyof typeof labels] || type.charAt(0).toUpperCase() + type.slice(1);
 });
 
 // Render markdown content (with normalization for LLM output patterns)
@@ -290,7 +284,7 @@ const toggleContent = () => {
                   target="_blank"
                   rel="noopener noreferrer"
                   class="rounded-lg p-2 text-blue-400 transition-all hover:bg-blue-400/10 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-bg-base"
-                  title="View original"
+                  :title="strings.digests.card.viewOriginal"
                 >
                   <ExternalLink :size="18" :stroke-width="2" />
                 </a>
@@ -340,21 +334,21 @@ const toggleContent = () => {
 
               <!-- Original Publication Date (for individual items) -->
               <div v-if="formattedPublishedDate && !digest.url?.startsWith('consolidated://')" class="flex items-center gap-2 text-text-secondary" title="Original publication date">
-                <span class="text-text-muted">Published:</span>
+                <span class="text-text-muted">{{ strings.digests.modal.published }}</span>
                 {{ formattedPublishedDate }}
               </div>
 
               <!-- Tokens -->
               <div class="flex items-center gap-2">
                 <Coins :size="16" :stroke-width="2" />
-                {{ tokenCount.toLocaleString() }} tokens
+                {{ tokenCount.toLocaleString() }} {{ strings.digests.modal.tokens }}
               </div>
             </div>
 
             <!-- Summary -->
             <div class="mb-8">
               <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-text-muted">
-                Summary
+                {{ strings.digests.modal.summaryTitle }}
               </h2>
               <div class="prose prose-invert max-w-none text-lg leading-relaxed text-text-secondary" v-html="renderedSummary" />
             </div>
@@ -366,7 +360,7 @@ const toggleContent = () => {
                 class="mb-4 flex w-full items-center justify-between rounded-lg bg-bg-surface p-3 text-left transition-colors hover:bg-bg-hover"
               >
                 <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  Full Content
+                  {{ strings.digests.modal.fullContentTitle }}
                 </h2>
                 <component
                   :is="isContentExpanded ? ChevronUp : ChevronDown"
@@ -388,7 +382,7 @@ const toggleContent = () => {
             <div class="mb-8">
               <div class="mb-3 flex items-center justify-between">
                 <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  Tags
+                  {{ strings.digests.modal.tagsTitle }}
                 </h2>
                 <div v-if="!isEditingTags" class="flex items-center gap-2">
                   <button
@@ -397,7 +391,7 @@ const toggleContent = () => {
                     @click="startEditingTags"
                   >
                     <Edit3 :size="12" />
-                    Edit
+                    {{ strings.common.edit }}
                   </button>
                 </div>
                 <div v-else class="flex items-center gap-2">
@@ -408,7 +402,7 @@ const toggleContent = () => {
                     @click="saveEditedTags"
                   >
                     <Check :size="12" />
-                    {{ updateTagsMutation.isPending.value ? 'Saving...' : 'Save' }}
+                    {{ updateTagsMutation.isPending.value ? strings.common.loading : strings.common.save }}
                   </button>
                   <button
                     type="button"
@@ -417,7 +411,7 @@ const toggleContent = () => {
                     @click="cancelEditingTags"
                   >
                     <X :size="12" />
-                    Cancel
+                    {{ strings.common.cancel }}
                   </button>
                 </div>
               </div>
@@ -435,7 +429,7 @@ const toggleContent = () => {
                   </span>
                 </div>
                 <p v-else class="text-sm text-text-muted">
-                  No tags yet. Click Edit to add tags.
+                  {{ strings.digests.modal.noTagsYet }}
                 </p>
               </div>
 
@@ -443,7 +437,7 @@ const toggleContent = () => {
               <div v-else>
                 <TagInput
                   v-model="editedTags"
-                  placeholder="Add tags..."
+                  :placeholder="strings.digests.modal.addTagsPlaceholder"
                   :disabled="updateTagsMutation.isPending.value"
                 />
               </div>

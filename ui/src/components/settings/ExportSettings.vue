@@ -15,6 +15,7 @@ import { settingsApi, digestsApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
 import { useExportersList } from '@/composables/useExporters';
 import { useSettingsNavigation } from '@/composables/useSettingsNavigation';
+import { strings } from '@/i18n/en';
 import ExporterSelector from './ExporterSelector.vue';
 import ExporterConfigPanel from './ExporterConfigPanel.vue';
 import { Loader2, Save, RotateCcw, Download, Upload, Info } from 'lucide-vue-next';
@@ -149,12 +150,12 @@ const saveMutation = useMutation({
     });
   },
   onSuccess: () => {
-    toast.success('Export settings saved');
+    toast.success(strings.settings.exports.settingsSaved);
     hasChanges.value = false;
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to save settings');
+    toast.error(err.detail || strings.settings.failedToSave);
   },
 });
 
@@ -166,11 +167,11 @@ const resetMutation = useMutation({
     });
   },
   onSuccess: () => {
-    toast.success('Export settings reset to defaults');
+    toast.success(strings.settings.exports.settingsReset);
     queryClient.invalidateQueries({ queryKey: ['settings'] });
   },
   onError: (err: any) => {
-    toast.error(err.detail || 'Failed to reset settings');
+    toast.error(err.detail || strings.settings.failedToReset);
   },
 });
 
@@ -197,7 +198,7 @@ const exportMutation = useMutation({
       }
       toast.success(`${parts.join(', ')} → ${data.target_path}`);
     } else {
-      toast.info('No digests to export');
+      toast.info(strings.settings.exports.exportEmpty);
     }
     // Show errors if any
     if (data.errors && data.errors.length > 0) {
@@ -205,7 +206,7 @@ const exportMutation = useMutation({
     }
   },
   onError: (err: any) => {
-    toast.error(err.detail || err.message || 'Export failed');
+    toast.error(err.detail || err.message || strings.settings.exports.exportError);
   },
 });
 
@@ -233,8 +234,8 @@ const getExportSetting = (key: string): SettingValue => {
             <Download :size="20" class="text-accent-primary" />
           </div>
           <div>
-            <h2 class="text-lg font-semibold text-text-primary">Export Configuration</h2>
-            <p class="text-sm text-text-muted">Select an export format to configure its settings</p>
+            <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.exports.defaultFormat }}</h2>
+            <p class="text-sm text-text-muted">{{ strings.settings.exports.defaultFormatDescription }}</p>
           </div>
         </div>
 
@@ -248,7 +249,7 @@ const getExportSetting = (key: string): SettingValue => {
               : 'bg-amber-500/10 text-amber-400'
           ]"
         >
-          {{ getExportSetting('default_format').source === 'database' ? 'Saved' : 'ENV' }}
+          {{ getExportSetting('default_format').source === 'database' ? strings.settings.source.saved : strings.settings.source.env }}
         </span>
       </div>
 
@@ -267,7 +268,7 @@ const getExportSetting = (key: string): SettingValue => {
         <div class="flex items-center justify-between rounded-xl border border-border-subtle bg-bg-surface p-4">
           <div>
             <div class="text-sm font-medium text-text-primary">
-              Include Metadata
+              {{ strings.settings.exports.includeMetadata }}
               <span
                 v-if="getExportSetting('include_metadata').source !== 'default'"
                 :class="[
@@ -277,11 +278,11 @@ const getExportSetting = (key: string): SettingValue => {
                     : 'bg-amber-500/10 text-amber-400'
                 ]"
               >
-                {{ getExportSetting('include_metadata').source === 'database' ? 'Saved' : 'ENV' }}
+                {{ getExportSetting('include_metadata').source === 'database' ? strings.settings.source.saved : strings.settings.source.env }}
               </span>
             </div>
             <div class="text-xs text-text-muted mt-1">
-              Include timestamps, provider info, and tags in exports
+              {{ strings.settings.exports.includeMetadataDescription }}
             </div>
           </div>
           <button
@@ -310,7 +311,7 @@ const getExportSetting = (key: string): SettingValue => {
             class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-secondary hover:bg-bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RotateCcw :size="16" />
-            Reset to Defaults
+            {{ strings.settings.resetToDefaults }}
           </button>
           <button
             type="button"
@@ -320,7 +321,7 @@ const getExportSetting = (key: string): SettingValue => {
           >
             <Loader2 v-if="saveMutation.isPending.value" :size="16" class="animate-spin" />
             <Save v-else :size="16" />
-            Save Changes
+            {{ strings.settings.saveChanges }}
           </button>
         </div>
       </div>
@@ -342,8 +343,8 @@ const getExportSetting = (key: string): SettingValue => {
           <Upload :size="20" class="text-status-success" />
         </div>
         <div>
-          <h2 class="text-lg font-semibold text-text-primary">Export to {{ selectedExporter?.name === 'obsidian' ? 'Vault' : 'Path' }}</h2>
-          <p class="text-sm text-text-muted">Export all digests directly to your configured path</p>
+          <h2 class="text-lg font-semibold text-text-primary">{{ selectedExporter?.name === 'obsidian' ? strings.settings.exports.exportToVault : strings.settings.exports.exportToPath }}</h2>
+          <p class="text-sm text-text-muted">{{ strings.settings.exports.directExportDescription }}</p>
         </div>
       </div>
 
@@ -352,9 +353,9 @@ const getExportSetting = (key: string): SettingValue => {
         <div class="flex items-start gap-3">
           <Info :size="18" class="text-red-400 mt-0.5 flex-shrink-0" />
           <div>
-            <div class="text-sm font-medium text-red-400">Exporter is not enabled</div>
+            <div class="text-sm font-medium text-red-400">{{ strings.settings.exports.exporterNotEnabled }}</div>
             <div class="text-xs text-text-muted mt-1">
-              Enable the exporter using the toggle above before exporting.
+              {{ strings.settings.exports.enableExporterFirst }}
             </div>
           </div>
         </div>
@@ -365,9 +366,9 @@ const getExportSetting = (key: string): SettingValue => {
         <div class="flex items-start gap-3">
           <Info :size="18" class="text-amber-400 mt-0.5 flex-shrink-0" />
           <div>
-            <div class="text-sm font-medium text-amber-400">No export path configured</div>
+            <div class="text-sm font-medium text-amber-400">{{ strings.settings.exports.noPathConfigured }}</div>
             <div class="text-xs text-text-muted mt-1">
-              Configure the vault/export path in the exporter settings above to enable direct export.
+              {{ strings.settings.exports.noPathConfiguredDescription }}
             </div>
           </div>
         </div>
@@ -382,7 +383,7 @@ const getExportSetting = (key: string): SettingValue => {
       >
         <Loader2 v-if="exportMutation.isPending.value" :size="18" class="animate-spin" />
         <Upload v-else :size="18" />
-        {{ exportMutation.isPending.value ? 'Exporting...' : `Export All Digests to ${selectedExporter?.name === 'obsidian' ? 'Vault' : 'Path'}` }}
+        {{ exportMutation.isPending.value ? strings.settings.exports.exporting : strings.settings.exports.exportButton.replace('{name}', selectedExporter?.name === 'obsidian' ? 'Vault' : 'Path') }}
       </button>
     </div>
   </div>

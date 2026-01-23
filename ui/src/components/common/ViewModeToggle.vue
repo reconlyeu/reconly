@@ -4,6 +4,7 @@
  */
 import { LayoutGrid, List } from 'lucide-vue-next';
 import type { ViewMode } from '@/composables/useViewMode';
+import { strings } from '@/i18n/en';
 
 interface Props {
   modelValue: ViewMode;
@@ -33,7 +34,7 @@ const setMode = (mode: ViewMode) => {
           : 'text-text-muted hover:text-text-secondary'
       "
       :aria-pressed="modelValue === 'card'"
-      title="Card view"
+      :title="strings.common.viewMode.card"
     >
       <LayoutGrid :size="18" :stroke-width="2" />
     </button>
@@ -47,7 +48,7 @@ const setMode = (mode: ViewMode) => {
           : 'text-text-muted hover:text-text-secondary'
       "
       :aria-pressed="modelValue === 'table'"
-      title="Table view"
+      :title="strings.common.viewMode.table"
     >
       <List :size="18" :stroke-width="2" />
     </button>

@@ -7,6 +7,7 @@ import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 import type { Feed } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
 import cronstrue from 'cronstrue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   feeds: Feed[];
@@ -43,16 +44,16 @@ const handleSelectionChange = (ids: number[]) => {
 };
 
 const columns = computed<TableColumn<Feed>[]>(() => [
-  { key: 'name', label: 'Name', width: 'w-1/4' },
-  { key: 'sources', label: 'Sources', width: 'w-20', align: 'center' as const },
-  { key: 'schedule', label: 'Schedule', width: 'w-48' },
-  { key: 'last_run', label: 'Last Run', width: 'w-28' },
-  { key: 'enabled', label: 'Status', width: 'w-24', align: 'center' as const },
-  { key: 'actions', label: 'Actions', width: 'w-36', align: 'right' as const },
+  { key: 'name', label: strings.feeds.table.name, width: 'w-1/4' },
+  { key: 'sources', label: strings.feeds.table.sources, width: 'w-20', align: 'center' as const },
+  { key: 'schedule', label: strings.feeds.table.schedule, width: 'w-48' },
+  { key: 'last_run', label: strings.feeds.table.lastRun, width: 'w-28' },
+  { key: 'enabled', label: strings.feeds.table.status, width: 'w-24', align: 'center' as const },
+  { key: 'actions', label: strings.feeds.table.actions, width: 'w-36', align: 'right' as const },
 ]);
 
 const getScheduleText = (cron?: string | null) => {
-  if (!cron) return 'No schedule';
+  if (!cron) return strings.feeds.schedulePresets.noSchedule;
   try {
     return cronstrue.toString(cron);
   } catch {
@@ -62,7 +63,7 @@ const getScheduleText = (cron?: string | null) => {
 
 const getLastRunConfig = (lastRunAt?: string | null) => {
   if (!lastRunAt) {
-    return { text: 'Never', icon: Clock, color: 'text-text-muted' };
+    return { text: strings.feeds.status.never, icon: Clock, color: 'text-text-muted' };
   }
 
   const date = new Date(lastRunAt);
@@ -72,9 +73,9 @@ const getLastRunConfig = (lastRunAt?: string | null) => {
   const diffHours = Math.floor(diffMs / 3600000);
 
   let text = '';
-  if (diffMins < 1) text = 'just now';
-  else if (diffMins < 60) text = `${diffMins}m ago`;
-  else if (diffHours < 24) text = `${diffHours}h ago`;
+  if (diffMins < 1) text = strings.time.justNow;
+  else if (diffMins < 60) text = strings.time.minutesAgo.replace('{count}', String(diffMins));
+  else if (diffHours < 24) text = strings.time.hoursAgo.replace('{count}', String(diffHours));
   else text = date.toLocaleDateString();
 
   return { text, icon: CheckCircle2, color: 'text-status-success' };
@@ -209,7 +210,7 @@ defineExpose({
           @click="handleRun(item, $event)"
           :disabled="isRunning(item.id)"
           class="rounded-lg p-1.5 text-status-success transition-colors hover:bg-status-success/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          :title="isRunning(item.id) ? 'Running...' : 'Run now'"
+          :title="isRunning(item.id) ? strings.feeds.running : strings.feeds.runNow"
         >
           <PlayCircle
             :size="16"
@@ -220,14 +221,14 @@ defineExpose({
         <button
           @click="handleEdit(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent-primary"
-          title="Edit feed"
+          :title="strings.feeds.actions.editFeed"
         >
           <Edit :size="16" :stroke-width="2" />
         </button>
         <button
           @click="handleDelete(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
-          title="Delete feed"
+          :title="strings.feeds.actions.deleteFeed"
         >
           <Trash2 :size="16" :stroke-width="2" />
         </button>

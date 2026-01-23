@@ -7,6 +7,7 @@ import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import type { Digest, Exporter } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
 import { features } from '@/config/features';
+import { strings } from '@/i18n/en';
 
 interface Props {
   digests: Digest[];
@@ -41,12 +42,12 @@ const handleSelectionChange = (ids: number[]) => {
 };
 
 const columns = computed<TableColumn<Digest>[]>(() => [
-  { key: 'title', label: 'Title', width: 'w-1/3' },
-  { key: 'source_type', label: 'Type', width: 'w-16' },
-  { key: 'provider', label: 'Provider', width: 'w-44' },
-  { key: 'tags', label: 'Tags', width: 'w-40' },
-  { key: 'created_at', label: 'Date', width: 'w-28' },
-  { key: 'actions', label: 'Actions', width: 'w-32', align: 'right' as const },
+  { key: 'title', label: strings.digests.table.title, width: 'w-1/3' },
+  { key: 'source_type', label: strings.digests.table.type, width: 'w-16' },
+  { key: 'provider', label: strings.digests.table.provider, width: 'w-44' },
+  { key: 'tags', label: strings.digests.table.tags, width: 'w-40' },
+  { key: 'created_at', label: strings.digests.table.date, width: 'w-28' },
+  { key: 'actions', label: strings.digests.table.actions, width: 'w-32', align: 'right' as const },
 ]);
 
 const formatDate = (dateString: string) => {
@@ -130,7 +131,7 @@ defineExpose({
           <FileText :size="14" class="text-blue-400" :stroke-width="2" />
         </div>
         <span class="font-medium text-text-primary line-clamp-1">
-          {{ item.title || 'Untitled' }}
+          {{ item.title || strings.digests.table.untitled }}
         </span>
       </div>
     </template>
@@ -138,7 +139,7 @@ defineExpose({
     <!-- Type Cell -->
     <template #cell-source_type="{ item }">
       <span class="rounded-full bg-bg-hover px-2.5 py-1 text-xs font-medium text-text-secondary capitalize">
-        {{ item.source_type || 'article' }}
+        {{ item.source_type || strings.digests.card.article }}
       </span>
     </template>
 
@@ -179,7 +180,7 @@ defineExpose({
         <button
           @click.stop="handleView(item)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-accent-primary"
-          title="View digest"
+          :title="strings.digests.table.viewDigest"
         >
           <Eye :size="16" :stroke-width="2" />
         </button>
@@ -191,7 +192,7 @@ defineExpose({
         <button
           @click="handleDelete(item, $event)"
           class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-status-failed/10 hover:text-status-failed"
-          title="Delete digest"
+          :title="strings.digests.table.deleteDigest"
         >
           <Trash2 :size="16" :stroke-width="2" />
         </button>

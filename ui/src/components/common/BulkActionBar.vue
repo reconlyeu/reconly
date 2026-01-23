@@ -4,6 +4,7 @@
  * Shows selection count and action buttons.
  */
 import { X, Trash2 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   /** Number of items selected */
@@ -66,7 +67,7 @@ const pluralize = (count: number, singular: string): string => {
             class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-text-muted transition-all hover:bg-bg-hover hover:text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-elevated"
           >
             <X :size="16" :stroke-width="2" />
-            Clear
+            {{ strings.common.bulk.clear }}
           </button>
 
           <!-- Delete Selected -->
@@ -77,7 +78,7 @@ const pluralize = (count: number, singular: string): string => {
             class="flex items-center gap-1.5 rounded-lg bg-status-failed/10 px-3 py-1.5 text-sm font-medium text-status-failed transition-all hover:bg-status-failed/20 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-status-failed focus:ring-offset-2 focus:ring-offset-bg-elevated"
           >
             <Trash2 :size="16" :stroke-width="2" />
-            {{ isDeleting ? 'Deleting...' : 'Delete' }}
+            {{ isDeleting ? strings.common.bulk.deleting : strings.common.bulk.delete }}
           </button>
 
           <!-- Slot for additional actions -->

@@ -8,6 +8,7 @@ import { Rss, CheckCircle2, Calendar, ChevronRight } from 'lucide-vue-next';
 import { dashboardApi } from '@/services/api';
 import cronstrue from 'cronstrue';
 import BaseCard from '@/components/common/BaseCard.vue';
+import { strings } from '@/i18n/en';
 
 // Props
 interface Props {
@@ -24,23 +25,23 @@ const { data: feeds, isLoading } = useQuery({
 });
 
 function formatRelativeTime(timestamp: string | null): string {
-  if (!timestamp) return 'Never';
+  if (!timestamp) return strings.time.never;
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);
 
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return strings.time.justNow;
+  if (minutes < 60) return strings.time.minutesAgo.replace('{count}', String(minutes));
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return strings.time.hoursAgo.replace('{count}', String(hours));
   const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
+  if (days < 7) return strings.time.daysAgo.replace('{count}', String(days));
   return date.toLocaleDateString();
 }
 
 function formatSchedule(cron: string | null): string {
-  if (!cron) return 'No schedule';
+  if (!cron) return strings.dashboard.recentFeeds.noSchedule;
   try {
     return cronstrue.toString(cron);
   } catch {
@@ -66,7 +67,7 @@ function formatSchedule(cron: string | null): string {
       class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border-subtle bg-bg-surface/50 py-12"
     >
       <Rss class="mb-3 h-12 w-12 text-text-muted opacity-50" />
-      <p class="text-sm text-text-muted">No feeds run recently</p>
+      <p class="text-sm text-text-muted">{{ strings.dashboard.recentFeeds.noFeeds }}</p>
     </div>
 
     <!-- Feeds list -->
@@ -94,7 +95,7 @@ function formatSchedule(cron: string | null): string {
                       : 'bg-text-muted/10 text-text-muted'
                   "
                 >
-                  {{ feed.schedule_enabled ? 'Active' : 'Paused' }}
+                  {{ feed.schedule_enabled ? strings.dashboard.recentFeeds.active : strings.dashboard.recentFeeds.paused }}
                 </div>
               </div>
 
@@ -108,7 +109,7 @@ function formatSchedule(cron: string | null): string {
                 <!-- Sources -->
                 <div class="flex items-center gap-1">
                   <Rss class="h-3.5 w-3.5" />
-                  <span>{{ feed.feed_sources?.length || 0 }} source{{ (feed.feed_sources?.length || 0) !== 1 ? 's' : '' }}</span>
+                  <span>{{ feed.feed_sources?.length || 0 }} {{ (feed.feed_sources?.length || 0) === 1 ? strings.dashboard.recentFeeds.source : strings.dashboard.recentFeeds.sources }}</span>
                 </div>
                 <!-- Schedule -->
                 <div v-if="feed.schedule_cron" class="flex items-center gap-1">
