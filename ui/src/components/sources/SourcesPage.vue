@@ -267,6 +267,7 @@ function handleSuccess(): void {
 
     <!-- Create/Edit Modal -->
     <SourceForm
+      :key="editingSource?.id ?? 'create'"
       :is-open="isModalOpen"
       :source="editingSource"
       @close="closeModal"

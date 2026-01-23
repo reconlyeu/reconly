@@ -112,7 +112,7 @@ const insightsConfig = computed<InsightCard[]>(() => [
     subtitle: feedHealthSubtitle.value,
     icon: insights.value?.feeds_failing ? AlertCircle : HeartPulse,
     variant: feedHealthVariant.value,
-    href: '/feeds',
+    href: '/feed-runs',
   },
 ]);
 

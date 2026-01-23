@@ -9,6 +9,7 @@ import type { Feed, Exporter } from '@/types/entities';
 import { X, Loader2, Search, Calendar, Mail, Webhook, FileStack, Download, AlertTriangle, HelpCircle } from 'lucide-vue-next';
 import { useDirectExportCapableExporters, useEnabledDirectExportExporters } from '@/composables/useExporters';
 import cronstrue from 'cronstrue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   isOpen: boolean;
@@ -108,16 +109,39 @@ const disabledConfiguredExporters = computed(() => {
   });
 });
 
-// Source search
+// Source search and ordering
 const sourceSearch = ref('');
+// Capture initial selection when modal opens (for stable sorting during editing)
+const initialSelectedIds = ref<Set<number>>(new Set());
+
 const filteredSources = computed(() => {
   if (!sources.value) return [];
-  if (!sourceSearch.value) return sources.value;
-  const search = sourceSearch.value.toLowerCase();
-  return sources.value.filter(s =>
-    s.name.toLowerCase().includes(search) ||
-    s.url.toLowerCase().includes(search)
-  );
+
+  let result = [...sources.value];
+
+  // Filter by search term if provided
+  if (sourceSearch.value) {
+    const search = sourceSearch.value.toLowerCase();
+    result = result.filter(s =>
+      s.name.toLowerCase().includes(search) ||
+      s.url.toLowerCase().includes(search)
+    );
+  }
+
+  // Sort: initially selected first (alphabetical), then unselected (alphabetical)
+  result.sort((a, b) => {
+    const aSelected = initialSelectedIds.value.has(a.id);
+    const bSelected = initialSelectedIds.value.has(b.id);
+
+    // Selected sources come first
+    if (aSelected && !bSelected) return -1;
+    if (!aSelected && bSelected) return 1;
+
+    // Within same group, sort alphabetically by name
+    return a.name.localeCompare(b.name);
+  });
+
+  return result;
 });
 
 // Track selected disabled sources to show warning
@@ -265,12 +289,29 @@ const saveMutation = useMutation({
   },
 });
 
-// Watch for modal open to reset mutation state
+// Watch for modal open to reset state
+// Watch both isOpen and feed together to handle Vue reactivity timing
 watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen) {
+  () => [props.isOpen, props.feed] as const,
+  ([isOpen, feed], [wasOpen]) => {
+    if (isOpen && !wasOpen) {
+      // Modal just opened
       saveMutation.reset();
+      sourceSearch.value = '';
+
+      // Capture initial selection for stable sorting (selected sources stay on top during editing)
+      const currentIds = feed?.feed_sources?.map(fs => fs.source_id) || [];
+      initialSelectedIds.value = new Set(currentIds);
+
+      // Force form reset when opening in create mode (feed is null)
+      // This ensures fresh fields even if modal was previously used for editing
+      if (!feed) {
+        resetForm();
+        // Reset auto-export config
+        Object.keys(autoExportConfig.value).forEach((key) => {
+          autoExportConfig.value[key] = { enabled: false, path: '' };
+        });
+      }
     }
   }
 );
@@ -361,7 +402,7 @@ const handleClose = () => {
                   v-model="name"
                   v-bind="nameAttrs"
                   type="text"
-                  placeholder="Daily Tech News Digest"
+                  :placeholder="strings.feeds.placeholders.name"
                   class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                   :class="
                     errors.name
@@ -384,7 +425,7 @@ const handleClose = () => {
                   v-model="description"
                   v-bind="descriptionAttrs"
                   rows="3"
-                  placeholder="Aggregates tech news from RSS feeds and YouTube channels"
+                  :placeholder="strings.feeds.placeholders.description"
                   class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all resize-none"
                   :class="
                     errors.description
@@ -455,7 +496,7 @@ const handleClose = () => {
                 <input
                   v-model="sourceSearch"
                   type="search"
-                  placeholder="Search sources..."
+                  :placeholder="strings.feeds.placeholders.searchSources"
                   class="w-full rounded-lg border border-border-subtle bg-bg-surface pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
                 />
               </div>
@@ -632,7 +673,7 @@ const handleClose = () => {
                   v-model="schedule_cron"
                   v-bind="scheduleCronAttrs"
                   type="text"
-                  placeholder="0 9 * * *"
+                  :placeholder="strings.feeds.placeholders.cron"
                   class="w-full rounded-lg border bg-bg-surface px-4 py-3 font-mono text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                   :class="
                     errors.schedule_cron
@@ -668,7 +709,7 @@ const handleClose = () => {
                   id="email_recipients"
                   v-model="output_config.email_recipients"
                   type="text"
-                  placeholder="user@example.com, team@example.com"
+                  :placeholder="strings.feeds.placeholders.emailRecipients"
                   class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
                 />
                 <p class="mt-2 text-xs text-text-muted">Comma-separated email addresses</p>
@@ -685,7 +726,7 @@ const handleClose = () => {
                     id="webhook_url"
                     v-model="output_config.webhook_url"
                     type="url"
-                    placeholder="https://example.com/webhook"
+                    :placeholder="strings.feeds.placeholders.webhookUrl"
                     class="w-full rounded-lg border bg-bg-surface pl-10 pr-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                     :class="
                       errors['output_config.webhook_url']

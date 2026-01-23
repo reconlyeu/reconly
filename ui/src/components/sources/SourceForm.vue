@@ -9,6 +9,7 @@ import type { Source, FilterMode, SourceConfig, IMAPProvider, IMAPSourceCreate }
 import { X, Loader2, Filter, Plus, AlertCircle, ExternalLink } from 'lucide-vue-next';
 import AgentSourceForm from './AgentSourceForm.vue';
 import ImapSourceForm from './ImapSourceForm.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   isOpen: boolean;
@@ -333,13 +334,15 @@ const saveMutation = useMutation({
 });
 
 // Watch for modal open to reset state
+// Watch both isOpen and source together to handle Vue reactivity timing
 watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen) {
+  () => [props.isOpen, props.source] as const,
+  ([isOpen, source], [wasOpen]) => {
+    if (isOpen && !wasOpen) {
+      // Modal just opened
       saveMutation.reset();
-      // Reset form when opening in create mode (not edit mode)
-      if (!props.source) {
+      // Always reset first, then let the source watcher repopulate if editing
+      if (!source) {
         resetForm();
         resetFilterFields();
       }
@@ -431,7 +434,7 @@ const urlPlaceholder = computed(() => {
                 v-model="name"
                 v-bind="nameAttrs"
                 type="text"
-                placeholder="Enter source name"
+                :placeholder="strings.sources.placeholders.name"
                 class="w-full rounded-lg border bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
                 :class="
                   errors.name
@@ -565,7 +568,7 @@ const urlPlaceholder = computed(() => {
                       type="number"
                       min="1"
                       max="100"
-                      placeholder="No limit"
+                      :placeholder="strings.sources.placeholders.noLimit"
                       class="w-32 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                     />
                   </div>
@@ -588,7 +591,7 @@ const urlPlaceholder = computed(() => {
                       <input
                         v-model="includeInput"
                         type="text"
-                        placeholder="Add keyword..."
+                        :placeholder="strings.sources.placeholders.addKeyword"
                         @keydown.enter.prevent="addIncludeKeyword"
                         class="flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                       />
@@ -630,7 +633,7 @@ const urlPlaceholder = computed(() => {
                       <input
                         v-model="excludeInput"
                         type="text"
-                        placeholder="Add keyword..."
+                        :placeholder="strings.sources.placeholders.addKeyword"
                         @keydown.enter.prevent="addExcludeKeyword"
                         class="flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                       />

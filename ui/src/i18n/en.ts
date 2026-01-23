@@ -94,6 +94,11 @@ export const strings = {
       fetchFullContent: 'Fetch Full Content',
       fetchTranscript: 'Fetch Transcript',
     },
+    placeholders: {
+      name: 'Source name',
+      noLimit: 'No limit',
+      addKeyword: 'Add keyword...',
+    },
     usedBy: 'Used by {count} feeds',
     confirmDelete: 'Are you sure you want to delete this source?',
   },
@@ -114,6 +119,14 @@ export const strings = {
       promptTemplate: 'Prompt Template',
       reportTemplate: 'Report Template',
       outputs: 'Outputs',
+    },
+    placeholders: {
+      name: 'Feed name',
+      description: 'Optional description',
+      searchSources: 'Search sources...',
+      cron: '0 9 * * *',
+      emailRecipients: 'email@example.com',
+      webhookUrl: 'https://...',
     },
     schedulePresets: {
       hourly: 'Every hour',

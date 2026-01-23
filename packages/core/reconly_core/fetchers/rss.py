@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from dateutil import parser as date_parser
 
 from reconly_core.config_types import ConfigField
-from reconly_core.utils.images import extract_preview_image
+from reconly_core.utils.images import extract_preview_image, fetch_og_image
 from reconly_core.fetchers.base import BaseFetcher, FetcherConfigSchema, ValidationResult
 from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
@@ -132,6 +132,11 @@ class RSSFetcher(BaseFetcher):
                         article['full_content'] = full_content
                     if image_url:
                         article['image_url'] = image_url
+
+                # Always try to get preview image if not already found
+                # (fetch_full_content may be disabled or image extraction may have failed)
+                if not article.get('image_url') and article_url:
+                    article['image_url'] = fetch_og_image(article_url, timeout=5)
 
                 articles.append(article)
 

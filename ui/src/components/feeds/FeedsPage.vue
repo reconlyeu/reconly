@@ -225,6 +225,7 @@ const handleSuccess = () => {
 
     <!-- Create/Edit Modal -->
     <FeedForm
+      :key="editingFeed?.id ?? 'create'"
       :is-open="isModalOpen"
       :feed="editingFeed"
       @close="closeModal"

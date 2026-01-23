@@ -582,4 +582,20 @@ const toggleContent = () => {
 .prose :deep(a:hover) {
   color: var(--color-accent-primary-hover);
 }
+
+/* Image styling - constrain size and handle broken images gracefully */
+.prose :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1em 0;
+}
+
+/* Hide broken images (shields.io, badges, etc. that fail to load) */
+.prose :deep(img[src*="shields.io"]),
+.prose :deep(img[src*="badge"]),
+.prose :deep(img[src*=".svg"]),
+.prose :deep(img[src*="camo.githubusercontent"]) {
+  display: none;
+}
 </style>
