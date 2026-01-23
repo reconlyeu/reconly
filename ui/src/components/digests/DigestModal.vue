@@ -348,7 +348,7 @@ const toggleContent = () => {
             <!-- Summary -->
             <div class="mb-8">
               <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-text-muted">
-                Summary
+                {{ strings.digests.modal.summaryTitle }}
               </h2>
               <div class="prose prose-invert max-w-none text-lg leading-relaxed text-text-secondary" v-html="renderedSummary" />
             </div>
@@ -360,7 +360,7 @@ const toggleContent = () => {
                 class="mb-4 flex w-full items-center justify-between rounded-lg bg-bg-surface p-3 text-left transition-colors hover:bg-bg-hover"
               >
                 <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  Full Content
+                  {{ strings.digests.modal.fullContentTitle }}
                 </h2>
                 <component
                   :is="isContentExpanded ? ChevronUp : ChevronDown"
@@ -382,7 +382,7 @@ const toggleContent = () => {
             <div class="mb-8">
               <div class="mb-3 flex items-center justify-between">
                 <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted">
-                  Tags
+                  {{ strings.digests.modal.tagsTitle }}
                 </h2>
                 <div v-if="!isEditingTags" class="flex items-center gap-2">
                   <button
@@ -391,7 +391,7 @@ const toggleContent = () => {
                     @click="startEditingTags"
                   >
                     <Edit3 :size="12" />
-                    Edit
+                    {{ strings.common.edit }}
                   </button>
                 </div>
                 <div v-else class="flex items-center gap-2">
@@ -402,7 +402,7 @@ const toggleContent = () => {
                     @click="saveEditedTags"
                   >
                     <Check :size="12" />
-                    {{ updateTagsMutation.isPending.value ? 'Saving...' : 'Save' }}
+                    {{ updateTagsMutation.isPending.value ? strings.common.loading : strings.common.save }}
                   </button>
                   <button
                     type="button"
@@ -411,7 +411,7 @@ const toggleContent = () => {
                     @click="cancelEditingTags"
                   >
                     <X :size="12" />
-                    Cancel
+                    {{ strings.common.cancel }}
                   </button>
                 </div>
               </div>
@@ -429,7 +429,7 @@ const toggleContent = () => {
                   </span>
                 </div>
                 <p v-else class="text-sm text-text-muted">
-                  No tags yet. Click Edit to add tags.
+                  {{ strings.digests.modal.noTagsYet }}
                 </p>
               </div>
 
@@ -437,7 +437,7 @@ const toggleContent = () => {
               <div v-else>
                 <TagInput
                   v-model="editedTags"
-                  placeholder="Add tags..."
+                  :placeholder="strings.digests.modal.addTagsPlaceholder"
                   :disabled="updateTagsMutation.isPending.value"
                 />
               </div>

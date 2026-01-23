@@ -411,7 +411,7 @@ const urlPlaceholder = computed(() => {
           <!-- Header (fixed) -->
           <div class="relative flex shrink-0 items-center justify-between p-6 pb-4">
             <h2 class="text-2xl font-bold text-text-primary">
-              {{ isEditMode ? 'Edit Source' : 'Add New Source' }}
+              {{ isEditMode ? strings.sources.editSource : strings.sources.form.addNewSource }}
             </h2>
             <button
               @click="handleClose"
@@ -465,12 +465,12 @@ const urlPlaceholder = computed(() => {
                     : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                 "
               >
-                <option value="rss">RSS Feed</option>
-                <option value="youtube">YouTube</option>
-                <option value="website">Website</option>
-                <option value="blog">Blog</option>
-                <option value="imap">Email (IMAP)</option>
-                <option value="agent">AI Research Agent</option>
+                <option value="rss">{{ strings.sources.typeOptions.rss }}</option>
+                <option value="youtube">{{ strings.sources.typeOptions.youtube }}</option>
+                <option value="website">{{ strings.sources.typeOptions.website }}</option>
+                <option value="blog">{{ strings.sources.typeOptions.blog }}</option>
+                <option value="imap">{{ strings.sources.typeOptions.imap }}</option>
+                <option value="agent">{{ strings.sources.typeOptions.agent }}</option>
               </select>
               <Transition name="error">
                 <p v-if="errors.type" class="mt-2 text-sm text-status-failed">
@@ -528,9 +528,7 @@ const urlPlaceholder = computed(() => {
               </Transition>
               <!-- YouTube helper text -->
               <p v-if="type === 'youtube'" class="mt-2 text-xs text-text-muted">
-                Supports both video URLs (youtube.com/watch?v=...) and channel URLs
-                (youtube.com/@channel, youtube.com/channel/UC...). Channels will fetch
-                transcripts from recent videos.
+                {{ strings.sources.youtubeHelper }}
               </p>
             </div>
 
@@ -544,12 +542,12 @@ const urlPlaceholder = computed(() => {
               >
                 <div class="flex items-center gap-2">
                   <Filter :size="18" class="text-text-muted" />
-                  <span class="text-sm font-medium text-text-primary">Filters</span>
+                  <span class="text-sm font-medium text-text-primary">{{ strings.sources.form.filters }}</span>
                   <span v-if="hasFilters" class="rounded-full bg-accent-primary/20 px-2 py-0.5 text-xs text-accent-primary">
-                    {{ activeFilterCount }} active
+                    {{ activeFilterCount }} {{ strings.sources.form.active }}
                   </span>
                 </div>
-                <span class="text-xs text-text-muted">{{ showFilters ? 'Hide' : 'Show' }}</span>
+                <span class="text-xs text-text-muted">{{ showFilters ? strings.sources.form.hide : strings.sources.form.show }}</span>
               </button>
 
               <!-- Filter Content -->
@@ -558,10 +556,10 @@ const urlPlaceholder = computed(() => {
                   <!-- Max Items -->
                   <div>
                     <label class="mb-2 block text-sm font-medium text-text-primary">
-                      Max Items per Run
+                      {{ strings.sources.fields.maxItemsPerRun }}
                     </label>
                     <p class="mb-2 text-xs text-text-muted">
-                      Limit the number of items fetched per run (newest first)
+                      {{ strings.sources.filterHints.maxItems }}
                     </p>
                     <input
                       v-model.number="maxItems"
@@ -582,10 +580,10 @@ const urlPlaceholder = computed(() => {
                   <!-- Include Keywords -->
                   <div>
                     <label class="mb-2 block text-sm font-medium text-text-primary">
-                      Include Keywords
+                      {{ strings.sources.fields.includeKeywords }}
                     </label>
                     <p class="mb-2 text-xs text-text-muted">
-                      Items must match at least one keyword to be processed
+                      {{ strings.sources.filterHints.includeKeywords }}
                     </p>
                     <div class="flex gap-2">
                       <input
@@ -624,10 +622,10 @@ const urlPlaceholder = computed(() => {
                   <!-- Exclude Keywords -->
                   <div>
                     <label class="mb-2 block text-sm font-medium text-text-primary">
-                      Exclude Keywords
+                      {{ strings.sources.fields.excludeKeywords }}
                     </label>
                     <p class="mb-2 text-xs text-text-muted">
-                      Items matching any keyword will be skipped
+                      {{ strings.sources.filterHints.excludeKeywords }}
                     </p>
                     <div class="flex gap-2">
                       <input
@@ -668,15 +666,15 @@ const urlPlaceholder = computed(() => {
                     <!-- Filter Mode -->
                     <div class="flex-1">
                       <label class="mb-2 block text-sm font-medium text-text-primary">
-                        Search In
+                        {{ strings.sources.fields.searchIn }}
                       </label>
                       <select
                         v-model="filterMode"
                         class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                       >
-                        <option value="both">Title & Content</option>
-                        <option value="title_only">Title Only</option>
-                        <option value="content">Content Only</option>
+                        <option value="both">{{ strings.sources.filterModes.both }}</option>
+                        <option value="title_only">{{ strings.sources.filterModes.titleOnly }}</option>
+                        <option value="content">{{ strings.sources.filterModes.content }}</option>
                       </select>
                     </div>
 
@@ -691,7 +689,7 @@ const urlPlaceholder = computed(() => {
                           : 'border-border-subtle bg-bg-base text-text-muted hover:bg-bg-hover hover:text-text-primary'"
                       >
                         <span class="font-mono text-xs">.*</span>
-                        Regex
+                        {{ strings.sources.form.regex }}
                       </button>
                     </div>
                   </div>
@@ -703,10 +701,10 @@ const urlPlaceholder = computed(() => {
             <div class="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-surface p-4">
               <div>
                 <label for="enabled" class="block text-sm font-medium text-text-primary">
-                  Enable Source
+                  {{ strings.sources.fields.enableSource }}
                 </label>
                 <p class="mt-1 text-xs text-text-muted">
-                  Disabled sources will not be fetched
+                  {{ strings.sources.form.disabledSourcesNotFetched }}
                 </p>
               </div>
               <button
@@ -734,7 +732,7 @@ const urlPlaceholder = computed(() => {
               :disabled="isSaving"
               class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
             >
-              Cancel
+              {{ strings.common.cancel }}
             </button>
             <button
               type="button"
@@ -747,7 +745,7 @@ const urlPlaceholder = computed(() => {
                 :size="18"
                 class="animate-spin"
               />
-              {{ isSaving ? 'Saving...' : (isEditMode ? 'Update' : 'Create') }}
+              {{ isSaving ? strings.common.loading : (isEditMode ? strings.common.edit : strings.common.create) }}
             </button>
           </div>
         </div>

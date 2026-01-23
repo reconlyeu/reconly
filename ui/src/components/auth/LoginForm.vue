@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useMutation } from '@tanstack/vue-query';
 import { authApi } from '@/services/api';
 import { Loader2, AlertCircle } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 const password = ref('');
 const errorMessage = ref('');
@@ -14,7 +15,7 @@ const loginMutation = useMutation({
     window.location.href = '/';
   },
   onError: (error: any) => {
-    errorMessage.value = error.detail || 'Login failed. Please try again.';
+    errorMessage.value = error.detail || strings.auth.login.failed;
   },
 });
 
@@ -23,7 +24,7 @@ const handleSubmit = (e: Event) => {
   errorMessage.value = '';
 
   if (!password.value) {
-    errorMessage.value = 'Please enter a password';
+    errorMessage.value = strings.auth.login.passwordRequired;
     return;
   }
 
@@ -38,9 +39,9 @@ const isSubmitting = computed(() => loginMutation.isPending.value);
     <div class="w-full max-w-md">
       <!-- Logo/Brand -->
       <div class="text-center mb-8">
-        <img src="/reconly-logo.png" alt="Reconly" class="w-16 h-16 mx-auto mb-4" />
-        <h1 class="text-2xl font-bold text-text-primary">Reconly</h1>
-        <p class="text-text-secondary mt-2">Enter your password to continue</p>
+        <img src="/reconly-logo.png" :alt="strings.app.name" class="w-16 h-16 mx-auto mb-4" />
+        <h1 class="text-2xl font-bold text-text-primary">{{ strings.app.name }}</h1>
+        <p class="text-text-secondary mt-2">{{ strings.auth.login.subtitle }}</p>
       </div>
 
       <!-- Login Form -->
@@ -56,12 +57,12 @@ const isSubmitting = computed(() => loginMutation.isPending.value);
 
         <!-- Password Input -->
         <div>
-          <label for="password" class="sr-only">Password</label>
+          <label for="password" class="sr-only">{{ strings.auth.login.password }}</label>
           <input
             id="password"
             v-model="password"
             type="password"
-            placeholder="Password"
+            :placeholder="strings.auth.login.password"
             autocomplete="current-password"
             :disabled="isSubmitting"
             class="w-full px-4 py-3 rounded-lg border border-border-subtle bg-bg-surface text-text-primary placeholder-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base disabled:opacity-50"
@@ -75,13 +76,13 @@ const isSubmitting = computed(() => loginMutation.isPending.value);
           class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-accent-primary text-white font-medium hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Loader2 v-if="isSubmitting" :size="20" class="animate-spin" />
-          <span>{{ isSubmitting ? 'Signing in...' : 'Sign In' }}</span>
+          <span>{{ isSubmitting ? strings.auth.login.submitting : strings.auth.login.submit }}</span>
         </button>
       </form>
 
       <!-- Footer -->
       <p class="text-center text-text-muted text-sm mt-8">
-        This instance is password protected.
+        {{ strings.auth.login.protected }}
       </p>
     </div>
   </div>

@@ -18,6 +18,7 @@ import {
   Search,
 } from 'lucide-vue-next';
 import BaseCard from '@/components/common/BaseCard.vue';
+import { strings } from '@/i18n/en';
 
 interface Props {
   run: AgentRun;
@@ -103,7 +104,7 @@ const getStatusBadgeClass = (status: AgentRunStatus): string => {
 
 // Get status label
 const getStatusLabel = (status: AgentRunStatus): string => {
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return strings.status[status] || status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 // Get glow color based on status
@@ -146,8 +147,9 @@ const getStrategyBadgeClass = (strategy: string | null | undefined): string => {
 
 // Get strategy label
 const getStrategyLabel = (strategy: string | null | undefined): string => {
-  if (!strategy) return 'Simple';
-  return strategy.charAt(0).toUpperCase() + strategy.slice(1);
+  if (!strategy) return strings.sources.agent.strategies.simple;
+  const strategyKey = strategy as keyof typeof strings.sources.agent.strategies;
+  return strings.sources.agent.strategies[strategyKey] || strategy.charAt(0).toUpperCase() + strategy.slice(1);
 };
 </script>
 
@@ -214,7 +216,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
         <div class="text-center">
           <div class="flex items-center gap-1 text-text-muted">
             <RotateCw :size="12" />
-            <span class="text-xs">Iterations</span>
+            <span class="text-xs">{{ strings.agentRuns.stats.iterations }}</span>
           </div>
           <p class="text-sm font-medium text-text-primary">
             {{ run.iterations }}
@@ -225,7 +227,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
         <div class="text-center">
           <div class="flex items-center gap-1 text-text-muted">
             <Clock :size="12" />
-            <span class="text-xs">Duration</span>
+            <span class="text-xs">{{ strings.agentRuns.stats.duration }}</span>
           </div>
           <p class="text-sm font-medium text-text-primary">
             {{ formatDuration(run.duration_seconds) }}
@@ -236,7 +238,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
         <div class="text-center">
           <div class="flex items-center gap-1 text-text-muted">
             <Coins :size="12" />
-            <span class="text-xs">Tokens</span>
+            <span class="text-xs">{{ strings.agentRuns.stats.tokens }}</span>
           </div>
           <p class="text-sm font-medium text-text-primary">
             {{ formatTokens(run.tokens_in, run.tokens_out) }}
@@ -247,7 +249,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
         <div v-if="run.source_count" class="text-center">
           <div class="flex items-center gap-1 text-text-muted">
             <Search :size="12" />
-            <span class="text-xs">Sources</span>
+            <span class="text-xs">{{ strings.agentRuns.stats.sources }}</span>
           </div>
           <p class="text-sm font-medium text-text-primary">
             {{ run.source_count }}

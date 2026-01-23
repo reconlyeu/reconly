@@ -19,6 +19,7 @@ export const strings = {
     bannerShort: 'Demo mode with sample data.',
     learnMore: 'Learn how to set up your own instance',
     dismiss: 'Dismiss demo mode banner',
+    mode: 'Demo Mode',
   },
 
   // Navigation
@@ -33,6 +34,7 @@ export const strings = {
     analytics: 'Analytics',
     knowledgeGraph: 'Knowledge Graph',
     settings: 'Settings',
+    logout: 'Logout',
   },
 
   // Dashboard
@@ -130,14 +132,52 @@ export const strings = {
       type: 'Type',
       enabled: 'Enabled',
       maxItems: 'Max Items',
+      maxItemsPerRun: 'Max Items per Run',
       fetchFullContent: 'Fetch Full Content',
       fetchTranscript: 'Fetch Transcript',
+      includeKeywords: 'Include Keywords',
+      excludeKeywords: 'Exclude Keywords',
+      searchIn: 'Search In',
+      enableSource: 'Enable Source',
     },
     placeholders: {
       name: 'Source name',
       noLimit: 'No limit',
       addKeyword: 'Add keyword...',
     },
+    // Form sections and labels
+    form: {
+      addNewSource: 'Add New Source',
+      filters: 'Filters',
+      active: 'active',
+      show: 'Show',
+      hide: 'Hide',
+      regex: 'Regex',
+      disabledSourcesNotFetched: 'Disabled sources will not be fetched',
+    },
+    // Filter mode options
+    filterModes: {
+      both: 'Title & Content',
+      titleOnly: 'Title Only',
+      content: 'Content Only',
+    },
+    // Filter hints
+    filterHints: {
+      maxItems: 'Limit the number of items fetched per run (newest first)',
+      includeKeywords: 'Items must match at least one keyword to be processed',
+      excludeKeywords: 'Items matching any keyword will be skipped',
+    },
+    // Source type options
+    typeOptions: {
+      rss: 'RSS Feed',
+      youtube: 'YouTube',
+      website: 'Website',
+      blog: 'Blog',
+      imap: 'Email (IMAP)',
+      agent: 'AI Research Agent',
+    },
+    // YouTube helper
+    youtubeHelper: 'Supports both video URLs (youtube.com/watch?v=...) and channel URLs (youtube.com/@channel, youtube.com/channel/UC...). Channels will fetch transcripts from recent videos.',
     usedBy: 'Used by {count} feeds',
     confirmDelete: 'Are you sure you want to delete this source?',
     // Agent source form
@@ -246,6 +286,7 @@ export const strings = {
   feeds: {
     title: 'Feeds',
     createFeed: 'Create Feed',
+    createNewFeed: 'Create New Feed',
     editFeed: 'Edit Feed',
     deleteFeed: 'Delete Feed',
     runNow: 'Run Now',
@@ -255,12 +296,17 @@ export const strings = {
     exportBundle: 'Export Bundle',
     fields: {
       name: 'Name',
+      feedName: 'Feed Name',
       description: 'Description',
       sources: 'Sources',
       schedule: 'Schedule',
       promptTemplate: 'Prompt Template',
       reportTemplate: 'Report Template',
       outputs: 'Outputs',
+      cronExpression: 'Cron Expression',
+      emailRecipients: 'Email Recipients',
+      webhookUrl: 'Webhook URL',
+      customPath: 'Custom Path',
     },
     placeholders: {
       name: 'Feed name',
@@ -269,6 +315,68 @@ export const strings = {
       cron: '0 9 * * *',
       emailRecipients: 'email@example.com',
       webhookUrl: 'https://...',
+      overridePath: 'Override path (optional)',
+      noGlobalPath: 'No global path configured',
+    },
+    // Form sections
+    sections: {
+      basicInformation: 'Basic Information',
+      selectSources: 'Select Sources',
+      schedule: 'Schedule',
+      outputConfiguration: 'Output Configuration',
+      autoExport: 'Auto-Export',
+    },
+    // Digest mode
+    digestMode: {
+      title: 'Digest Mode',
+      individual: 'Individual',
+      individualDescription: 'One digest per item (default)',
+      perSource: 'Per Source',
+      perSourceDescription: 'One digest per source',
+      allSources: 'Single Briefing',
+      allSourcesDescription: 'One digest for all sources',
+      explanation: '<strong>Individual:</strong> One summary per item. <strong>Per Source:</strong> Consolidate items from each source. <strong>Single Briefing:</strong> Cross-source synthesis into one unified digest.',
+    },
+    // Template options
+    templateOptions: {
+      selectTemplate: 'Select template...',
+      systemTemplates: 'System Templates',
+      userTemplates: 'User Templates',
+    },
+    // Cron help
+    cronHelp: {
+      title: 'Cron Syntax (5 fields)',
+      syntax: 'minute hour day month weekday',
+      examples: {
+        daily9am: 'Daily 9 AM',
+        weekdays8am: 'Weekdays 8 AM',
+        every6hours: 'Every 6 hours',
+        monday730am: 'Monday 7:30 AM',
+      },
+    },
+    // Auto export
+    autoExport: {
+      description: 'Automatically export digests to configured destinations after each feed run completes.',
+      noPathWarning: 'No export path configured. Set a path below or configure the global path in',
+      settingsExport: 'Settings → Export',
+      noExportersEnabled: 'No exporters are enabled. Enable exporters in',
+      toConfigureAutoExport: 'to configure auto-export.',
+      disabledExportersWarning: 'Some configured exporters are now disabled:',
+      enableInSettings: 'Enable them in',
+      toUseAgain: 'to use them again.',
+      leaveEmptyForGlobal: 'leave empty to use global:',
+      optionalOverride: 'optional override',
+    },
+    // Source selection
+    sourceSelection: {
+      selected: '{count} selected',
+      disabled: 'Disabled',
+      noSourcesFound: 'No sources found',
+      disabledSourcesWarning: '{count} disabled source(s) selected. Disabled sources will be skipped during feed runs.',
+    },
+    // Hints
+    hints: {
+      commaSeparatedEmails: 'Comma-separated email addresses',
     },
     schedulePresets: {
       hourly: 'Every hour',
@@ -306,6 +414,8 @@ export const strings = {
       editFeed: 'Edit feed',
       deleteFeed: 'Delete feed',
       exportFeedBundle: 'Export feed bundle',
+      saving: 'Saving...',
+      updateFeed: 'Update Feed',
     },
     sourceUnit: 'source',
     sourcesUnit: 'sources',
@@ -362,6 +472,8 @@ export const strings = {
     subtitle: 'View execution history and debug failed runs',
     viewAll: 'View All',
     viewDetails: 'View Details',
+    backToFeedRuns: 'Back to Feed Runs',
+    noIdSpecified: 'No feed run ID specified.',
     filters: {
       allFeeds: 'All Feeds',
       allStatuses: 'All Statuses',
@@ -390,6 +502,21 @@ export const strings = {
       triggeredBy: 'Triggered By',
       noErrors: 'No errors occurred during this run',
       noDigests: 'No digests were created during this run',
+      runInformation: 'Run Information',
+      timing: 'Timing',
+      duration: 'Duration',
+      items: 'Items',
+      tokens: 'Tokens',
+      created: 'Created',
+      started: 'Started',
+      completed: 'Completed',
+      llmProvider: 'LLM Provider',
+      llmModel: 'LLM Model',
+      failed: 'failed',
+      tokensIn: 'In:',
+      tokensOut: 'Out:',
+      runNumber: 'Run #{id}',
+      triggeredByLabel: 'Triggered by {trigger}',
     },
     noRuns: 'No feed runs found',
     errorTypes: {

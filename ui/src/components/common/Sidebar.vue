@@ -109,7 +109,7 @@ const isActive = (href: string) => {
         class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-medium text-text-secondary hover:text-status-failed hover:bg-status-failed/10 transition-colors"
       >
         <LogOut class="w-[1.35rem] h-[1.35rem] flex-shrink-0" />
-        <span>Logout</span>
+        <span>{{ strings.nav.logout }}</span>
       </button>
     </nav>
 
@@ -121,7 +121,7 @@ const isActive = (href: string) => {
         class="flex items-center gap-1.5 text-xs text-amber-500/70"
       >
         <FlaskConical class="w-3.5 h-3.5" />
-        <span>Demo Mode</span>
+        <span>{{ strings.demo.mode }}</span>
       </div>
 
       <div class="text-xs text-text-muted">

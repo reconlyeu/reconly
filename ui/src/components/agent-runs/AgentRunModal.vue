@@ -33,6 +33,7 @@ import {
   ListTree,
   ClipboardList,
 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   isOpen: boolean;
@@ -153,7 +154,7 @@ const getStatusBadgeClass = (status: AgentRunStatus): string => {
 
 // Get status label
 const getStatusLabel = (status: AgentRunStatus): string => {
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return strings.status[status] || status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 // Get tool icon based on tool name
@@ -189,8 +190,9 @@ const getStrategyBadgeClass = (strategy: string | null | undefined): string => {
 
 // Get strategy label
 const getStrategyLabel = (strategy: string | null | undefined): string => {
-  if (!strategy) return 'Simple';
-  return strategy.charAt(0).toUpperCase() + strategy.slice(1);
+  if (!strategy) return strings.sources.agent.strategies.simple;
+  const strategyKey = strategy as keyof typeof strings.sources.agent.strategies;
+  return strings.sources.agent.strategies[strategyKey] || strategy.charAt(0).toUpperCase() + strategy.slice(1);
 };
 </script>
 
@@ -223,7 +225,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
                   <h2 class="text-xl font-bold text-text-primary">
-                    Agent Run Details
+                    {{ strings.agentRuns.details.title }}
                   </h2>
                   <span
                     :class="[
@@ -266,7 +268,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Clock :size="14" />
-                  <span class="text-xs">Duration</span>
+                  <span class="text-xs">{{ strings.agentRuns.stats.duration }}</span>
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ formatDuration(run.duration_seconds) }}
@@ -277,7 +279,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <RotateCw :size="14" />
-                  <span class="text-xs">Iterations</span>
+                  <span class="text-xs">{{ strings.agentRuns.stats.iterations }}</span>
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ run.iterations }}
@@ -288,7 +290,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Search :size="14" />
-                  <span class="text-xs">Sources</span>
+                  <span class="text-xs">{{ strings.agentRuns.stats.sources }}</span>
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ run.source_count ?? (run.sources_consulted?.length || 0) }}
@@ -299,7 +301,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Coins :size="14" />
-                  <span class="text-xs">Tokens</span>
+                  <span class="text-xs">{{ strings.agentRuns.stats.tokens }}</span>
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ formatTokens(run.tokens_in + run.tokens_out) }}
@@ -313,7 +315,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <div class="flex items-center gap-2 text-text-muted">
                   <Coins :size="14" />
-                  <span class="text-xs">Est. Cost</span>
+                  <span class="text-xs">{{ strings.agentRuns.stats.cost }}</span>
                 </div>
                 <p class="mt-1 text-lg font-semibold text-text-primary">
                   {{ formatCost(run.estimated_cost) }}
@@ -324,7 +326,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <!-- Trace ID -->
             <div v-if="run.trace_id" class="flex items-center gap-2">
               <Hash :size="14" class="text-text-muted" />
-              <span class="text-xs text-text-muted">Trace ID:</span>
+              <span class="text-xs text-text-muted">{{ strings.agentRuns.details.traceId }}</span>
               <code class="rounded bg-bg-hover px-2 py-0.5 text-xs text-text-secondary font-mono">
                 {{ run.trace_id }}
               </code>
@@ -339,7 +341,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
 
             <!-- Research Prompt -->
             <div>
-              <h3 class="mb-2 text-sm font-medium text-text-primary">Research Prompt</h3>
+              <h3 class="mb-2 text-sm font-medium text-text-primary">{{ strings.agentRuns.details.prompt }}</h3>
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <p class="text-sm text-text-secondary whitespace-pre-wrap">{{ run.prompt }}</p>
               </div>
@@ -353,7 +355,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               >
                 <h3 class="flex items-center gap-2 text-sm font-medium text-text-primary">
                   <ListTree :size="14" class="text-text-muted" />
-                  Subtopics ({{ run.subtopics.length }})
+                  {{ strings.agentRuns.details.subtopics }} ({{ run.subtopics.length }})
                 </h3>
                 <component
                   :is="expandedSubtopics ? ChevronDown : ChevronRight"
@@ -387,7 +389,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               >
                 <h3 class="flex items-center gap-2 text-sm font-medium text-text-primary">
                   <ClipboardList :size="14" class="text-text-muted" />
-                  Research Plan
+                  {{ strings.agentRuns.details.researchPlan }}
                 </h3>
                 <component
                   :is="expandedResearchPlan ? ChevronDown : ChevronRight"
@@ -407,7 +409,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <!-- Report Format (if set) -->
             <div v-if="run.report_format" class="flex items-center gap-2 text-sm">
               <FileText :size="14" class="text-text-muted" />
-              <span class="text-text-muted">Report Format:</span>
+              <span class="text-text-muted">{{ strings.agentRuns.details.reportFormat }}</span>
               <span class="rounded bg-bg-hover px-2 py-0.5 text-text-secondary font-medium">
                 {{ run.report_format }}
               </span>
@@ -416,7 +418,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <!-- Tool Calls -->
             <div v-if="run.tool_calls && run.tool_calls.length > 0">
               <h3 class="mb-2 text-sm font-medium text-text-primary">
-                Tool Calls ({{ run.tool_calls.length }})
+                {{ strings.agentRuns.details.toolCalls }} ({{ run.tool_calls.length }})
               </h3>
               <div class="space-y-2">
                 <div
@@ -445,12 +447,12 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
                     <div v-if="expandedToolCalls.has(index)" class="border-t border-border-subtle p-3 space-y-3">
                       <!-- Input -->
                       <div>
-                        <span class="text-xs font-medium text-text-muted">Input:</span>
+                        <span class="text-xs font-medium text-text-muted">{{ strings.agentRuns.details.input }}</span>
                         <pre class="mt-1 rounded bg-bg-hover p-2 text-xs text-text-secondary overflow-x-auto">{{ JSON.stringify(call.input, null, 2) }}</pre>
                       </div>
                       <!-- Output -->
                       <div>
-                        <span class="text-xs font-medium text-text-muted">Output:</span>
+                        <span class="text-xs font-medium text-text-muted">{{ strings.agentRuns.details.output }}</span>
                         <pre class="mt-1 rounded bg-bg-hover p-2 text-xs text-text-secondary overflow-x-auto max-h-48 overflow-y-auto">{{ call.output }}</pre>
                       </div>
                     </div>
@@ -462,7 +464,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <!-- Sources Consulted -->
             <div v-if="run.sources_consulted && run.sources_consulted.length > 0">
               <h3 class="mb-2 text-sm font-medium text-text-primary">
-                Sources Consulted ({{ run.sources_consulted.length }})
+                {{ strings.agentRuns.details.sourcesConsulted }} ({{ run.sources_consulted.length }})
               </h3>
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <ul class="space-y-1">
@@ -487,7 +489,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
 
             <!-- Result -->
             <div v-if="run.result_title || run.result_content">
-              <h3 class="mb-2 text-sm font-medium text-text-primary">Result</h3>
+              <h3 class="mb-2 text-sm font-medium text-text-primary">{{ strings.agentRuns.details.result }}</h3>
               <div class="rounded-lg border border-border-subtle bg-bg-surface p-4">
                 <h4 v-if="run.result_title" class="font-medium text-text-primary mb-2">
                   {{ run.result_title }}
@@ -502,7 +504,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
 
             <!-- Error Log -->
             <div v-if="run.error_log">
-              <h3 class="mb-2 text-sm font-medium text-status-failed">Error Log</h3>
+              <h3 class="mb-2 text-sm font-medium text-status-failed">{{ strings.agentRuns.details.errorLog }}</h3>
               <div class="rounded-lg border border-status-failed/30 bg-status-failed/10 p-4">
                 <pre class="text-sm text-status-failed whitespace-pre-wrap font-mono">{{ run.error_log }}</pre>
               </div>
@@ -511,15 +513,15 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <!-- Timestamps -->
             <div class="flex gap-6 text-xs text-text-muted">
               <div>
-                <span class="font-medium">Created:</span>
+                <span class="font-medium">{{ strings.agentRuns.details.created }}</span>
                 {{ formatDate(run.created_at) }}
               </div>
               <div v-if="run.started_at">
-                <span class="font-medium">Started:</span>
+                <span class="font-medium">{{ strings.agentRuns.details.started }}</span>
                 {{ formatDate(run.started_at) }}
               </div>
               <div v-if="run.completed_at">
-                <span class="font-medium">Completed:</span>
+                <span class="font-medium">{{ strings.agentRuns.details.completed }}</span>
                 {{ formatDate(run.completed_at) }}
               </div>
             </div>
@@ -531,7 +533,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
               @click="$emit('close')"
               class="rounded-lg border border-border-subtle bg-bg-surface px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-hover"
             >
-              Close
+              {{ strings.common.close }}
             </button>
           </div>
         </div>

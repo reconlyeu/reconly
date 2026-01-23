@@ -10,6 +10,7 @@
 
 import { ref, computed } from 'vue';
 import { Wrench, ChevronDown, ChevronRight, Check, X, Loader2 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   /** Tool name */
@@ -102,19 +103,19 @@ const formattedResult = computed(() => {
     <div v-if="expanded" class="border-t border-border-subtle">
       <!-- Arguments -->
       <div class="px-3 py-2">
-        <div class="text-xs text-text-muted mb-1">Arguments:</div>
+        <div class="text-xs text-text-muted mb-1">{{ strings.chat.toolCall.arguments }}</div>
         <pre class="text-xs text-text-secondary bg-bg-base p-2 rounded whitespace-pre-wrap break-words">{{ formattedArgs }}</pre>
       </div>
 
       <!-- Result (if available) -->
       <div v-if="formattedResult !== null" class="px-3 py-2 border-t border-border-subtle">
-        <div class="text-xs text-text-muted mb-1">Result:</div>
+        <div class="text-xs text-text-muted mb-1">{{ strings.chat.toolCall.result }}</div>
         <pre class="text-xs text-text-secondary bg-bg-base p-2 rounded whitespace-pre-wrap break-words max-h-40 overflow-y-auto">{{ formattedResult }}</pre>
       </div>
 
       <!-- Error (if failed) -->
       <div v-if="error" class="px-3 py-2 border-t border-border-subtle">
-        <div class="text-xs text-status-failed mb-1">Error:</div>
+        <div class="text-xs text-status-failed mb-1">{{ strings.chat.toolCall.error }}</div>
         <pre class="text-xs text-status-failed/80 bg-status-failed/5 p-2 rounded whitespace-pre-wrap break-words">{{ error }}</pre>
       </div>
     </div>

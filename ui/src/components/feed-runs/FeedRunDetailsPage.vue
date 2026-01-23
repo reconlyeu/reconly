@@ -113,12 +113,12 @@ const getStatusLabel = (status: FeedRunStatus): string => {
       class="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary mb-6"
     >
       <ArrowLeft :size="16" />
-      Back to Feed Runs
+      {{ strings.feedRuns.backToFeedRuns }}
     </a>
 
     <!-- No ID provided -->
     <div v-if="!resolvedRunId" class="bg-status-warning/10 text-status-warning p-4 rounded-lg">
-      No feed run ID specified.
+      {{ strings.feedRuns.noIdSpecified }}
     </div>
 
     <!-- Loading state -->
@@ -166,7 +166,7 @@ const getStatusLabel = (status: FeedRunStatus): string => {
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
           <div class="flex items-center gap-2 text-text-secondary mb-2">
             <Clock :size="14" />
-            <span class="text-xs">Duration</span>
+            <span class="text-xs">{{ strings.feedRuns.details.duration }}</span>
           </div>
           <p class="text-lg font-semibold text-text-primary">
             {{ formatDuration(run.duration_seconds) }}
@@ -177,12 +177,12 @@ const getStatusLabel = (status: FeedRunStatus): string => {
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
           <div class="flex items-center gap-2 text-text-secondary mb-2">
             <Activity :size="14" />
-            <span class="text-xs">Sources</span>
+            <span class="text-xs">{{ strings.feedRuns.details.sources }}</span>
           </div>
           <p class="text-lg font-semibold text-text-primary">
             {{ run.sources_processed }}/{{ run.sources_total }}
             <span v-if="run.sources_failed > 0" class="text-sm text-status-error">
-              ({{ run.sources_failed }} failed)
+              ({{ run.sources_failed }} {{ strings.feedRuns.details.failed }})
             </span>
           </p>
         </div>
@@ -191,7 +191,7 @@ const getStatusLabel = (status: FeedRunStatus): string => {
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
           <div class="flex items-center gap-2 text-text-secondary mb-2">
             <FileText :size="14" />
-            <span class="text-xs">Items</span>
+            <span class="text-xs">{{ strings.feedRuns.details.items }}</span>
           </div>
           <p class="text-lg font-semibold text-text-primary">
             {{ run.items_processed }}
@@ -202,13 +202,13 @@ const getStatusLabel = (status: FeedRunStatus): string => {
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
           <div class="flex items-center gap-2 text-text-secondary mb-2">
             <Zap :size="14" />
-            <span class="text-xs">Tokens</span>
+            <span class="text-xs">{{ strings.feedRuns.details.tokens }}</span>
           </div>
           <p class="text-lg font-semibold text-text-primary">
             {{ formatTokens(run.total_tokens_in + run.total_tokens_out) }}
           </p>
           <p class="text-xs text-text-muted">
-            In: {{ formatTokens(run.total_tokens_in) }} / Out: {{ formatTokens(run.total_tokens_out) }}
+            {{ strings.feedRuns.details.tokensIn }} {{ formatTokens(run.total_tokens_in) }} / {{ strings.feedRuns.details.tokensOut }} {{ formatTokens(run.total_tokens_out) }}
           </p>
         </div>
 
@@ -216,7 +216,7 @@ const getStatusLabel = (status: FeedRunStatus): string => {
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
           <div class="flex items-center gap-2 text-text-secondary mb-2">
             <FileText :size="14" />
-            <span class="text-xs">Digests</span>
+            <span class="text-xs">{{ strings.feedRuns.details.digests }}</span>
           </div>
           <p class="text-lg font-semibold text-text-primary">
             {{ run.digests_count || digests?.length || 0 }}
@@ -228,18 +228,18 @@ const getStatusLabel = (status: FeedRunStatus): string => {
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <!-- Timing details -->
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
-          <h3 class="font-medium text-text-primary mb-4">Timing</h3>
+          <h3 class="font-medium text-text-primary mb-4">{{ strings.feedRuns.details.timing }}</h3>
           <dl class="space-y-2 text-sm">
             <div class="flex justify-between">
-              <dt class="text-text-secondary">Created</dt>
+              <dt class="text-text-secondary">{{ strings.feedRuns.details.created }}</dt>
               <dd class="text-text-primary">{{ formatDate(run.created_at) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-text-secondary">Started</dt>
+              <dt class="text-text-secondary">{{ strings.feedRuns.details.started }}</dt>
               <dd class="text-text-primary">{{ formatDate(run.started_at) }}</dd>
             </div>
             <div class="flex justify-between">
-              <dt class="text-text-secondary">Completed</dt>
+              <dt class="text-text-secondary">{{ strings.feedRuns.details.completed }}</dt>
               <dd class="text-text-primary">{{ formatDate(run.completed_at) }}</dd>
             </div>
           </dl>
@@ -247,18 +247,18 @@ const getStatusLabel = (status: FeedRunStatus): string => {
 
         <!-- Run info -->
         <div class="bg-bg-surface rounded-lg border border-border-subtle p-4">
-          <h3 class="font-medium text-text-primary mb-4">Run Information</h3>
+          <h3 class="font-medium text-text-primary mb-4">{{ strings.feedRuns.details.runInformation }}</h3>
           <dl class="space-y-2 text-sm">
             <div class="flex justify-between">
               <dt class="text-text-secondary">{{ strings.feedRuns.details.triggeredBy }}</dt>
               <dd class="text-text-primary capitalize">{{ run.triggered_by }}</dd>
             </div>
             <div v-if="run.llm_provider" class="flex justify-between">
-              <dt class="text-text-secondary">LLM Provider</dt>
+              <dt class="text-text-secondary">{{ strings.feedRuns.details.llmProvider }}</dt>
               <dd class="text-text-primary capitalize">{{ run.llm_provider }}</dd>
             </div>
             <div v-if="run.llm_model" class="flex justify-between">
-              <dt class="text-text-secondary">LLM Model</dt>
+              <dt class="text-text-secondary">{{ strings.feedRuns.details.llmModel }}</dt>
               <dd class="text-text-primary font-mono text-xs">{{ run.llm_model }}</dd>
             </div>
             <div v-if="run.trace_id" class="flex justify-between">

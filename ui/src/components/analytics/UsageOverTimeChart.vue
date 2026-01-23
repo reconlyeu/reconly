@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useQuery } from '@tanstack/vue-query';
 import { analyticsApi } from '@/services/api';
 import { Loader2 } from 'lucide-vue-next';
+import { strings } from '@/i18n/en';
 
 interface Props {
   period: string;
@@ -136,7 +137,7 @@ const formatNumber = (num: number) => {
           <polyline points="2 17 7 12 12 17 17 7 22 12" />
         </svg>
       </div>
-      Cumulative Token Usage
+      {{ strings.analytics.usageChart.title }}
     </h2>
 
     <!-- Loading State -->
@@ -146,12 +147,12 @@ const formatNumber = (num: number) => {
 
     <!-- Error State -->
     <div v-else-if="isError" class="flex h-64 items-center justify-center">
-      <p class="text-sm text-status-failed">Failed to load usage data</p>
+      <p class="text-sm text-status-failed">{{ strings.analytics.usageChart.failedToLoad }}</p>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!chartData || chartData.length === 0" class="flex h-64 items-center justify-center">
-      <p class="text-sm text-text-muted">No usage data available for this period</p>
+      <p class="text-sm text-text-muted">{{ strings.analytics.usageChart.noData }}</p>
     </div>
 
     <!-- Chart -->
@@ -266,22 +267,22 @@ const formatNumber = (num: number) => {
             <div class="whitespace-nowrap rounded-lg border border-border-default bg-bg-elevated px-3 py-2 text-xs shadow-xl">
               <div class="font-semibold text-text-primary">{{ point.date }}</div>
               <div class="mt-1 space-y-0.5">
-                <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">Cumulative</div>
+                <div class="text-text-muted text-[10px] uppercase tracking-wide mb-1">{{ strings.analytics.usageChart.cumulative }}</div>
                 <div class="flex justify-between gap-4">
-                  <span class="text-text-muted">Total:</span>
+                  <span class="text-text-muted">{{ strings.analytics.usageChart.total }}</span>
                   <span class="font-mono text-accent-primary font-semibold">{{ point.cumulative_total.toLocaleString() }}</span>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span class="text-text-muted">In:</span>
+                  <span class="text-text-muted">{{ strings.analytics.usageChart.in }}</span>
                   <span class="font-mono text-green-400">{{ point.cumulative_tokens_in.toLocaleString() }}</span>
                 </div>
                 <div class="flex justify-between gap-4">
-                  <span class="text-text-muted">Out:</span>
+                  <span class="text-text-muted">{{ strings.analytics.usageChart.out }}</span>
                   <span class="font-mono text-blue-400">{{ point.cumulative_tokens_out.toLocaleString() }}</span>
                 </div>
-                <div class="text-text-muted text-[10px] uppercase tracking-wide mt-2 mb-1">This Day</div>
+                <div class="text-text-muted text-[10px] uppercase tracking-wide mt-2 mb-1">{{ strings.analytics.usageChart.thisDay }}</div>
                 <div class="flex justify-between gap-4">
-                  <span class="text-text-muted">Daily:</span>
+                  <span class="text-text-muted">{{ strings.analytics.usageChart.daily }}</span>
                   <span class="font-mono text-text-secondary">+{{ point.daily_total.toLocaleString() }}</span>
                 </div>
               </div>

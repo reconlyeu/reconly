@@ -152,12 +152,12 @@ const selectedDisabledSources = computed(() => {
   );
 });
 
-// Digest mode options
-const digestModeOptions = [
-  { value: 'individual', label: 'Individual', description: 'One digest per item (default)' },
-  { value: 'per_source', label: 'Per Source', description: 'One digest per source' },
-  { value: 'all_sources', label: 'Single Briefing', description: 'One digest for all sources' },
-];
+// Digest mode options - use computed for i18n
+const digestModeOptions = computed(() => [
+  { value: 'individual', label: strings.feeds.digestMode.individual, description: strings.feeds.digestMode.individualDescription },
+  { value: 'per_source', label: strings.feeds.digestMode.perSource, description: strings.feeds.digestMode.perSourceDescription },
+  { value: 'all_sources', label: strings.feeds.digestMode.allSources, description: strings.feeds.digestMode.allSourcesDescription },
+]);
 
 // Validation schema
 const formSchema = toTypedSchema(
@@ -374,7 +374,7 @@ const handleClose = () => {
           <div class="sticky top-0 z-10 border-b border-border-subtle bg-bg-elevated/95 backdrop-blur-sm p-6">
             <div class="flex items-center justify-between">
               <h2 class="text-2xl font-bold text-text-primary">
-                {{ isEditMode ? 'Edit Feed' : 'Create New Feed' }}
+                {{ isEditMode ? strings.feeds.editFeed : strings.feeds.createNewFeed }}
               </h2>
               <button
                 @click="handleClose"
@@ -390,12 +390,12 @@ const handleClose = () => {
           <form @submit.prevent="onSubmit" class="p-6 space-y-8">
             <!-- Section 1: Basic Info -->
             <div class="space-y-4">
-              <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">Basic Information</h3>
+              <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.basicInformation }}</h3>
 
               <!-- Name -->
               <div>
                 <label for="name" class="mb-2 block text-sm font-medium text-text-primary">
-                  Feed Name
+                  {{ strings.feeds.fields.feedName }}
                 </label>
                 <input
                   id="name"
@@ -443,7 +443,7 @@ const handleClose = () => {
                 <div class="flex items-center gap-2 mb-3">
                   <FileStack :size="16" class="text-text-muted" />
                   <label class="text-sm font-medium text-text-primary">
-                    Digest Mode
+                    {{ strings.feeds.digestMode.title }}
                   </label>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
@@ -471,10 +471,7 @@ const handleClose = () => {
                     />
                   </label>
                 </div>
-                <p class="mt-3 text-xs text-text-muted">
-                  <strong>Individual:</strong> One summary per item. <strong>Per Source:</strong> Consolidate items from each source.
-                  <strong>Single Briefing:</strong> Cross-source synthesis into one unified digest.
-                </p>
+                <p class="mt-3 text-xs text-text-muted" v-html="strings.feeds.digestMode.explanation"></p>
               </div>
             </div>
 
@@ -484,9 +481,9 @@ const handleClose = () => {
             <!-- Section 2: Sources -->
             <div class="space-y-4">
               <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">Select Sources</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.selectSources }}</h3>
                 <span class="text-sm text-text-secondary">
-                  {{ source_ids.length }} selected
+                  {{ source_ids.length }} {{ strings.feeds.sourceSelection.selected.replace('{count}', '') }}
                 </span>
               </div>
 
@@ -522,7 +519,7 @@ const handleClose = () => {
                         v-if="source.enabled === false"
                         class="text-xs font-medium px-1.5 py-0.5 rounded bg-text-muted/20 text-text-muted"
                       >
-                        Disabled
+                        {{ strings.feeds.sourceSelection.disabled }}
                       </span>
                     </div>
                     <div class="text-xs text-text-muted truncate">{{ source.url }}</div>
@@ -541,7 +538,7 @@ const handleClose = () => {
                 </label>
 
                 <div v-if="filteredSources?.length === 0" class="py-8 text-center text-sm text-text-muted">
-                  No sources found
+                  {{ strings.feeds.sourceSelection.noSourcesFound }}
                 </div>
               </div>
 
@@ -553,8 +550,7 @@ const handleClose = () => {
                 >
                   <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
                   <p class="text-xs text-amber-200">
-                    {{ selectedDisabledSources.length }} disabled source{{ selectedDisabledSources.length > 1 ? 's' : '' }}
-                    selected. Disabled sources will be skipped during feed runs.
+                    {{ strings.feeds.sourceSelection.disabledSourcesWarning.replace('{count}', String(selectedDisabledSources.length)) }}
                   </p>
                 </div>
               </Transition>
@@ -585,13 +581,13 @@ const handleClose = () => {
                       : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                   "
                 >
-                  <option :value="undefined" disabled>Select template...</option>
-                  <optgroup v-if="promptTemplates?.some(t => t.is_system)" label="System Templates">
+                  <option :value="undefined" disabled>{{ strings.feeds.templateOptions.selectTemplate }}</option>
+                  <optgroup v-if="promptTemplates?.some(t => t.is_system)" :label="strings.feeds.templateOptions.systemTemplates">
                     <option v-for="t in promptTemplates?.filter(t => t.is_system)" :key="t.id" :value="t.id">
                       {{ t.name }}
                     </option>
                   </optgroup>
-                  <optgroup v-if="promptTemplates?.some(t => !t.is_system)" label="User Templates">
+                  <optgroup v-if="promptTemplates?.some(t => !t.is_system)" :label="strings.feeds.templateOptions.userTemplates">
                     <option v-for="t in promptTemplates?.filter(t => !t.is_system)" :key="t.id" :value="t.id">
                       {{ t.name }}
                     </option>
@@ -618,13 +614,13 @@ const handleClose = () => {
                       : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                   "
                 >
-                  <option :value="undefined" disabled>Select template...</option>
-                  <optgroup v-if="reportTemplates?.some(t => t.is_system)" label="System Templates">
+                  <option :value="undefined" disabled>{{ strings.feeds.templateOptions.selectTemplate }}</option>
+                  <optgroup v-if="reportTemplates?.some(t => t.is_system)" :label="strings.feeds.templateOptions.systemTemplates">
                     <option v-for="t in reportTemplates?.filter(t => t.is_system)" :key="t.id" :value="t.id">
                       {{ t.name }}
                     </option>
                   </optgroup>
-                  <optgroup v-if="reportTemplates?.some(t => !t.is_system)" label="User Templates">
+                  <optgroup v-if="reportTemplates?.some(t => !t.is_system)" :label="strings.feeds.templateOptions.userTemplates">
                     <option v-for="t in reportTemplates?.filter(t => !t.is_system)" :key="t.id" :value="t.id">
                       {{ t.name }}
                     </option>
@@ -643,25 +639,25 @@ const handleClose = () => {
             <div class="space-y-4">
               <div class="flex items-center gap-2">
                 <Calendar :size="16" class="text-text-muted" />
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">Schedule</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.schedule }}</h3>
               </div>
 
               <div>
                 <label for="schedule" class="mb-2 flex items-center gap-2 text-sm font-medium text-text-primary">
-                  Cron Expression
+                  {{ strings.feeds.fields.cronExpression }}
                   <div class="group relative">
                     <HelpCircle :size="14" class="text-text-muted cursor-help hover:text-text-secondary" />
                     <div class="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 opacity-0 transition-opacity group-hover:opacity-100 z-50">
                       <div class="w-64 rounded-lg border border-border-subtle bg-bg-elevated p-3 shadow-xl text-xs">
-                        <div class="font-semibold text-text-primary mb-2">Cron Syntax (5 fields)</div>
+                        <div class="font-semibold text-text-primary mb-2">{{ strings.feeds.cronHelp.title }}</div>
                         <code class="block bg-bg-surface rounded px-2 py-1 mb-2 text-text-secondary font-mono">
-                          minute hour day month weekday
+                          {{ strings.feeds.cronHelp.syntax }}
                         </code>
                         <div class="space-y-1 text-text-muted">
-                          <div><code class="text-accent-primary">0 9 * * *</code> Daily 9 AM</div>
-                          <div><code class="text-accent-primary">0 8 * * 1-5</code> Weekdays 8 AM</div>
-                          <div><code class="text-accent-primary">0 */6 * * *</code> Every 6 hours</div>
-                          <div><code class="text-accent-primary">30 7 * * 1</code> Monday 7:30 AM</div>
+                          <div><code class="text-accent-primary">0 9 * * *</code> {{ strings.feeds.cronHelp.examples.daily9am }}</div>
+                          <div><code class="text-accent-primary">0 8 * * 1-5</code> {{ strings.feeds.cronHelp.examples.weekdays8am }}</div>
+                          <div><code class="text-accent-primary">0 */6 * * *</code> {{ strings.feeds.cronHelp.examples.every6hours }}</div>
+                          <div><code class="text-accent-primary">30 7 * * 1</code> {{ strings.feeds.cronHelp.examples.monday730am }}</div>
                         </div>
                       </div>
                       <div class="absolute left-1/2 -translate-x-1/2 -bottom-1 h-2 w-2 rotate-45 border-b border-r border-border-subtle bg-bg-elevated"></div>
@@ -697,13 +693,13 @@ const handleClose = () => {
             <div class="space-y-4">
               <div class="flex items-center gap-2">
                 <Mail :size="16" class="text-text-muted" />
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">Output Configuration</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.outputConfiguration }}</h3>
               </div>
 
               <!-- Email Recipients -->
               <div>
                 <label for="email_recipients" class="mb-2 block text-sm font-medium text-text-primary">
-                  Email Recipients <span class="text-text-muted">(optional)</span>
+                  {{ strings.feeds.fields.emailRecipients }} <span class="text-text-muted">({{ strings.common.optional }})</span>
                 </label>
                 <input
                   id="email_recipients"
@@ -712,13 +708,13 @@ const handleClose = () => {
                   :placeholder="strings.feeds.placeholders.emailRecipients"
                   class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
                 />
-                <p class="mt-2 text-xs text-text-muted">Comma-separated email addresses</p>
+                <p class="mt-2 text-xs text-text-muted">{{ strings.feeds.hints.commaSeparatedEmails }}</p>
               </div>
 
               <!-- Webhook URL -->
               <div>
                 <label for="webhook_url" class="mb-2 block text-sm font-medium text-text-primary">
-                  Webhook URL <span class="text-text-muted">(optional)</span>
+                  {{ strings.feeds.fields.webhookUrl }} <span class="text-text-muted">({{ strings.common.optional }})</span>
                 </label>
                 <div class="relative">
                   <Webhook class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
@@ -750,10 +746,10 @@ const handleClose = () => {
             <div v-if="allDirectExportExporters && allDirectExportExporters.length > 0" class="space-y-4">
               <div class="flex items-center gap-2">
                 <Download :size="16" class="text-text-muted" />
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">Auto-Export</h3>
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.autoExport }}</h3>
               </div>
               <p class="text-xs text-text-muted">
-                Automatically export digests to configured destinations after each feed run completes.
+                {{ strings.feeds.autoExport.description }}
               </p>
 
               <!-- Warning for disabled exporters that were previously configured -->
@@ -763,13 +759,13 @@ const handleClose = () => {
               >
                 <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
                 <div class="text-xs text-amber-200">
-                  <p class="font-medium mb-1">Some configured exporters are now disabled:</p>
+                  <p class="font-medium mb-1">{{ strings.feeds.autoExport.disabledExportersWarning }}</p>
                   <ul class="list-disc list-inside">
                     <li v-for="exp in disabledConfiguredExporters" :key="exp.name">
                       {{ exp.name.charAt(0).toUpperCase() + exp.name.slice(1) }}
                     </li>
                   </ul>
-                  <p class="mt-1">Enable them in <span class="font-medium">Settings → Export</span> to use them again.</p>
+                  <p class="mt-1">{{ strings.feeds.autoExport.enableInSettings }} <span class="font-medium">{{ strings.feeds.autoExport.settingsExport }}</span> {{ strings.feeds.autoExport.toUseAgain }}</p>
                 </div>
               </div>
 
@@ -779,9 +775,9 @@ const handleClose = () => {
                 class="rounded-lg border border-border-subtle bg-bg-surface p-4 text-center"
               >
                 <p class="text-sm text-text-muted">
-                  No exporters are enabled. Enable exporters in
-                  <span class="font-medium text-text-secondary">Settings → Export</span>
-                  to configure auto-export.
+                  {{ strings.feeds.autoExport.noExportersEnabled }}
+                  <span class="font-medium text-text-secondary">{{ strings.feeds.autoExport.settingsExport }}</span>
+                  {{ strings.feeds.autoExport.toConfigureAutoExport }}
                 </p>
               </div>
 
@@ -815,8 +811,8 @@ const handleClose = () => {
                     >
                       <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
                       <p class="text-xs text-amber-200">
-                        No export path configured. Set a path below or configure the global path in
-                        <span class="font-medium">Settings → Export</span>.
+                        {{ strings.feeds.autoExport.noPathWarning }}
+                        <span class="font-medium">{{ strings.feeds.autoExport.settingsExport }}</span>.
                       </p>
                     </div>
                   </Transition>
@@ -825,17 +821,17 @@ const handleClose = () => {
                   <Transition name="slide">
                     <div v-if="autoExportConfig[exporter.name]?.enabled" class="mt-3">
                       <label :for="`export-path-${exporter.name}`" class="mb-1 block text-xs font-medium text-text-secondary">
-                        Custom Path
+                        {{ strings.feeds.fields.customPath }}
                         <span v-if="getGlobalExportPath(exporter.name)" class="text-text-muted">
-                          (leave empty to use global: <span class="font-mono text-text-secondary">{{ getGlobalExportPath(exporter.name) }}</span>)
+                          ({{ strings.feeds.autoExport.leaveEmptyForGlobal }} <span class="font-mono text-text-secondary">{{ getGlobalExportPath(exporter.name) }}</span>)
                         </span>
-                        <span v-else class="text-text-muted">(optional override)</span>
+                        <span v-else class="text-text-muted">({{ strings.feeds.autoExport.optionalOverride }})</span>
                       </label>
                       <input
                         :id="`export-path-${exporter.name}`"
                         v-model="autoExportConfig[exporter.name].path"
                         type="text"
-                        :placeholder="getGlobalExportPath(exporter.name) ? 'Override path (optional)' : 'No global path configured'"
+                        :placeholder="getGlobalExportPath(exporter.name) ? strings.feeds.placeholders.overridePath : strings.feeds.placeholders.noGlobalPath"
                         class="w-full rounded-lg border border-border-subtle bg-bg-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
                       />
                     </div>
@@ -852,7 +848,7 @@ const handleClose = () => {
                 :disabled="isSaving"
                 class="flex-1 rounded-lg border border-border-subtle bg-bg-surface px-6 py-3 font-medium text-text-primary transition-all hover:bg-bg-hover disabled:opacity-50"
               >
-                Cancel
+                {{ strings.common.cancel }}
               </button>
               <button
                 type="submit"
@@ -864,7 +860,7 @@ const handleClose = () => {
                   :size="18"
                   class="animate-spin"
                 />
-                {{ isSaving ? 'Saving...' : (isEditMode ? 'Update Feed' : 'Create Feed') }}
+                {{ isSaving ? strings.feeds.actions.saving : (isEditMode ? strings.feeds.actions.updateFeed : strings.feeds.createFeed) }}
               </button>
             </div>
           </form>
