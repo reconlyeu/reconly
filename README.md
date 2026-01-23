@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml"><img src="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License"/></a>
   <!-- <a href="#"><img src="https://img.shields.io/github/v/release/reconlyeu/reconly" alt="Release"/></a> -->
   <!-- <a href="#"><img src="https://img.shields.io/docker/pulls/reconlyeu/reconly" alt="Docker Pulls"/></a> -->
@@ -32,7 +33,7 @@ docker compose up -d
 
 Open **http://localhost:8000** — sample feeds and digests ready to explore.
 
-For AI summarization, either [install Ollama](https://ollama.com) (free, local) or add an API key to `.env`.
+For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) (both free & local), or add a cloud API key. Then configure your provider and model in `.env` or via the UI at **Settings**.
 
 ---
 
@@ -42,7 +43,7 @@ For AI summarization, either [install Ollama](https://ollama.com) (free, local) 
 - **Multi-Source** — RSS, YouTube, websites, email, and AI agents in one place
 - **RAG Knowledge System** — Semantic search across your archive with citations
 - **Knowledge Graphs** — Visualize connections between topics
-- **100% Private** — Run offline with Ollama + SearXNG. No cloud dependency
+- **100% Private** — Run offline with Ollama/LM Studio + SearXNG. No cloud dependency
 - **PKM Export** — Obsidian, Logseq, or any markdown-based system
 - **Extensible** — Custom sources, LLM providers, and exporters via [plugins](https://github.com/reconlyeu/reconly-extensions)
 
@@ -57,7 +58,7 @@ For AI summarization, either [install Ollama](https://ollama.com) (free, local) 
 | OpenAI | ~$0.02/article | Cloud | API key |
 | Anthropic | ~$0.04/article | Cloud | API key |
 
-**Recommendation:** Start with [Ollama](https://ollama.com/) for free, private summarization.
+**Recommendation:** Start with [Ollama](https://ollama.com/) or [LM Studio](https://lmstudio.ai/) for free, private summarization.
 
 ---
 

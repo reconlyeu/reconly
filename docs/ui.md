@@ -273,7 +273,7 @@ graphApi.expandNode(id, depth, sim)  // Expand node to show related
 The Knowledge Graph requires the RAG system to be configured:
 
 1. PostgreSQL with pgvector extension
-2. Embedding provider configured (Ollama, OpenAI, or HuggingFace)
+2. Embedding provider configured (Ollama, LM Studio, OpenAI, or HuggingFace)
 3. Digests must be embedded (`embedding_status = 'completed'`)
 
 See [RAG Setup Guide](rag-setup.md) for configuration details.

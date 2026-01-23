@@ -21,7 +21,7 @@ Local, free, private AI summarization.
 # .env
 DEFAULT_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-DEFAULT_MODEL=llama3.2
+DEFAULT_MODEL=llama3.2      # Or qwen2.5:7b for lighter hardware
 ```
 
 | Variable | Default | Description |
@@ -30,6 +30,24 @@ DEFAULT_MODEL=llama3.2
 | `DEFAULT_MODEL` | `llama3.2` | Model to use for summarization |
 
 **Docker Note**: Use `http://host.docker.internal:11434` to access Ollama running on the host.
+
+### LM Studio (Recommended for OSS)
+
+Local, free, private AI summarization via [LM Studio](https://lmstudio.ai).
+
+```bash
+# .env
+DEFAULT_PROVIDER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LMSTUDIO_BASE_URL` | `http://localhost:1234/v1` | LM Studio server URL |
+
+**Setup**: Download a model in LM Studio, then enable the local server in the Developer tab.
+
+**Docker Note**: Use `http://host.docker.internal:1234/v1` to access LM Studio running on the host.
 
 ### OpenAI
 
@@ -73,7 +91,7 @@ DEFAULT_HF_MODEL=glm-4
 
 When `enable_fallback=True` (default), providers are tried in this order:
 
-1. **Local providers** (Ollama) - Free, private
+1. **Local providers** (Ollama, LM Studio) - Free, private
 2. **Free cloud providers** (HuggingFace free tier) - No cost
 3. **Paid cloud providers** (OpenAI, Anthropic) - Sorted by cost
 
@@ -328,6 +346,7 @@ Best for privacy and development. No API costs.
 | Model | Best For | Notes |
 |-------|----------|-------|
 | **llama3.2** | General use | Best balance of speed and quality |
+| **qwen2.5:7b** | Lower-powered hardware | Lighter model, still capable |
 | **mistral** | Fast responses | Good for simple tasks |
 | **qwen2.5** | Tool calling | Strong structured output |
 | **codellama** | Technical questions | Better for code and technical content |
@@ -340,9 +359,24 @@ OLLAMA_BASE_URL=http://localhost:11434
 **Setup:**
 
 ```bash
-ollama pull llama3.2
+# Choose based on your hardware
+ollama pull llama3.2      # Recommended for most users
+ollama pull qwen2.5:7b    # For less powerful machines (8GB RAM)
 ollama serve
 ```
+
+#### LM Studio (Local, Free)
+
+Best for privacy with a visual interface. No API costs.
+
+Use the same models as Ollama (Llama 3.2, Qwen 2.5, Mistral) downloaded through LM Studio's interface.
+
+```bash
+DEFAULT_CHAT_PROVIDER=lmstudio
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+**Setup:** Download a model in LM Studio, then start the local server from the Developer tab.
 
 #### OpenAI (Cloud, Paid)
 

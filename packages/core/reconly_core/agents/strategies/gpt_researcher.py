@@ -235,6 +235,15 @@ class GPTResearcherStrategy(ResearchStrategy):
             os.environ["FAST_LLM"] = f"ollama:{model_name}"
             os.environ["STRATEGIC_LLM"] = f"ollama:{model_name}"
 
+        elif provider_name == "lmstudio":
+            # LM Studio exposes an OpenAI-compatible API, configure via OPENAI_BASE_URL
+            base_url = getattr(provider, "base_url", "http://localhost:1234/v1")
+            os.environ["OPENAI_BASE_URL"] = base_url
+            os.environ["OPENAI_API_KEY"] = "lm-studio"  # Dummy key, LM Studio ignores it
+            os.environ["SMART_LLM"] = f"openai:{model_name}"
+            os.environ["FAST_LLM"] = f"openai:{model_name}"
+            os.environ["STRATEGIC_LLM"] = f"openai:{model_name}"
+
         else:
             log.warning(
                 "gpt_researcher_unsupported_provider",

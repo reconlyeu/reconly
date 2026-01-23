@@ -8,7 +8,7 @@ The RAG system enables:
 - **Semantic Search**: Find digests by meaning, not just keywords
 - **Question Answering**: Ask natural language questions with cited answers
 - **Knowledge Discovery**: Find related digests and explore connections
-- **Multi-Provider**: Use local (Ollama) or cloud (OpenAI, HuggingFace) embeddings
+- **Multi-Provider**: Use local (Ollama, LM Studio) or cloud (OpenAI, HuggingFace) embeddings
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ The RAG system enables:
 - **Python 3.10+** (already installed if you're running Reconly)
 
 ### Optional
-- **Ollama** (for local, free embeddings - recommended)
+- **Ollama** or **LM Studio** (for local, free embeddings - recommended)
 - **OpenAI API key** (for cloud embeddings)
 - **HuggingFace API key** (for cloud embeddings)
 
@@ -154,7 +154,7 @@ psql postgresql://reconly:reconly_dev@localhost:5432/reconly
 
 ## Step 4: Configure Embedding Provider
 
-Choose an embedding provider. Ollama is recommended for local/free operation.
+Choose an embedding provider. Ollama or LM Studio are recommended for local/free operation.
 
 ### Option A: Ollama (Recommended - Local & Free)
 
@@ -208,7 +208,36 @@ curl http://localhost:11434/api/tags
 # Should return list of available models
 ```
 
-### Option B: OpenAI
+### Option B: LM Studio (Local & Free)
+
+**1. Install LM Studio:**
+
+Download from [lmstudio.ai](https://lmstudio.ai) for your platform.
+
+**2. Download embedding model:**
+
+In LM Studio, search for and download an embedding model like `nomic-embed-text` or `bge-m3`.
+
+**3. Start the local server:**
+
+Go to the Developer tab and click "Start Server".
+
+**4. Configure Reconly:**
+
+In your `.env` file:
+```bash
+EMBEDDING_PROVIDER=lmstudio
+EMBEDDING_MODEL=nomic-embed-text  # or your downloaded model name
+LMSTUDIO_BASE_URL=http://localhost:1234/v1
+```
+
+**Test connection:**
+```bash
+curl http://localhost:1234/v1/models
+# Should return list of loaded models
+```
+
+### Option C: OpenAI
 
 **1. Get API key:**
 
@@ -225,7 +254,7 @@ OPENAI_API_KEY=sk-...your-key...
 
 **Cost:** ~$0.0001 per 1K tokens (~$0.01 per 100 digests)
 
-### Option C: HuggingFace
+### Option D: HuggingFace
 
 **1. Get API token:**
 
