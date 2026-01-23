@@ -96,10 +96,10 @@ const deleteFeedMutation = useMutation({
 
 const feedsList = computed(() => {
   if (!feeds.value) return [];
+  // Sort by created_at descending (newest first) - preserves API order
   return [...feeds.value].sort((a, b) => {
-    // Sort by last_run_at descending (newest first), nulls last
-    const aDate = a.last_run_at ? new Date(a.last_run_at).getTime() : 0;
-    const bDate = b.last_run_at ? new Date(b.last_run_at).getTime() : 0;
+    const aDate = new Date(a.created_at).getTime();
+    const bDate = new Date(b.created_at).getTime();
     return bDate - aDate;
   });
 });
