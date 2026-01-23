@@ -32,7 +32,7 @@
   <g transform="translate(320, 190)">
     <rect x="-80" y="-35" width="160" height="70" rx="12" fill="none" stroke="#b0bec5" stroke-width="2"/>
     <text x="0" y="-8" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#eceff1">Agent Researcher</text>
-    <text x="0" y="12" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle" fill="#90a4ae">SearXNG &#8226; GPT Researcher</text>
+    <text x="0" y="12" font-family="system-ui, -apple-system, sans-serif" font-size="9" text-anchor="middle" fill="#90a4ae">GPT Researcher &#8226; SearXNG &#8226; Tavily</text>
   </g>
 
   <!-- Arrow: Fetchers to Core -->
