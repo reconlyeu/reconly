@@ -60,6 +60,8 @@ For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https:
 
 ## Architecture
 
+Reconly combines traditional feed aggregation with autonomous AI research. Fetchers pull content from RSS, YouTube, websites, and email, while Agent Researchers actively investigate topics using search engines and GPT Researcher. All content flows through a unified processing pipeline for summarization, embedding, and knowledge extraction.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.svg">
@@ -67,6 +69,11 @@ For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https:
     <img alt="Reconly Architecture" src="docs/images/architecture-light.svg" width="400">
   </picture>
 </p>
+
+1. **Sources** — Define what to monitor: RSS feeds, YouTube channels, websites, email inboxes, or research topics
+2. **Fetchers & Agents** — Fetchers pull content on schedule; Agent Researchers autonomously investigate topics via SearXNG
+3. **Core Processing** — Summarize with your LLM of choice, generate embeddings for RAG, extract entities for the knowledge graph
+4. **Export** — Trigger webhooks for automation, generate digests for the frontend or email, sync to your PKM (Obsidian/Logseq)
 
 ---
 
