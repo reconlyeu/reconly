@@ -1,5 +1,22 @@
 #!/usr/bin/env python
-"""Populate database with sample data for testing.
+"""Populate database with sample data for LOCAL DEVELOPMENT ONLY.
+
+WARNING: This script is intended for developer convenience during local development.
+It is NOT intended for production deployment or Docker images.
+
+Purpose:
+    - Creates a default dev user (dev@example.com)
+    - Seeds default prompt/report templates
+    - Imports sample feed bundles from the sample_bundles/ directory
+
+Usage:
+    cd packages/api
+    python scripts/populate_sample_data.py
+
+Note:
+    Production/Docker deployments use a separate seed mechanism (load_demo_seed.py)
+    with curated demo data. This script and sample_bundles/ are excluded from
+    production builds.
 
 Sample feeds are loaded from JSON bundle files in the sample_bundles/ directory.
 To add new sample feeds, simply drop a valid bundle JSON file into that folder.
@@ -119,8 +136,10 @@ def import_sample_bundles(session: Session, user: User) -> dict:
 def main():
     """Main function to populate sample data."""
     print("=" * 70)
-    print("POPULATING SAMPLE DATA")
+    print("POPULATING SAMPLE DATA (LOCAL DEVELOPMENT ONLY)")
     print("=" * 70)
+    print()
+    print("NOTE: Production/Docker uses load_demo_seed.py instead.")
     print()
 
     # Get database session via DigestDB

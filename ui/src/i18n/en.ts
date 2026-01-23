@@ -1224,6 +1224,76 @@ export const strings = {
     unauthorized: 'You are not authorized to perform this action.',
   },
 
+  // Onboarding
+  onboarding: {
+    emptyStates: {
+      digests: {
+        title: 'No digests yet',
+        message: 'Digests are AI-generated summaries of content from your feeds. Run a feed to see digests here.',
+        cta: 'View your feeds',
+        tip: 'You can also search and filter digests once you have some.',
+      },
+      feeds: {
+        title: 'No feeds yet',
+        message: 'Feeds combine multiple sources and run them on a schedule to generate digests.',
+        cta: 'Create a feed',
+        tip: 'Start with one source, you can add more later.',
+      },
+      sources: {
+        title: 'No sources yet',
+        message: 'Sources are the RSS feeds, YouTube channels, or websites you want to follow.',
+        cta: 'Add a source',
+        tip: 'Try adding your favorite tech blog or newsletter.',
+      },
+    },
+    wizard: {
+      title: 'Welcome to Reconly',
+      subtitle: "Let's set up your first feed",
+      steps: {
+        welcome: {
+          title: 'Welcome',
+          description: "We'll walk you through creating your first feed in just a few steps.",
+          items: ['Add a source (RSS feed)', 'Create a feed', 'Run it to generate summaries'],
+          llmWarning: "To generate summaries, you'll need to configure an LLM provider in Settings.",
+          start: "Let's go!",
+          skip: 'Skip for now',
+        },
+        source: {
+          title: 'Add a Source',
+          description: 'This RSS feed shows trending GitHub repositories.',
+          nameLabel: 'Name',
+          urlLabel: 'URL',
+          namePlaceholder: 'GitHub Trending',
+          urlDefault: 'https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml',
+          create: 'Create Source',
+          creating: 'Creating...',
+        },
+        feed: {
+          title: 'Create a Feed',
+          description: 'A feed runs your sources and summarizes new content.',
+          nameLabel: 'Feed Name',
+          namePlaceholder: 'My First Feed',
+          sourceLabel: 'Source',
+          create: 'Create Feed',
+          creating: 'Creating...',
+        },
+        run: {
+          title: 'Run Your Feed',
+          description: 'Generating summaries...',
+          running: 'Running...',
+          completed: 'Done! Your first digest is ready.',
+          noLlm: 'LLM not configured. Configure in Settings, then run your feed.',
+          viewResults: 'View Results',
+          goToSettings: 'Go to Settings',
+        },
+      },
+      stepIndicator: 'Step {current} of {total}',
+      skip: 'Skip',
+      back: 'Back',
+      next: 'Next',
+    },
+  },
+
   // Authentication
   auth: {
     login: {

@@ -6,7 +6,7 @@ import { useSourcesStore } from '@/stores/sources';
 import BaseList from '@/components/common/BaseList.vue';
 import SourceCard from './SourceCard.vue';
 import type { Source } from '@/types/entities';
-import { Rss } from 'lucide-vue-next';
+import { Rss, Plus } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { strings } from '@/i18n/en';
@@ -17,6 +17,7 @@ interface Props {
 
 interface Emits {
   (e: 'edit', source: Source): void;
+  (e: 'create'): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -72,11 +73,25 @@ const deleteMutation = useMutation({
 
 const sourcesList = computed(() => sources.value || []);
 
+// Check if filter is applied (not 'all')
+const hasTypeFilter = computed(() => props.filterType !== 'all');
+
+// Empty state content - use onboarding strings when no filter applied
+const emptyTitle = computed(() => {
+  return hasTypeFilter.value
+    ? strings.sources.empty.title
+    : strings.onboarding.emptyStates.sources.title;
+});
+
 const emptyMessage = computed(() => {
-  if (props.filterType === 'all') {
-    return strings.sources.empty.noSourcesYet;
+  if (hasTypeFilter.value) {
+    return strings.sources.empty.noTypeSourcesFound.replace('{type}', props.filterType);
   }
-  return strings.sources.empty.noTypeSourcesFound.replace('{type}', props.filterType);
+  return strings.onboarding.emptyStates.sources.message;
+});
+
+const emptyTip = computed(() => {
+  return hasTypeFilter.value ? undefined : strings.onboarding.emptyStates.sources.tip;
 });
 
 const handleToggle = (sourceId: number, enabled: boolean) => {
@@ -108,11 +123,22 @@ const handleDelete = (sourceId: number) => {
     :grid-cols="3"
     :skeleton-count="6"
     skeleton-height="h-64"
-    :empty-title="strings.sources.empty.title"
+    :empty-title="emptyTitle"
     :empty-message="emptyMessage"
     :empty-icon="Rss"
+    :empty-tip="emptyTip"
     @retry="refetch"
   >
+    <template #empty-action>
+      <button
+        v-if="!hasTypeFilter"
+        @click="emit('create')"
+        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
+      >
+        <Plus :size="16" :stroke-width="2" />
+        {{ strings.onboarding.emptyStates.sources.cta }}
+      </button>
+    </template>
     <template #default>
       <SourceCard
         v-for="(source, index) in sourcesList"

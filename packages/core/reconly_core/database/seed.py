@@ -61,135 +61,6 @@ Content:
 **Title:** [English title]
 Answer in 2-3 sentences: What is the key takeaway?""",
     },
-    {
-        "name": "Deep Analysis (English)",
-        "description": "Detailed English analysis with context and implications",
-        "language": "en",
-        "target_length": 300,
-        "system_prompt": """You are an experienced analyst and content expert.
-Create in-depth analyses with context and implications in English.
-Consider broader impact and future relevance.
-IMPORTANT: If the original title is not in English, translate it to English.""",
-        "user_prompt_template": """Analyze the following content from a {source_type} in detail.
-
-Original Title: {title}
-
-Content:
-{content}
-
-Create a detailed analysis of approximately {target_length} words:
-
-**Title:** [English title - translate if needed]
-
-1. **Summary** (2-3 sentences): What is this about?
-2. **Context** (2-3 sentences): Why is this relevant?
-3. **Key Arguments/Findings** (5-7 points): What are the central claims?
-4. **Critical Assessment** (2-3 sentences): What are the strengths/weaknesses?
-5. **Implications** (2-3 sentences): What does this mean for the future?
-6. **Conclusion** (1-2 sentences): What is the most important insight?""",
-    },
-    {
-        "name": "Equity Analyst Brief (English)",
-        "description": "Daily analyst morning brief with sections and ratings (use with all_sources digest mode)",
-        "language": "en",
-        "target_length": 600,
-        "system_prompt": """You are a Senior Equity Research Analyst creating morning briefs for institutional investors.
-
-CRITICAL ACCURACY RULES - YOU MUST FOLLOW THESE:
-1. ONLY report information that is EXPLICITLY stated in the provided articles
-2. NEVER invent, fabricate, or extrapolate financial figures (revenue, profit, margins, prices)
-3. NEVER make up analyst ratings, target prices, or consensus estimates
-4. NEVER fabricate partnerships, product announcements, or strategic moves
-5. If information for a section is NOT in the articles, write "No coverage in today's sources"
-6. ALWAYS cite the source name when reporting a fact: "According to [Source]..." or "(Source: X)"
-7. If an article headline is ambiguous, report it conservatively without embellishment
-
-Formatting rules:
-- Use emoji numbers for sections (1️⃣, 2️⃣, etc.)
-- Valuation relevance per section: 🔴 (high/price-critical), 🟡 (medium), ❌ (none)
-- Start with 🔴 Executive Summary (30 seconds reading time)
-- End with 📊 Analyst Conclusion
-
-Write precisely, cite sources, never fabricate.""",
-        "user_prompt_template": """Analyze ONLY the following {item_count} articles from {source_count} sources.
-
-{articles}
-
-IMPORTANT: Base your brief ONLY on the articles above. Do NOT add information from your training data.
-
-Create an Analyst Morning Brief with these sections:
-
-🔴 Executive Summary (30 seconds)
-- 3-4 bullet points of developments ACTUALLY mentioned in the articles
-- Each point must cite its source: "(Source: X)"
-- Overall assessment based ONLY on what the articles say
-
-1️⃣ Company-Specific News
-- ONLY report news explicitly mentioned in articles above
-- If no company news in sources, write: "No coverage in today's sources"
-- Cite source for each fact
-- Valuation relevance: 🔴/🟡/❌
-
-2️⃣ Strategic & Product News
-- ONLY report announcements explicitly in the articles
-- If none, write: "No coverage in today's sources"
-- Cite source for each fact
-- Valuation relevance: 🔴/🟡/❌
-
-3️⃣ Peer & Competition Update
-- ONLY mention competitors if they appear in the articles
-- If none, write: "No coverage in today's sources"
-- Valuation relevance: 🔴/🟡/❌
-
-4️⃣ Analyst & Consensus Movements
-- ONLY report if analyst actions are explicitly mentioned
-- NEVER invent target prices or ratings
-- If none, write: "No coverage in today's sources"
-- Valuation relevance: 🔴/🟡/❌
-
-5️⃣ Macro & FX
-- ONLY report if macro/FX data is in the articles
-- NEVER invent exchange rates or economic figures
-- If none, write: "No coverage in today's sources"
-- Valuation relevance: 🔴/🟡/❌
-
-6️⃣ Market & Trading Signals
-- ONLY report trading data if explicitly in articles
-- If none, write: "No coverage in today's sources"
-- Valuation relevance: 🔴/🟡/❌
-
-📊 Analyst Conclusion
-- Summarize ONLY what the articles actually report
-- Be honest about gaps: "Today's sources did not cover X, Y, Z"
-
-Target length: {target_length} words. Accuracy over completeness - empty sections are better than fabricated content.""",
-    },
-    {
-        "name": "Consolidated Summary (English)",
-        "description": "Default English template for consolidated digests (per_source or all_sources mode)",
-        "language": "en",
-        "target_length": 300,
-        "system_prompt": """You are a content synthesizer. Create cohesive briefings
-that combine information from multiple articles.
-
-IMPORTANT: Use markdown links for source citations in format [Source Name](URL).
-Examples:
-- "According to [Bloomberg](https://example.com/article1)..."
-- "[Reuters](https://example.com/article2) reports..."
-
-Synthesize insights rather than just aggregating.""",
-        "user_prompt_template": """Create a consolidated briefing from the following {item_count} articles.
-
-{articles}
-
-Create a cohesive summary of approximately {target_length} words that:
-1. Identifies the key common themes
-2. Shows chronological developments (if relevant)
-3. Highlights core messages and trends
-4. Formats source citations as markdown links: [Source Name](URL)
-
-The summary should read like a professional briefing, not a list.""",
-    },
 ]
 
 
@@ -219,7 +90,7 @@ DEFAULT_REPORT_TEMPLATES = [
 
 {{ digest.summary }}
 
-🔗 [Read more]({{ digest.url }})
+[Read more]({{ digest.url }})
 
 ---
 
@@ -268,7 +139,7 @@ DEFAULT_REPORT_TEMPLATES = [
       {{ digest.source_type }}
     </p>
     <p class="summary">{{ digest.summary }}</p>
-    <a href="{{ digest.url }}" class="read-more">Read full article →</a>
+    <a href="{{ digest.url }}" class="read-more">Read full article</a>
   </div>
   {% endfor %}
 
@@ -277,165 +148,6 @@ DEFAULT_REPORT_TEMPLATES = [
     {% if run_info %}
     <p>{{ run_info.sources_processed }} sources &bull; {{ run_info.items_processed }} items processed</p>
     {% endif %}
-  </div>
-</body>
-</html>
-""",
-    },
-    {
-        "name": "Simple List (Markdown)",
-        "description": "Minimal list format for quick reference",
-        "format": "markdown",
-        "template_content": """# {{ feed.name }}
-
-{{ generated_at.strftime('%Y-%m-%d') }}
-
-{% for digest in digests %}
-- **[{{ digest.title }}]({{ digest.url }})** {% if digest.author %}({{ digest.author }}){% endif %}
-  {{ digest.summary | truncate(200) }}
-
-{% endfor %}
-""",
-    },
-    {
-        "name": "Obsidian Note",
-        "description": "Markdown format optimized for Obsidian with frontmatter",
-        "format": "markdown",
-        "template_content": """---
-title: "{{ feed.name }} - {{ generated_at.strftime('%Y-%m-%d') }}"
-date: {{ generated_at.strftime('%Y-%m-%d') }}
-type: digest
-feed: "{{ feed.name }}"
-tags:
-  - digest
-  - automated
-{% if run_info %}
-sources_processed: {{ run_info.sources_processed }}
-items_processed: {{ run_info.items_processed }}
-{% endif %}
----
-
-# {{ feed.name }}
-
-> [!info] Generated
-> {{ generated_at.strftime('%Y-%m-%d %H:%M') }}
-
-{% for digest in digests %}
-## {{ digest.title }}
-
-> [!quote] Summary
-> {{ digest.summary }}
-
-- **Source:** {{ digest.source_type }}
-{% if digest.author %}- **Author:** {{ digest.author }}{% endif %}
-{% if digest.published_at %}- **Published:** {{ digest.published_at.strftime('%Y-%m-%d') }}{% endif %}
-- **Link:** [{{ digest.url | truncate(50) }}]({{ digest.url }})
-
----
-
-{% endfor %}
-""",
-    },
-    {
-        "name": "JSON Export",
-        "description": "Machine-readable JSON format for integrations",
-        "format": "text",
-        "template_content": """{
-  "feed": {
-    "name": "{{ feed.name }}",
-    "id": {{ feed.id }}
-  },
-  "generated_at": "{{ generated_at.isoformat() }}",
-  {% if run_info %}
-  "run_info": {
-    "sources_processed": {{ run_info.sources_processed }},
-    "items_processed": {{ run_info.items_processed }},
-    "total_cost": {{ run_info.total_cost }}
-  },
-  {% endif %}
-  "digests": [
-    {% for digest in digests %}
-    {
-      "id": {{ digest.id }},
-      "title": "{{ digest.title | replace('"', '\\"') }}",
-      "url": "{{ digest.url }}",
-      "source_type": "{{ digest.source_type }}",
-      "author": {% if digest.author %}"{{ digest.author | replace('"', '\\"') }}"{% else %}null{% endif %},
-      "published_at": {% if digest.published_at %}"{{ digest.published_at.isoformat() }}"{% else %}null{% endif %},
-      "summary": "{{ digest.summary | replace('"', '\\"') | replace('\n', '\\n') }}"
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-  ]
-}
-""",
-    },
-    {
-        "name": "Analyst Morning Brief (Markdown)",
-        "description": "Professional equity analyst daily brief format (use with all_sources digest mode)",
-        "format": "markdown",
-        "template_content": """{{ feed.name }} – Daily Analyst Morning Brief
-
-Date: {{ generated_at.strftime('%Y-%m-%d') }}
-Ticker: {{ feed.name.split()[0] if ' ' in feed.name else feed.name }}
-Bias: ⚖️ Neutral
-Time Horizon: 3–12 months
-
-{% for digest in digests %}
-{{ digest.summary }}
-{% endfor %}
-
----
-
-*Sources processed: {{ run_info.sources_processed if run_info else 'N/A' }} | Articles analyzed: {{ run_info.items_processed if run_info else 'N/A' }}*
-*Generated: {{ generated_at.strftime('%Y-%m-%d %H:%M') }} | Reconly*
-""",
-    },
-    {
-        "name": "Analyst Morning Brief (HTML)",
-        "description": "Professional equity analyst daily brief in HTML format (use with all_sources digest mode)",
-        "format": "html",
-        "template_content": """<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ feed.name }} – Analyst Brief</title>
-  <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.5; color: #1a1a1a; max-width: 700px; margin: 0 auto; padding: 20px; background: #f8f9fa; }
-    .header { background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; margin-bottom: 0; }
-    .header h1 { margin: 0 0 8px 0; font-size: 1.5em; font-weight: 600; }
-    .header .meta { opacity: 0.9; font-size: 0.9em; }
-    .header .ticker { background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 4px; display: inline-block; margin-top: 12px; font-weight: 500; }
-    .content { background: white; padding: 24px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .summary { white-space: pre-wrap; font-size: 0.95em; }
-    .section-header { color: #2c5282; font-weight: 600; margin-top: 20px; }
-    .rating-high { color: #c53030; }
-    .rating-medium { color: #d69e2e; }
-    .rating-none { color: #718096; }
-    .footer { margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 0.85em; text-align: center; }
-    .stats { display: flex; gap: 16px; justify-content: center; margin-bottom: 8px; }
-    .stat { background: #edf2f7; padding: 4px 12px; border-radius: 4px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>{{ feed.name }}</h1>
-    <div class="meta">Daily Analyst Morning Brief • {{ generated_at.strftime('%Y-%m-%d') }}</div>
-    <div class="ticker">{{ feed.name.split()[0] if ' ' in feed.name else feed.name }}</div>
-  </div>
-
-  <div class="content">
-    {% for digest in digests %}
-    <div class="summary">{{ digest.summary }}</div>
-    {% endfor %}
-  </div>
-
-  <div class="footer">
-    <div class="stats">
-      <span class="stat">{{ run_info.sources_processed if run_info else 'N/A' }} Sources</span>
-      <span class="stat">{{ run_info.items_processed if run_info else 'N/A' }} Articles</span>
-    </div>
-    <div>Generated: {{ generated_at.strftime('%Y-%m-%d %H:%M') }} | Reconly</div>
   </div>
 </body>
 </html>
@@ -533,9 +245,9 @@ def get_default_report_template(session: Session, format: str = "markdown") -> R
 
 
 def get_default_consolidated_template(session: Session, language: str = "en") -> PromptTemplate | None:
-    """Get the default system prompt template for consolidated digests."""
-    name = f"Consolidated Summary ({'German' if language == 'de' else 'English'})"
-    return session.query(PromptTemplate).filter(
-        PromptTemplate.name == name,
-        PromptTemplate.origin == 'builtin',
-    ).first()
+    """Get the default system prompt template for consolidated digests.
+
+    Returns the Standard Summary template since the dedicated Consolidated
+    Summary template was removed to simplify onboarding.
+    """
+    return get_default_prompt_template(session, language)

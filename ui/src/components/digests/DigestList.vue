@@ -6,7 +6,7 @@ import { useDigestsStore } from '@/stores/digests';
 import BaseList from '@/components/common/BaseList.vue';
 import DigestCard from './DigestCard.vue';
 import type { Digest, Exporter } from '@/types/entities';
-import { FileText } from 'lucide-vue-next';
+import { FileText, ArrowRight } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 
 interface Props {
@@ -91,11 +91,26 @@ const totalPages = computed(() => {
 const hasNextPage = computed(() => props.page < totalPages.value);
 const hasPrevPage = computed(() => props.page > 1);
 
+// Check if any filters are applied
+const hasFilters = computed(() => {
+  return !!(props.searchQuery || props.feedFilter || props.sourceFilter || props.tagFilter);
+});
+
+// Empty state content - use onboarding strings when no filters applied
+const emptyTitle = computed(() => {
+  return hasFilters.value
+    ? strings.digests.list.emptyTitle
+    : strings.onboarding.emptyStates.digests.title;
+});
+
 const emptyMessage = computed(() => {
-  if (props.searchQuery || props.feedFilter || props.sourceFilter || props.tagFilter) {
-    return strings.digests.list.filterMessage;
-  }
-  return strings.digests.list.noFiltersMessage;
+  return hasFilters.value
+    ? strings.digests.list.filterMessage
+    : strings.onboarding.emptyStates.digests.message;
+});
+
+const emptyTip = computed(() => {
+  return hasFilters.value ? undefined : strings.onboarding.emptyStates.digests.tip;
 });
 
 const handleView = (digest: Digest) => {
@@ -133,9 +148,10 @@ const prevPage = () => {
     :grid-cols="2"
     :skeleton-count="pageSize"
     skeleton-height="h-80"
-    :empty-title="strings.digests.list.emptyTitle"
+    :empty-title="emptyTitle"
     :empty-message="emptyMessage"
     :empty-icon="FileText"
+    :empty-tip="emptyTip"
     :show-pagination="totalPages > 1"
     :page="page"
     :total-pages="totalPages"
@@ -145,6 +161,17 @@ const prevPage = () => {
     @prev-page="prevPage"
     @next-page="nextPage"
   >
+    <template #empty-action>
+      <a
+        v-if="!hasFilters"
+        href="/feeds"
+        aria-label="Navigate to feeds page"
+        class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
+      >
+        {{ strings.onboarding.emptyStates.digests.cta }}
+        <ArrowRight :size="16" :stroke-width="2" />
+      </a>
+    </template>
     <template #default>
       <DigestCard
         v-for="(digest, index) in digests"

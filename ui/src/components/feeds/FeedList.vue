@@ -7,13 +7,14 @@ import BaseList from '@/components/common/BaseList.vue';
 import FeedCard from './FeedCard.vue';
 import ImportBundleModal from './ImportBundleModal.vue';
 import type { Feed } from '@/types/entities';
-import { Layers, Upload } from 'lucide-vue-next';
+import { Layers, Upload, Plus } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
 import { strings } from '@/i18n/en';
 
 interface Emits {
   (e: 'edit', feed: Feed): void;
+  (e: 'create'): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -173,11 +174,21 @@ const handleImportSuccess = () => {
       :grid-cols="3"
       :skeleton-count="4"
       skeleton-height="h-80"
-      :empty-title="strings.feeds.empty.title"
-      :empty-message="strings.feeds.empty.message"
+      :empty-title="strings.onboarding.emptyStates.feeds.title"
+      :empty-message="strings.onboarding.emptyStates.feeds.message"
       :empty-icon="Layers"
+      :empty-tip="strings.onboarding.emptyStates.feeds.tip"
       @retry="refetch"
     >
+      <template #empty-action>
+        <button
+          @click="emit('create')"
+          class="inline-flex items-center gap-2 rounded-lg bg-accent-primary px-4 py-2.5 text-sm font-medium text-white transition-all hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
+        >
+          <Plus :size="16" :stroke-width="2" />
+          {{ strings.onboarding.emptyStates.feeds.cta }}
+        </button>
+      </template>
       <template #default>
         <FeedCard
           v-for="(feed, index) in feedsList"

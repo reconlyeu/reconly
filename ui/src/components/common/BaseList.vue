@@ -32,6 +32,8 @@ interface Props {
   emptyMessage?: string;
   /** Empty state icon */
   emptyIcon?: Component;
+  /** Empty state tip */
+  emptyTip?: string;
   /** Show pagination */
   showPagination?: boolean;
   /** Current page */
@@ -110,6 +112,7 @@ const gridColsClass = {
       :title="emptyTitle || `No ${entityName}s found`"
       :message="emptyMessage || `${entityName.charAt(0).toUpperCase() + entityName.slice(1)}s will appear here once they are created.`"
       :icon="emptyIcon"
+      :tip="emptyTip"
     >
       <template #action>
         <slot name="empty-action" />
