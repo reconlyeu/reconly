@@ -96,6 +96,21 @@ For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https:
 
 We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+---
+
+## Acknowledgements
+
+Reconly is built on the shoulders of these excellent open source projects:
+
+- [Ollama](https://ollama.com) / [LM Studio](https://lmstudio.ai) — Local LLM inference
+- [GPT Researcher](https://gptr.dev) — Autonomous research agents
+- [SearXNG](https://searxng.org) — Privacy-respecting metasearch
+- [pgvector](https://github.com/pgvector/pgvector) — Vector similarity search for PostgreSQL
+- [FastAPI](https://fastapi.tiangolo.com) — Modern Python web framework
+- [Vue.js](https://vuejs.org) / [Astro](https://astro.build) — Frontend frameworks
+
+---
+
 **License:** [AGPL-3.0](LICENSE)
 
 <p align="center">

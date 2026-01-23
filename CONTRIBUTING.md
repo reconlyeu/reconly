@@ -350,6 +350,17 @@ To save everyone's time, these PRs will be closed without review:
 - Code that doesn't follow style guidelines
 - PRs that ignore this contribution guide
 
+## 🌱 First-Time Contributors
+
+New to open source or Reconly? Welcome! Here's how to get started:
+
+1. **Look for `good first issue` labels** — These are beginner-friendly tasks we've identified
+2. **Start with documentation** — Fixing typos or improving docs is a great first contribution
+3. **Try the extensions repo** — [reconly-extensions](https://github.com/reconlyeu/reconly-extensions) is designed for easier contributions
+4. **Ask questions** — Use [Discussions](https://github.com/reconlyeu/reconly/discussions) if you're unsure about anything
+
+Don't worry about making mistakes — we're happy to help guide you through the process!
+
 ## 📞 Questions?
 
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/reconlyeu/reconly/discussions)

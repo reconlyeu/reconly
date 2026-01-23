@@ -20,9 +20,14 @@ If you discover a security vulnerability, please report it via one of these meth
 
 ### Response Timeline
 
-- **Initial response**: Within 48 hours
-- **Status update**: Within 7 days
-- **Fix timeline**: Depends on severity (critical: 24-72h, high: 1-2 weeks)
+| Severity | Initial Response | Fix Timeline |
+|----------|------------------|--------------|
+| Critical (RCE, data breach) | 72 hours | 7 days |
+| High (auth bypass, SQLi) | 7 days | 14 days |
+| Medium (XSS, info disclosure) | 14 days | 30 days |
+| Low (minor issues) | 30 days | 60 days |
+
+> **Note:** Reconly is maintained by a solo developer. Response times may be longer during holidays or personal time. Critical issues are always prioritized.
 
 ### Disclosure Policy
 
