@@ -11,6 +11,7 @@ import ViewModeToggle from '@/components/common/ViewModeToggle.vue';
 import { useViewMode } from '@/composables/useViewMode';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import type { Feed } from '@/types/entities';
 import { Plus } from 'lucide-vue-next';
 
@@ -24,7 +25,9 @@ const { confirmDelete } = useConfirm();
 const isModalOpen = ref(false);
 const editingFeed = ref<Feed | null>(null);
 const feedTableRef = ref<InstanceType<typeof FeedTable> | null>(null);
-const runningFeeds = ref<Set<number>>(new Set());
+
+// Use shared polling composable for tracking feed run status
+const { runningFeeds, startPolling } = useFeedRunPolling();
 
 // Handle ?edit= query param to open edit modal on page load
 onMounted(async () => {
@@ -77,7 +80,7 @@ const runFeedMutation = useMutation({
     runningFeeds.value.add(feedId);
     return await feedsApi.run(feedId);
   },
-  onSuccess: (_data, feedId) => {
+  onSuccess: (data, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
@@ -85,16 +88,14 @@ const runFeedMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
+    // Start polling for completion
+    startPolling(feedId, data.id);
   },
   onError: (error: any, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-  },
-  onSettled: (_data, _error, feedId) => {
-    setTimeout(() => {
-      runningFeeds.value.delete(feedId);
-    }, 2000);
+    runningFeeds.value.delete(feedId);
   },
 });
 
