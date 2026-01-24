@@ -174,7 +174,11 @@ const closeModal = () => {
 };
 
 const handleSuccess = () => {
-  
+  const message = editingFeed.value
+    ? 'Feed updated successfully'
+    : 'Feed created successfully';
+  toast.success(message);
+  closeModal();
 };
 </script>
 
