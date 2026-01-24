@@ -43,7 +43,6 @@ const { data: feeds, isLoading, isError, error, refetch } = useQuery({
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
-    console.log('[FeedList] mutationFn called, feedId=', feedId);
     addRunningFeed(feedId);
     return await feedsApi.run(feedId);
   },
@@ -51,6 +50,7 @@ const runFeedMutation = useMutation({
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
+    // Refetch immediately to get the new run status
     queryClient.invalidateQueries({ queryKey: ['feeds'] });
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
@@ -125,9 +125,10 @@ const handleDelete = (feedId: number) => {
 };
 
 const isRunning = (feedId: number) => {
-  const running = runningFeeds.value.has(feedId);
-  console.log('[FeedList] isRunning check: feedId=', feedId, 'running=', running, 'set=', [...runningFeeds.value]);
-  return running;
+  // Feed is "running" if we're tracking it OR if the API says it's running
+  const feed = feeds.value?.find(f => f.id === feedId);
+  const apiSaysRunning = feed?.last_run_status === 'running' || feed?.last_run_status === 'pending';
+  return runningFeeds.value.has(feedId) || apiSaysRunning;
 };
 
 // Export feed as bundle

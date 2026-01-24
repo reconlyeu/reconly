@@ -134,6 +134,8 @@ export interface Feed {
   schedule_cron?: string | null;
   schedule_enabled: boolean;
   last_run_at?: string | null;
+  last_run_id?: number | null;
+  last_run_status?: FeedRunStatus | null;
   next_run_at?: string | null;
   prompt_template_id?: number | null;
   report_template_id?: number | null;

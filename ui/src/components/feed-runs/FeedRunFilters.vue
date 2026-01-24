@@ -63,7 +63,7 @@ const hasFilters = () => {
         <label class="block text-xs text-text-secondary mb-1">Feed</label>
         <select
           v-model.number="localFilters.feed_id"
-          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary dark-select"
         >
           <option :value="undefined">{{ strings.feedRuns.filters.allFeeds }}</option>
           <option v-for="feed in feeds" :key="feed.id" :value="feed.id">
@@ -77,7 +77,7 @@ const hasFilters = () => {
         <label class="block text-xs text-text-secondary mb-1">Status</label>
         <select
           v-model="localFilters.status"
-          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary dark-select"
         >
           <option v-for="option in statusOptions" :key="option.value" :value="option.value || undefined">
             {{ option.label }}
@@ -91,7 +91,7 @@ const hasFilters = () => {
         <input
           v-model="localFilters.from_date"
           type="datetime-local"
-          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary dark-select"
         />
       </div>
 
@@ -101,7 +101,7 @@ const hasFilters = () => {
         <input
           v-model="localFilters.to_date"
           type="datetime-local"
-          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-primary text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-bg-surface text-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-accent-primary dark-select"
         />
       </div>
     </div>

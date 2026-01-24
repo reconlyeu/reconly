@@ -399,6 +399,9 @@ export const strings = {
       nextRun: 'Next Run',
       never: 'Never',
       neverRun: 'Never run',
+      completed: 'Completed',
+      completedWithErrors: 'Partial',
+      failed: 'Failed',
     },
     table: {
       name: 'Name',

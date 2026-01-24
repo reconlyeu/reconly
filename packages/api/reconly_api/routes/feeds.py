@@ -40,8 +40,10 @@ async def list_feeds(
     enabled_only: bool = False,
     db: Session = Depends(get_db)
 ):
-    """List all feeds."""
+    """List all feeds with their latest run status."""
     from sqlalchemy.orm import joinedload
+    from sqlalchemy import func
+    from reconly_core.database.models import FeedRun
 
     query = db.query(Feed).options(
         joinedload(Feed.feed_sources).joinedload(FeedSource.source)
@@ -50,7 +52,34 @@ async def list_feeds(
         query = query.filter(Feed.schedule_enabled == True)
 
     feeds = query.order_by(Feed.created_at.desc()).all()
-    return [FeedResponse.model_validate(f) for f in feeds]
+
+    # Get latest run info for all feeds in one query
+    # Subquery to get max created_at per feed
+    latest_run_subq = db.query(
+        FeedRun.feed_id,
+        func.max(FeedRun.created_at).label('max_created_at')
+    ).group_by(FeedRun.feed_id).subquery()
+
+    # Join to get the actual id and status
+    latest_runs = db.query(FeedRun.feed_id, FeedRun.id, FeedRun.status).join(
+        latest_run_subq,
+        (FeedRun.feed_id == latest_run_subq.c.feed_id) &
+        (FeedRun.created_at == latest_run_subq.c.max_created_at)
+    ).all()
+
+    # Build lookup dict
+    run_info_map = {run.feed_id: {'id': run.id, 'status': run.status} for run in latest_runs}
+
+    # Build response with status
+    result = []
+    for feed in feeds:
+        feed_dict = FeedResponse.model_validate(feed).model_dump()
+        run_info = run_info_map.get(feed.id, {})
+        feed_dict['last_run_id'] = run_info.get('id')
+        feed_dict['last_run_status'] = run_info.get('status')
+        result.append(feed_dict)
+
+    return result
 
 
 @router.post("", response_model=FeedResponse, status_code=201)
@@ -113,11 +142,22 @@ async def get_feed(
     feed_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get a specific feed."""
+    """Get a specific feed with latest run status."""
+    from reconly_core.database.models import FeedRun
+
     feed = db.query(Feed).filter(Feed.id == feed_id).first()
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
-    return FeedResponse.model_validate(feed)
+
+    # Get latest run info
+    latest_run = db.query(FeedRun.id, FeedRun.status).filter(
+        FeedRun.feed_id == feed_id
+    ).order_by(FeedRun.created_at.desc()).first()
+
+    feed_dict = FeedResponse.model_validate(feed).model_dump()
+    feed_dict['last_run_id'] = latest_run.id if latest_run else None
+    feed_dict['last_run_status'] = latest_run.status if latest_run else None
+    return feed_dict
 
 
 @router.put("/{feed_id}", response_model=FeedResponse)
