@@ -124,7 +124,9 @@ const handleDelete = (feedId: number) => {
 };
 
 const isRunning = (feedId: number) => {
-  return runningFeeds.value.has(feedId);
+  const running = runningFeeds.value.has(feedId);
+  console.log('[FeedList] isRunning check: feedId=', feedId, 'running=', running, 'set=', [...runningFeeds.value]);
+  return running;
 };
 
 // Export feed as bundle

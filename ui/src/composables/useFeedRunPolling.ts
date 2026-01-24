@@ -16,14 +16,18 @@ const activePolls = new Map<number, ReturnType<typeof setInterval>>();
 
 // Helper to add feedId and trigger reactivity
 const addRunningFeed = (feedId: number) => {
+  console.log('[useFeedRunPolling] addRunningFeed:', feedId);
   runningFeeds.value.add(feedId);
   triggerRef(runningFeeds);
+  console.log('[useFeedRunPolling] runningFeeds after add:', [...runningFeeds.value]);
 };
 
 // Helper to remove feedId and trigger reactivity
 const removeRunningFeed = (feedId: number) => {
+  console.log('[useFeedRunPolling] removeRunningFeed:', feedId);
   runningFeeds.value.delete(feedId);
   triggerRef(runningFeeds);
+  console.log('[useFeedRunPolling] runningFeeds after remove:', [...runningFeeds.value]);
 };
 
 /**
@@ -64,18 +68,22 @@ export function useFeedRunPolling() {
 
     // Mark feed as running (with reactivity trigger)
     addRunningFeed(feedId);
+    console.log('[useFeedRunPolling] startPolling: feedId=', feedId, 'runId=', runId);
 
     let pollCount = 0;
 
     const pollInterval = setInterval(async () => {
       if (pollCount >= maxPolls) {
+        console.log('[useFeedRunPolling] maxPolls reached, stopping');
         stopPolling(feedId);
         return;
       }
       pollCount++;
+      console.log('[useFeedRunPolling] polling... count=', pollCount);
 
       try {
         const run = await feedRunsApi.get(runId);
+        console.log('[useFeedRunPolling] poll result: status=', run.status);
 
         if (isTerminalStatus(run.status)) {
           stopPolling(feedId);
