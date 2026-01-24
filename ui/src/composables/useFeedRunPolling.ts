@@ -40,11 +40,15 @@ export function useFeedRunPolling() {
       onError,
     } = options;
 
+    // Clear any existing poll for this feed (but don't remove from runningFeeds yet)
+    const existingInterval = activePolls.get(feedId);
+    if (existingInterval) {
+      clearInterval(existingInterval);
+      activePolls.delete(feedId);
+    }
+
     // Mark feed as running
     runningFeeds.value.add(feedId);
-
-    // Clear any existing poll for this feed
-    stopPolling(feedId);
 
     let pollCount = 0;
 
