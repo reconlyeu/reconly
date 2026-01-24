@@ -128,10 +128,17 @@ const filteredSources = computed(() => {
     );
   }
 
-  // Sort: initially selected first (alphabetical), then unselected (alphabetical)
+  // Sort: selected sources first (alphabetical), then unselected (alphabetical)
+  // For editing: use initial selection for stable sorting (sources don't jump around)
+  // For creating: use current selection so newly checked sources appear at top
   result.sort((a, b) => {
-    const aSelected = initialSelectedIds.value.has(a.id);
-    const bSelected = initialSelectedIds.value.has(b.id);
+    const useInitial = initialSelectedIds.value.size > 0;
+    const aSelected = useInitial
+      ? initialSelectedIds.value.has(a.id)
+      : source_ids.value.includes(a.id);
+    const bSelected = useInitial
+      ? initialSelectedIds.value.has(b.id)
+      : source_ids.value.includes(b.id);
 
     // Selected sources come first
     if (aSelected && !bSelected) return -1;
