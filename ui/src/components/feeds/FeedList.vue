@@ -10,6 +10,7 @@ import type { Feed } from '@/types/entities';
 import { Layers, Upload, Plus } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
+import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import { strings } from '@/i18n/en';
 
 interface Emits {
@@ -22,7 +23,7 @@ const queryClient = useQueryClient();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
-const runningFeeds = ref<Set<number>>(new Set());
+const { runningFeeds, startPolling } = useFeedRunPolling();
 const showImportModal = ref(false);
 
 // Fetch feeds
@@ -45,7 +46,7 @@ const runFeedMutation = useMutation({
     runningFeeds.value.add(feedId);
     return await feedsApi.run(feedId);
   },
-  onSuccess: (_data, feedId) => {
+  onSuccess: (data, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
@@ -53,17 +54,14 @@ const runFeedMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
+    // Start polling for completion
+    startPolling(feedId, data.id);
   },
   onError: (error: any, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-  },
-  onSettled: (_data, _error, feedId) => {
-    // Keep running state for a bit to show feedback
-    setTimeout(() => {
-      runningFeeds.value.delete(feedId);
-    }, 2000);
+    runningFeeds.value.delete(feedId);
   },
 });
 
