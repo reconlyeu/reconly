@@ -60,6 +60,7 @@ const lastRunConfig = computed(() => {
 </script>
 
 <template>
+  <div :class="{ 'running-border': isRunning }">
   <BaseCard glow-color="primary">
     <template #header>
       <div class="flex items-start justify-between">
@@ -74,14 +75,17 @@ const lastRunConfig = computed(() => {
 
         <!-- Status Badge -->
         <div
-          class="ml-4 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
+          class="ml-4 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300 flex items-center gap-1.5"
           :class="
-            feed.schedule_enabled
-              ? 'bg-status-success/10 text-status-success'
-              : 'bg-text-muted/10 text-text-muted'
+            isRunning
+              ? 'bg-status-running/10 text-status-running'
+              : feed.schedule_enabled
+                ? 'bg-status-success/10 text-status-success'
+                : 'bg-text-muted/10 text-text-muted'
           "
         >
-          {{ feed.schedule_enabled ? strings.feeds.status.active : strings.feeds.status.paused }}
+          <span v-if="isRunning" class="pulse-dot h-2 w-2 rounded-full bg-status-running" />
+          {{ isRunning ? strings.feeds.status.running : (feed.schedule_enabled ? strings.feeds.status.active : strings.feeds.status.paused) }}
         </div>
       </div>
     </template>
@@ -168,6 +172,7 @@ const lastRunConfig = computed(() => {
       </div>
     </template>
   </BaseCard>
+  </div>
 </template>
 
 <style scoped>
@@ -176,5 +181,54 @@ const lastRunConfig = computed(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Pulsing dot animation for running status */
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+/* Running border - animated gradient sweep along bottom edge */
+.running-border {
+  position: relative;
+  border-radius: 1rem; /* match card border-radius */
+  overflow: hidden;
+}
+
+.running-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-status-running) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: border-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes border-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>
