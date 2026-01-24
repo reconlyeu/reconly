@@ -23,7 +23,7 @@ const queryClient = useQueryClient();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
-const { runningFeeds, startPolling } = useFeedRunPolling();
+const { runningFeeds, startPolling, addRunningFeed, removeRunningFeed } = useFeedRunPolling();
 const showImportModal = ref(false);
 
 // Fetch feeds
@@ -43,7 +43,7 @@ const { data: feeds, isLoading, isError, error, refetch } = useQuery({
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
-    runningFeeds.value.add(feedId);
+    addRunningFeed(feedId);
     return await feedsApi.run(feedId);
   },
   onSuccess: (data, feedId) => {
@@ -61,7 +61,7 @@ const runFeedMutation = useMutation({
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-    runningFeeds.value.delete(feedId);
+    removeRunningFeed(feedId);
   },
 });
 

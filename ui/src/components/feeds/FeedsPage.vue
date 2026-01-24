@@ -27,7 +27,7 @@ const editingFeed = ref<Feed | null>(null);
 const feedTableRef = ref<InstanceType<typeof FeedTable> | null>(null);
 
 // Use shared polling composable for tracking feed run status
-const { runningFeeds, startPolling } = useFeedRunPolling();
+const { runningFeeds, startPolling, addRunningFeed, removeRunningFeed } = useFeedRunPolling();
 
 // Handle ?edit= query param to open edit modal on page load
 onMounted(async () => {
@@ -77,7 +77,7 @@ const feeds = computed(() => feedsData.value || []);
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
-    runningFeeds.value.add(feedId);
+    addRunningFeed(feedId);
     return await feedsApi.run(feedId);
   },
   onSuccess: (data, feedId) => {
@@ -95,7 +95,7 @@ const runFeedMutation = useMutation({
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-    runningFeeds.value.delete(feedId);
+    removeRunningFeed(feedId);
   },
 });
 

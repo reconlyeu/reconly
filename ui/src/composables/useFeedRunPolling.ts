@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, triggerRef } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { feedRunsApi } from '@/services/api';
 import type { FeedRun, FeedRunStatus } from '@/types/entities';
@@ -13,6 +13,18 @@ interface PollOptions {
 // Shared state across all component instances
 const runningFeeds = ref<Set<number>>(new Set());
 const activePolls = new Map<number, ReturnType<typeof setInterval>>();
+
+// Helper to add feedId and trigger reactivity
+const addRunningFeed = (feedId: number) => {
+  runningFeeds.value.add(feedId);
+  triggerRef(runningFeeds);
+};
+
+// Helper to remove feedId and trigger reactivity
+const removeRunningFeed = (feedId: number) => {
+  runningFeeds.value.delete(feedId);
+  triggerRef(runningFeeds);
+};
 
 /**
  * Composable for polling feed run status until completion.
@@ -32,7 +44,7 @@ export function useFeedRunPolling() {
       clearInterval(interval);
       activePolls.delete(feedId);
     }
-    runningFeeds.value.delete(feedId);
+    removeRunningFeed(feedId);
   };
 
   const startPolling = (feedId: number, runId: number, options: PollOptions = {}) => {
@@ -50,8 +62,8 @@ export function useFeedRunPolling() {
       activePolls.delete(feedId);
     }
 
-    // Mark feed as running
-    runningFeeds.value.add(feedId);
+    // Mark feed as running (with reactivity trigger)
+    addRunningFeed(feedId);
 
     let pollCount = 0;
 
@@ -91,5 +103,7 @@ export function useFeedRunPolling() {
     runningFeeds,
     startPolling,
     stopPolling,
+    addRunningFeed,
+    removeRunningFeed,
   };
 }
