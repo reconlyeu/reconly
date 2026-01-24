@@ -1,4 +1,4 @@
-import { ref, onUnmounted } from 'vue';
+import { ref } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
 import { feedRunsApi } from '@/services/api';
 import type { FeedRun, FeedRunStatus } from '@/types/entities';
@@ -10,14 +10,17 @@ interface PollOptions {
   onError?: (error: unknown) => void;
 }
 
+// Shared state across all component instances
+const runningFeeds = ref<Set<number>>(new Set());
+const activePolls = new Map<number, ReturnType<typeof setInterval>>();
+
 /**
  * Composable for polling feed run status until completion.
+ * Uses shared state so all components see the same running feeds.
  * Automatically cleans up intervals on unmount.
  */
 export function useFeedRunPolling() {
   const queryClient = useQueryClient();
-  const runningFeeds = ref<Set<number>>(new Set());
-  const activePolls = new Map<number, ReturnType<typeof setInterval>>();
 
   const isTerminalStatus = (status: FeedRunStatus): boolean => {
     return status === 'completed' || status === 'completed_with_errors' || status === 'failed';
@@ -81,12 +84,8 @@ export function useFeedRunPolling() {
     activePolls.set(feedId, pollInterval);
   };
 
-  // Cleanup all polls on unmount
-  onUnmounted(() => {
-    for (const [feedId] of activePolls) {
-      stopPolling(feedId);
-    }
-  });
+  // Note: No onUnmounted cleanup since state is shared globally.
+  // Polling continues until run completes, regardless of component lifecycle.
 
   return {
     runningFeeds,
