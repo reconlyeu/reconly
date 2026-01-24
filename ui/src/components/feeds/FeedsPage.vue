@@ -80,7 +80,7 @@ const runFeedMutation = useMutation({
     addRunningFeed(feedId);
     return await feedsApi.run(feedId);
   },
-  onSuccess: (data, feedId) => {
+  onSuccess: (_data, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
@@ -88,8 +88,8 @@ const runFeedMutation = useMutation({
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
-    // Start polling for completion
-    startPolling(feedId, data.id);
+    // Start polling for completion (polls latest run for this feed)
+    startPolling(feedId);
   },
   onError: (error: any, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);

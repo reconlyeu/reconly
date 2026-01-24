@@ -14,7 +14,7 @@
 
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
-import { sourcesApi, feedsApi, providersApi, promptTemplatesApi, reportTemplatesApi, feedRunsApi } from '@/services/api';
+import { sourcesApi, feedsApi, providersApi, promptTemplatesApi, reportTemplatesApi } from '@/services/api';
 import { useOnboarding } from '@/composables/useOnboarding';
 import { useToast } from '@/composables/useToast';
 import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
@@ -173,10 +173,10 @@ const runFeedMutation = useMutation({
     isRunning.value = true;
     runError.value = null;
     // Start polling for completion using shared composable
-    startPolling(createdFeed.value!.id, run.id, {
+    startPolling(createdFeed.value!.id, {
       onComplete: async (completedRun) => {
-        // Fetch the full run details
-        feedRun.value = await feedRunsApi.get(completedRun.id);
+        // Update with the completed run details
+        feedRun.value = completedRun;
         isRunning.value = false;
         if (completedRun.status === 'completed' || completedRun.status === 'completed_with_errors') {
           runCompleted.value = true;

@@ -1,7 +1,7 @@
 import { ref, triggerRef } from 'vue';
 import { useQueryClient } from '@tanstack/vue-query';
-import { feedRunsApi } from '@/services/api';
-import type { FeedRun, FeedRunStatus } from '@/types/entities';
+import { feedsApi } from '@/services/api';
+import type { FeedRunStatus } from '@/types/entities';
 
 interface PollOptions {
   interval?: number;
@@ -51,7 +51,7 @@ export function useFeedRunPolling() {
     removeRunningFeed(feedId);
   };
 
-  const startPolling = (feedId: number, runId: number, options: PollOptions = {}) => {
+  const startPolling = (feedId: number, options: PollOptions = {}) => {
     const {
       interval = 2000,
       maxPolls = 300, // 10 minutes max
@@ -68,7 +68,7 @@ export function useFeedRunPolling() {
 
     // Mark feed as running (with reactivity trigger)
     addRunningFeed(feedId);
-    console.log('[useFeedRunPolling] startPolling: feedId=', feedId, 'runId=', runId);
+    console.log('[useFeedRunPolling] startPolling: feedId=', feedId);
 
     let pollCount = 0;
 
@@ -82,10 +82,18 @@ export function useFeedRunPolling() {
       console.log('[useFeedRunPolling] polling... count=', pollCount);
 
       try {
-        const run = await feedRunsApi.get(runId);
-        console.log('[useFeedRunPolling] poll result: status=', run.status);
+        // Get the latest run for this feed
+        const { items } = await feedsApi.getRuns(feedId, 1, 1);
+        const latestRun = items[0];
 
-        if (isTerminalStatus(run.status)) {
+        if (!latestRun) {
+          console.log('[useFeedRunPolling] no runs found yet, continuing...');
+          return;
+        }
+
+        console.log('[useFeedRunPolling] poll result: status=', latestRun.status);
+
+        if (isTerminalStatus(latestRun.status)) {
           stopPolling(feedId);
           // Invalidate queries to refresh data
           queryClient.invalidateQueries({ queryKey: ['feeds'] });
@@ -93,9 +101,10 @@ export function useFeedRunPolling() {
           queryClient.invalidateQueries({ queryKey: ['digests'] });
           queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
           queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
-          onComplete?.(run);
+          onComplete?.(latestRun);
         }
       } catch (error) {
+        console.error('[useFeedRunPolling] error:', error);
         stopPolling(feedId);
         onError?.(error);
       }
