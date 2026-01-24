@@ -671,19 +671,13 @@ export const exportersApi = {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const fetchersApi = {
-  list: async (enabledOnly?: boolean): Promise<Fetcher[]> => {
-    const params = enabledOnly ? { enabled_only: true } : {};
-    const { data } = await apiClient.get<FetcherListResponse>('/fetchers', { params });
+  list: async (): Promise<Fetcher[]> => {
+    const { data } = await apiClient.get<FetcherListResponse>('/fetchers');
     return data.fetchers;
   },
 
   get: async (name: string): Promise<Fetcher> => {
     const { data } = await apiClient.get<Fetcher>(`/fetchers/${name}`);
-    return data;
-  },
-
-  setEnabled: async (name: string, enabled: boolean): Promise<Fetcher> => {
-    const { data } = await apiClient.put<Fetcher>(`/fetchers/${name}/enabled`, { enabled });
     return data;
   },
 };

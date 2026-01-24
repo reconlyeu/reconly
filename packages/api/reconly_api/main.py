@@ -56,47 +56,69 @@ def migrate_deprecated_settings() -> None:
         print(f"[Startup] Skipping settings migration: {e}")
 
 
-def cleanup_stale_feed_runs(stale_threshold_hours: int = 1) -> int:
+def cleanup_interrupted_runs() -> tuple[int, int]:
     """
-    Mark feed runs that have been 'running' for too long as 'failed'.
+    Mark feed runs and agent runs stuck in 'running' or 'pending' status as 'failed'.
 
-    This handles cases where a feed run process crashed or was interrupted
-    without properly updating the database status.
-
-    Args:
-        stale_threshold_hours: Number of hours after which a running feed is considered stale
+    On server startup, any runs that were in progress are now orphaned since
+    the process handling them is gone. This marks them as failed so the UI
+    shows the correct status.
 
     Returns:
-        Number of feed runs that were marked as failed
+        Tuple of (feed_runs_cleaned, agent_runs_cleaned)
     """
-    from reconly_core.database.models import FeedRun
+    from reconly_core.database.models import FeedRun, AgentRun
+    from sqlalchemy import or_
 
     try:
         db = SessionLocal()
         try:
-            cutoff_time = datetime.utcnow() - timedelta(hours=stale_threshold_hours)
-
-            # Find stale feed runs
-            stale_runs = db.query(FeedRun).filter(
-                FeedRun.status == 'running',
-                FeedRun.started_at < cutoff_time
+            # Clean up stuck feed runs
+            stuck_feed_runs = db.query(FeedRun).filter(
+                or_(
+                    FeedRun.status == 'running',
+                    FeedRun.status == 'pending'
+                )
             ).all()
 
-            count = len(stale_runs)
-            if count > 0:
-                for run in stale_runs:
-                    run.status = 'failed'
-                    run.completed_at = datetime.utcnow()
-                db.commit()
-                print(f"[Startup] Cleaned up {count} stale feed run(s) that were stuck in 'running' status")
+            feed_count = len(stuck_feed_runs)
+            for run in stuck_feed_runs:
+                run.status = 'failed'
+                run.completed_at = datetime.utcnow()
+                run.error_log = 'Run interrupted - server restarted'
 
-            return count
+            # Clean up stuck agent runs
+            stuck_agent_runs = db.query(AgentRun).filter(
+                or_(
+                    AgentRun.status == 'running',
+                    AgentRun.status == 'pending'
+                )
+            ).all()
+
+            agent_count = len(stuck_agent_runs)
+            for run in stuck_agent_runs:
+                run.status = 'failed'
+                run.completed_at = datetime.utcnow()
+                run.error_log = 'Run interrupted - server restarted'
+
+            if feed_count > 0 or agent_count > 0:
+                db.commit()
+                print(f"[Startup] Cleaned up {feed_count} feed run(s) and {agent_count} agent run(s) interrupted by restart")
+
+            return feed_count, agent_count
         finally:
             db.close()
     except Exception as e:
         # Gracefully handle errors during startup cleanup (e.g., during tests)
-        print(f"[Startup] Skipping stale feed run cleanup: {e}")
-        return 0
+        print(f"[Startup] Skipping interrupted run cleanup: {e}")
+        return 0, 0
+
+
+# Keep old name as alias for backwards compatibility
+def cleanup_stale_feed_runs() -> int:
+    """Alias for cleanup_interrupted_runs, returns only feed run count."""
+    feed_count, _ = cleanup_interrupted_runs()
+    return feed_count
 
 
 @asynccontextmanager

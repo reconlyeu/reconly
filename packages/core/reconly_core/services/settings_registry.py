@@ -405,8 +405,9 @@ def register_component_settings(
     has_required_fields = any(f.required for f in schema.fields)
 
     # Register enabled setting (defaults to False if component has required fields)
-    # Skip enabled setting for providers - they're always available if configured
-    if component_type != "provider":
+    # Skip enabled setting for providers and fetchers - they're always available
+    # (Exporters keep enabled setting for auto-export feature control)
+    if component_type not in ("provider", "fetch"):
         _register_enabled_setting(prefix, component_type, name, has_required_fields)
 
     # Register each field from the schema

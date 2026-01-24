@@ -10,6 +10,7 @@ import { X, Loader2, Filter, Plus, AlertCircle, ExternalLink } from 'lucide-vue-
 import AgentSourceForm from './AgentSourceForm.vue';
 import ImapSourceForm from './ImapSourceForm.vue';
 import { strings } from '@/i18n/en';
+import { useFetcherTypes, hasCustomForm } from '@/composables/useFetcherTypes';
 
 interface Props {
   isOpen: boolean;
@@ -27,18 +28,33 @@ const emit = defineEmits<Emits>();
 
 const queryClient = useQueryClient();
 
-// Validation schema - URL is required for types except 'agent' and 'imap'
-const formSchema = toTypedSchema(
+// Use dynamic fetcher types
+const {
+  sourceTypeOptions,
+  validSourceTypes,
+  isLoading: isFetchersLoading,
+  getUrlPlaceholder,
+} = useFetcherTypes();
+
+// Validation schema - URL is required for types that don't have custom forms
+// Type validation is dynamic based on available fetchers
+const formSchema = computed(() => toTypedSchema(
   z.object({
     name: z.string().min(1, 'Name is required').max(200, 'Name is too long'),
-    type: z.enum(['rss', 'youtube', 'website', 'blog', 'agent', 'imap'], {
-      errorMap: () => ({ message: 'Please select a source type' }),
-    }),
+    type: z.string().min(1, 'Please select a source type').refine(
+      (val) => {
+        // If fetchers are still loading, accept any non-empty value
+        if (isFetchersLoading.value) return val.length > 0;
+        // Otherwise validate against available types
+        return validSourceTypes.value.includes(val);
+      },
+      { message: 'Please select a valid source type' }
+    ),
     url: z.string(),
     enabled: z.boolean(),
   }).superRefine((data, ctx) => {
-    // URL is required for non-agent and non-imap types
-    if (data.type !== 'agent' && data.type !== 'imap') {
+    // URL is required for types that don't have custom forms (agent, imap)
+    if (!hasCustomForm(data.type)) {
       if (!data.url) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -58,7 +74,7 @@ const formSchema = toTypedSchema(
       }
     }
   })
-);
+));
 
 // Form setup
 const { defineField, handleSubmit, resetForm, errors } = useForm({
@@ -187,7 +203,7 @@ watch(
       resetForm({
         values: {
           name: newSource.name,
-          type: newSource.type as 'rss' | 'youtube' | 'website' | 'blog' | 'agent' | 'imap',
+          type: newSource.type,
           url: newSource.url,
           enabled: newSource.enabled,
         },
@@ -377,16 +393,8 @@ const activeFilterCount = computed(() => {
   return count;
 });
 
-// Dynamic URL placeholder based on type
-const urlPlaceholder = computed(() => {
-  const placeholders: Record<string, string> = {
-    rss: 'https://example.com/feed.xml',
-    youtube: 'https://youtube.com/@channel or /watch?v=...',
-    website: 'https://example.com/article',
-    blog: 'https://blog.example.com',
-  };
-  return placeholders[type.value] || 'https://example.com';
-});
+// Dynamic URL placeholder based on type (using composable)
+const urlPlaceholder = computed(() => getUrlPlaceholder(type.value));
 </script>
 
 <template>
@@ -454,7 +462,20 @@ const urlPlaceholder = computed(() => {
               <label for="type" class="mb-2 block text-sm font-medium text-text-primary">
                 Type
               </label>
+              <!-- Loading state for fetcher types -->
+              <div v-if="isFetchersLoading" class="relative">
+                <select
+                  id="type"
+                  disabled
+                  class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-muted opacity-60"
+                >
+                  <option>{{ strings.common.loading }}</option>
+                </select>
+                <Loader2 :size="16" class="absolute right-10 top-1/2 -translate-y-1/2 animate-spin text-text-muted" />
+              </div>
+              <!-- Dynamic type dropdown -->
               <select
+                v-else
                 id="type"
                 v-model="type"
                 v-bind="typeAttrs"
@@ -465,12 +486,13 @@ const urlPlaceholder = computed(() => {
                     : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
                 "
               >
-                <option value="rss">{{ strings.sources.typeOptions.rss }}</option>
-                <option value="youtube">{{ strings.sources.typeOptions.youtube }}</option>
-                <option value="website">{{ strings.sources.typeOptions.website }}</option>
-                <option value="blog">{{ strings.sources.typeOptions.blog }}</option>
-                <option value="imap">{{ strings.sources.typeOptions.imap }}</option>
-                <option value="agent">{{ strings.sources.typeOptions.agent }}</option>
+                <option
+                  v-for="option in sourceTypeOptions"
+                  :key="option.name"
+                  :value="option.name"
+                >
+                  {{ option.displayName }}
+                </option>
               </select>
               <Transition name="error">
                 <p v-if="errors.type" class="mt-2 text-sm text-status-failed">

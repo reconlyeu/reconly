@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Calendar, Clock, PlayCircle, Edit, Trash2, CheckCircle2, Download } from 'lucide-vue-next';
-import type { Feed } from '@/types/entities';
+import { Calendar, Clock, PlayCircle, Edit, Trash2, CheckCircle2, Download, AlertCircle, Loader2 } from 'lucide-vue-next';
+import type { Feed, FeedRunStatus } from '@/types/entities';
 import cronstrue from 'cronstrue';
 import BaseCard from '@/components/common/BaseCard.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
@@ -9,7 +9,7 @@ import { strings } from '@/i18n/en';
 
 interface Props {
   feed: Feed;
-  isRunning?: boolean;
+  isRunning?: boolean;  // Still used for immediate feedback after triggering a run
 }
 
 interface Emits {
@@ -38,6 +38,64 @@ const scheduleText = computed(() => {
   }
 });
 
+// Determine effective run status (prop override or from feed data)
+const effectiveStatus = computed((): FeedRunStatus | 'never' => {
+  // If isRunning prop is set (immediate feedback), show running
+  if (props.isRunning) return 'running';
+  // Otherwise use feed's last run status
+  return props.feed.last_run_status || 'never';
+});
+
+// Status badge configuration
+const statusBadge = computed(() => {
+  const status = effectiveStatus.value;
+
+  switch (status) {
+    case 'running':
+    case 'pending':
+      return {
+        text: strings.feeds.running,
+        bgClass: 'bg-accent-primary/10',
+        textClass: 'text-accent-primary',
+        icon: Loader2,
+        animate: true,
+      };
+    case 'completed':
+      return {
+        text: strings.feeds.status.completed,
+        bgClass: 'bg-status-success/10',
+        textClass: 'text-status-success',
+        icon: CheckCircle2,
+        animate: false,
+      };
+    case 'completed_with_errors':
+      return {
+        text: strings.feeds.status.completedWithErrors || 'Partial',
+        bgClass: 'bg-status-warning/10',
+        textClass: 'text-status-warning',
+        icon: AlertCircle,
+        animate: false,
+      };
+    case 'failed':
+      return {
+        text: strings.feeds.status.failed,
+        bgClass: 'bg-status-failed/10',
+        textClass: 'text-status-failed',
+        icon: AlertCircle,
+        animate: false,
+      };
+    case 'never':
+    default:
+      return {
+        text: strings.feeds.status.neverRun,
+        bgClass: 'bg-text-muted/10',
+        textClass: 'text-text-muted',
+        icon: Clock,
+        animate: false,
+      };
+  }
+});
+
 const lastRunConfig = computed(() => {
   if (!props.feed.last_run_at) {
     return { text: strings.feeds.status.neverRun, icon: Clock, color: 'text-text-muted' };
@@ -55,13 +113,20 @@ const lastRunConfig = computed(() => {
   else if (diffHours < 24) timeText = strings.time.hoursAgo.replace('{count}', String(diffHours));
   else timeText = date.toLocaleDateString();
 
+  // Use status-appropriate icon and color for last run display
+  const status = props.feed.last_run_status;
+  if (status === 'failed') {
+    return { text: timeText, icon: AlertCircle, color: 'text-status-failed' };
+  } else if (status === 'completed_with_errors') {
+    return { text: timeText, icon: AlertCircle, color: 'text-status-warning' };
+  }
   return { text: timeText, icon: CheckCircle2, color: 'text-status-success' };
 });
 </script>
 
 <template>
   <BaseCard glow-color="primary">
-    <template #header>
+      <template #header>
       <div class="flex items-start justify-between">
         <div class="flex-1">
           <h3 class="mb-1 text-lg font-semibold text-text-primary transition-colors duration-300 group-hover:text-accent-primary">
@@ -72,16 +137,34 @@ const lastRunConfig = computed(() => {
           </p>
         </div>
 
-        <!-- Status Badge -->
-        <div
-          class="ml-4 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
-          :class="
-            feed.schedule_enabled
-              ? 'bg-status-success/10 text-status-success'
-              : 'bg-text-muted/10 text-text-muted'
-          "
+        <!-- Status Badge (clickable if there's a run to view) -->
+        <a
+          v-if="feed.last_run_id"
+          :href="`/feed-runs/detail?id=${feed.last_run_id}`"
+          class="ml-4 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all duration-300 hover:ring-2 hover:ring-offset-1 hover:ring-offset-bg-base"
+          :class="[statusBadge.bgClass, statusBadge.textClass, `hover:ring-current`]"
+          :title="strings.feedRuns.viewDetails"
+          @click.stop
         >
-          {{ feed.schedule_enabled ? strings.feeds.status.active : strings.feeds.status.paused }}
+          <component
+            :is="statusBadge.icon"
+            :size="12"
+            :stroke-width="2"
+            :class="{ 'animate-spin': statusBadge.animate }"
+          />
+          {{ statusBadge.text }}
+        </a>
+        <div
+          v-else
+          class="ml-4 flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors duration-300"
+          :class="[statusBadge.bgClass, statusBadge.textClass]"
+        >
+          <component
+            :is="statusBadge.icon"
+            :size="12"
+            :stroke-width="2"
+          />
+          {{ statusBadge.text }}
         </div>
       </div>
     </template>
@@ -128,7 +211,10 @@ const lastRunConfig = computed(() => {
         <button
           @click="emit('run', feed.id)"
           :disabled="isRunning"
-          class="group/run flex items-center justify-center gap-1.5 rounded-lg bg-status-success/10 px-3 py-1.5 text-sm font-medium text-status-success transition-all hover:bg-status-success hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          class="group/run flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all"
+          :class="isRunning
+            ? 'bg-status-success text-white running-button-glow cursor-wait'
+            : 'bg-status-success/10 text-status-success hover:bg-status-success hover:text-white'"
           :title="strings.feeds.actions.runFeedNow"
         >
           <PlayCircle
@@ -176,5 +262,21 @@ const lastRunConfig = computed(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Pulsing dot animation for running status */
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
 }
 </style>

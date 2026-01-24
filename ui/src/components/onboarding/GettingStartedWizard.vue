@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { sourcesApi, feedsApi, providersApi, promptTemplatesApi, reportTemplatesApi } from '@/services/api';
 import { useOnboarding } from '@/composables/useOnboarding';
 import { useToast } from '@/composables/useToast';
+import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import { strings } from '@/i18n/en';
 import type { Source, Feed, FeedRun, PromptTemplate, ReportTemplate } from '@/types/entities';
 import {
@@ -39,6 +40,7 @@ const t = strings.onboarding.wizard;
 const queryClient = useQueryClient();
 const toast = useToast();
 const { shouldShowWizard, skipOnboarding, finishOnboarding, closeWizard } = useOnboarding();
+const { startPolling } = useFeedRunPolling();
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATE
@@ -166,69 +168,33 @@ const runFeedMutation = useMutation({
     if (!createdFeed.value) throw new Error('No feed created');
     return await feedsApi.run(createdFeed.value.id);
   },
-  onSuccess: (run) => {
+  onSuccess: async (run) => {
     feedRun.value = run;
     isRunning.value = true;
     runError.value = null;
-    // Start polling for completion
-    pollRunStatus();
+    // Start polling for completion using shared composable
+    startPolling(createdFeed.value!.id, {
+      onComplete: async (completedRun) => {
+        // Update with the completed run details
+        feedRun.value = completedRun;
+        isRunning.value = false;
+        if (completedRun.status === 'completed' || completedRun.status === 'completed_with_errors') {
+          runCompleted.value = true;
+        } else {
+          runError.value = 'Feed run failed. Check your LLM configuration.';
+        }
+      },
+      onError: () => {
+        isRunning.value = false;
+        runError.value = 'Failed to check run status';
+      },
+    });
   },
   onError: (error: any) => {
     isRunning.value = false;
     runError.value = error.detail || 'Failed to run feed';
     toast.error(runError.value!);
   },
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// RUN STATUS POLLING
-// ═══════════════════════════════════════════════════════════════════════════════
-
-let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-const pollRunStatus = async () => {
-  if (!feedRun.value) return;
-
-  // Clear any existing interval
-  if (pollInterval) {
-    clearInterval(pollInterval);
-  }
-
-  pollInterval = setInterval(async () => {
-    try {
-      const { data: run } = await apiClient.get(`/feed-runs/${feedRun.value!.id}`);
-      feedRun.value = run;
-
-      if (run.status === 'completed' || run.status === 'failed') {
-        clearInterval(pollInterval!);
-        pollInterval = null;
-        isRunning.value = false;
-
-        if (run.status === 'completed') {
-          runCompleted.value = true;
-          queryClient.invalidateQueries({ queryKey: ['digests'] });
-          queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
-        } else {
-          runError.value = 'Feed run failed. Check your LLM configuration.';
-        }
-      }
-    } catch (error) {
-      clearInterval(pollInterval!);
-      pollInterval = null;
-      isRunning.value = false;
-      runError.value = 'Failed to check run status';
-    }
-  }, 2000); // Poll every 2 seconds
-};
-
-// Import apiClient for polling
-import { apiClient } from '@/services/api';
-
-// Cleanup on unmount
-onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval);
-  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

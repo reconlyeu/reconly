@@ -3,7 +3,7 @@
  * Fetcher Settings Component
  *
  * Provides UI for configuring fetcher settings including:
- * - Fetcher list with cards showing status and toggle
+ * - Fetcher list with cards showing status
  * - Fetcher-specific configuration via FetcherConfigPanel
  *
  * Supports deep-linking via useSettingsNavigation composable
@@ -13,9 +13,8 @@ import { ArrowRightToLine } from 'lucide-vue-next';
 import BaseList from '@/components/common/BaseList.vue';
 import FetcherCard from './FetcherCard.vue';
 import FetcherConfigPanel from './FetcherConfigPanel.vue';
-import { useFetchersList, useToggleFetcher } from '@/composables/useFetchers';
+import { useFetchersList } from '@/composables/useFetchers';
 import { useSettingsNavigation } from '@/composables/useSettingsNavigation';
-import { useToast } from '@/composables/useToast';
 import { strings } from '@/i18n/en';
 import type { Fetcher } from '@/types/entities';
 
@@ -31,23 +30,11 @@ onMounted(() => {
   }
 });
 
-const toast = useToast();
-
 // Selected fetcher name
 const selectedFetcherName = ref<string | null>(null);
 
 // Fetch fetchers list using the composable
 const { data: fetchers, isLoading, isError, error, refetch } = useFetchersList();
-
-// Toggle mutation
-const toggleMutation = useToggleFetcher({
-  onSuccess: (data) => {
-    toast.success(`${data.name} ${data.enabled ? 'enabled' : 'disabled'}`);
-  },
-  onError: (error: any) => {
-    toast.error(error.response?.data?.detail || error.detail || 'Failed to toggle fetcher');
-  },
-});
 
 // Get the currently selected fetcher object
 const selectedFetcher = computed<Fetcher | null>(() => {
@@ -87,11 +74,6 @@ watch(
 const handleSelect = (fetcherName: string) => {
   selectedFetcherName.value = fetcherName;
 };
-
-// Handle fetcher toggle
-const handleToggle = (fetcherName: string, enabled: boolean) => {
-  toggleMutation.mutate({ name: fetcherName, enabled });
-};
 </script>
 
 <template>
@@ -128,9 +110,7 @@ const handleToggle = (fetcherName: string, enabled: boolean) => {
             :key="fetcher.name"
             :fetcher="fetcher"
             :selected="selectedFetcherName === fetcher.name"
-            :is-toggling="toggleMutation.isPending.value"
             @select="handleSelect"
-            @toggle="handleToggle"
           />
         </template>
 

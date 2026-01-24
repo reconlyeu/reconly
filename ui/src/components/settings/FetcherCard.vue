@@ -1,36 +1,31 @@
 <script setup lang="ts">
 /**
  * Card for displaying a fetcher option.
- * Shows activation status badge, extension indicator, and toggle switch.
+ * Shows configuration status badge and extension indicator.
  * Used in FetcherSettings for listing and selecting fetchers.
  */
 import { computed } from 'vue';
 import {
   ArrowRightToLine,
   Check,
-  X,
   AlertCircle,
   Settings,
   Puzzle,
 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 import type { Fetcher } from '@/types/entities';
-import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
 
 interface Props {
   fetcher: Fetcher;
   selected?: boolean;
-  isToggling?: boolean;
 }
 
 interface Emits {
   (e: 'select', fetcherName: string): void;
-  (e: 'toggle', fetcherName: string, enabled: boolean): void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   selected: false,
-  isToggling: false,
 });
 
 const emit = defineEmits<Emits>();
@@ -39,18 +34,11 @@ const handleClick = () => {
   emit('select', props.fetcher.name);
 };
 
-const handleToggle = (enabled: boolean) => {
-  emit('toggle', props.fetcher.name, enabled);
-};
-
-// Status configuration following ExporterCard pattern
-type StatusType = 'active' | 'needs_config' | 'disabled';
+// Status configuration - simplified since fetchers are always active
+type StatusType = 'active' | 'needs_config';
 
 const status = computed<StatusType>(() => {
-  const { enabled, is_configured } = props.fetcher;
-  if (enabled && is_configured) return 'active';
-  if (!is_configured) return 'needs_config';
-  return 'disabled';
+  return props.fetcher.is_configured ? 'active' : 'needs_config';
 });
 
 const statusConfig = computed(() => {
@@ -67,12 +55,6 @@ const statusConfig = computed(() => {
       icon: AlertCircle,
       dotColor: 'bg-amber-500',
     },
-    disabled: {
-      label: strings.settings.fetchers.status.disabled,
-      color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-      icon: X,
-      dotColor: 'bg-gray-500',
-    },
   };
   return configs[status.value];
 });
@@ -81,14 +63,6 @@ const statusConfig = computed(() => {
 const displayName = computed(() => {
   const name = props.fetcher.name;
   return name.charAt(0).toUpperCase() + name.slice(1);
-});
-
-// Tooltip for disabled toggle
-const toggleTooltip = computed(() => {
-  if (!props.fetcher.can_enable && !props.fetcher.enabled) {
-    return strings.settings.fetchers.configureRequired;
-  }
-  return props.fetcher.enabled ? strings.settings.fetchers.disableFetcher : strings.settings.fetchers.enableFetcher;
 });
 
 // Has configurable fields
@@ -157,22 +131,8 @@ const hasConfig = computed(() => {
         {{ fetcher.description }}
       </p>
 
-      <!-- Toggle and feature badges -->
+      <!-- Feature badges -->
       <div class="flex items-center gap-3 pt-1">
-        <!-- Toggle switch (left) -->
-        <div
-          @click.stop
-          :title="toggleTooltip"
-        >
-          <ToggleSwitch
-            :model-value="fetcher.enabled"
-            @update:model-value="handleToggle"
-            :disabled="(!fetcher.can_enable && !fetcher.enabled) || isToggling"
-            size="sm"
-          />
-        </div>
-
-        <!-- Feature badges -->
         <div class="flex flex-wrap gap-2">
           <span
             v-if="fetcher.is_extension"

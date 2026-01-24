@@ -224,16 +224,12 @@ class TestFetcherRegistry:
         # Verify fetcher is registered
         assert is_fetcher_registered('auto-settings')
 
-        # Verify settings were auto-registered
-        assert "fetch.auto-settings.enabled" in SETTINGS_REGISTRY
+        # Verify settings were auto-registered (no enabled setting for fetchers)
+        assert "fetch.auto-settings.enabled" not in SETTINGS_REGISTRY
         assert "fetch.auto-settings.timeout" in SETTINGS_REGISTRY
         assert "fetch.auto-settings.user_agent" in SETTINGS_REGISTRY
 
         # Verify setting properties
-        enabled_setting = SETTINGS_REGISTRY["fetch.auto-settings.enabled"]
-        assert enabled_setting.type is bool
-        assert enabled_setting.default is False  # Has required field
-
         timeout_setting = SETTINGS_REGISTRY["fetch.auto-settings.timeout"]
         assert timeout_setting.type is int
         assert timeout_setting.default == 30
@@ -244,7 +240,7 @@ class TestFetcherRegistry:
         assert user_agent_setting.default is None
 
     def test_register_fetcher_no_settings_for_empty_schema(self):
-        """Test that fetcher with empty schema only registers enabled setting."""
+        """Test that fetcher with empty schema registers no settings."""
         @register_fetcher('no-schema')
         class NoSchemaFetcher(BaseFetcher):
             def fetch(self, url, since=None, max_items=None, **kwargs):
@@ -258,9 +254,8 @@ class TestFetcherRegistry:
         # Fetcher should be registered
         assert is_fetcher_registered('no-schema')
 
-        # Only the enabled setting should be registered (always added for all fetchers)
-        assert "fetch.no-schema.enabled" in SETTINGS_REGISTRY
-        # But no other custom settings from schema
+        # No settings should be registered (fetchers don't have enabled setting)
+        assert "fetch.no-schema.enabled" not in SETTINGS_REGISTRY
         assert "fetch.no-schema.timeout" not in SETTINGS_REGISTRY
 
     def test_fetcher_config_schema_stored_in_registry_entry(self):

@@ -464,13 +464,15 @@ class TestRegisterExtensionSettings:
         assert setting.secret is True
 
     def test_fetcher_settings(self):
-        """Test registering fetcher settings uses fetch prefix."""
+        """Test registering fetcher settings uses fetch prefix (no enabled setting for fetchers)."""
         register_extension_settings(ExtensionType.FETCHER, "reddit")
 
-        assert "fetch.reddit.enabled" in SETTINGS_REGISTRY
+        # Fetchers don't have enabled setting (removed - always active)
+        assert "fetch.reddit.enabled" not in SETTINGS_REGISTRY
 
     def test_provider_settings(self):
-        """Test registering provider settings uses provider prefix."""
+        """Test registering provider settings uses provider prefix (no enabled setting for providers)."""
         register_extension_settings(ExtensionType.PROVIDER, "gemini")
 
-        assert "provider.gemini.enabled" in SETTINGS_REGISTRY
+        # Providers don't have enabled setting (always available if configured)
+        assert "provider.gemini.enabled" not in SETTINGS_REGISTRY

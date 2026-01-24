@@ -25,7 +25,7 @@ from sqlalchemy import (
     Column, Integer, String, Text, Float, DateTime, Boolean, JSON,
     ForeignKey, Index
 )
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship, backref
 from pgvector.sqlalchemy import Vector
 
 # Template origin types:
@@ -1289,7 +1289,7 @@ class AgentRun(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationships
-    source = relationship('Source', backref='agent_runs')
+    source = relationship('Source', backref=backref('agent_runs', passive_deletes=True))
     user = relationship('User', back_populates='agent_runs')
 
     __table_args__ = (

@@ -5,20 +5,14 @@
  * Shows activation status badge and toggle switch.
  */
 import { computed } from 'vue';
-import {
-  FileJson,
-  FileSpreadsheet,
-  FileText,
-  FileType,
-  Check,
-  X,
-  AlertCircle,
-  HardDrive,
-  Settings,
-} from 'lucide-vue-next';
+import { HardDrive, Settings } from 'lucide-vue-next';
+import { Icon } from '@iconify/vue';
 import { strings } from '@/i18n/en';
 import type { Exporter } from '@/types/entities';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
+
+// Default fallback icon for exporters without metadata.icon
+const FALLBACK_ICON = 'mdi:file-export-outline';
 
 interface Props {
   exporter: Exporter;
@@ -62,40 +56,33 @@ const statusConfig = computed(() => {
     active: {
       label: strings.settings.exports.status.active,
       color: 'bg-green-500/10 text-green-400 border-green-500/20',
-      icon: Check,
       dotColor: 'bg-green-500',
     },
     misconfigured: {
       label: strings.settings.exports.status.misconfigured,
       color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-      icon: AlertCircle,
       dotColor: 'bg-amber-500',
     },
     disabled: {
       label: strings.settings.exports.status.disabled,
       color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-      icon: X,
       dotColor: 'bg-gray-500',
     },
     not_configured: {
       label: strings.settings.exports.status.notConfigured,
       color: 'bg-red-500/10 text-red-400 border-red-500/20',
-      icon: X,
       dotColor: 'bg-red-500',
     },
   };
   return configs[status.value];
 });
 
-// Get icon based on exporter name/type (keep icon mapping - lucide icons can't be dynamically loaded)
-const ExporterIcon = computed(() => {
-  const iconMap: Record<string, typeof FileJson> = {
-    json: FileJson,
-    csv: FileSpreadsheet,
-    obsidian: FileText,
-    markdown: FileText,
-  };
-  return iconMap[props.exporter.name] || FileType;
+/**
+ * Get the icon string for the exporter.
+ * Uses metadata.icon if available, otherwise falls back to a generic export icon.
+ */
+const exporterIcon = computed(() => {
+  return props.exporter.metadata?.icon || FALLBACK_ICON;
 });
 
 // Fallback color mappings for when ui_color is not available
@@ -183,10 +170,10 @@ const toggleTooltip = computed(() => {
           class="flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 group-hover:scale-110"
           :class="iconBgColor"
         >
-          <component
-            :is="ExporterIcon"
-            :size="22"
-            :stroke-width="2"
+          <Icon
+            :icon="exporterIcon"
+            :width="22"
+            :height="22"
             :class="iconColor"
           />
         </div>

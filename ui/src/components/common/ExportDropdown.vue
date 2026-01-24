@@ -4,18 +4,14 @@
  * Used for single digest export and bulk export actions.
  */
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
-import { Download, ChevronDown, FileJson, FileSpreadsheet, FileText, Folder } from 'lucide-vue-next';
+import { Download, ChevronDown } from 'lucide-vue-next';
+import { Icon } from '@iconify/vue';
 import { useEnabledExporters } from '@/composables/useExporters';
 import type { Exporter } from '@/types/entities';
 import { strings } from '@/i18n/en';
 
-// Map exporter names to icons
-const exporterIcons: Record<string, any> = {
-  json: FileJson,
-  csv: FileSpreadsheet,
-  markdown: FileText,
-  obsidian: Folder,
-};
+// Default fallback icon for exporters without metadata.icon
+const FALLBACK_ICON = 'mdi:file-export-outline';
 
 interface Props {
   /** Size variant */
@@ -51,10 +47,24 @@ const { exporters: configuredExporters, isLoading } = useEnabledExporters();
 // Built-in markdown download - always available as baseline feature
 const builtInMarkdownExporter: Exporter = {
   name: 'markdown',
+  description: 'Export as Markdown file',
+  content_type: 'text/markdown',
   enabled: true,
   supports_direct_export: false,
   file_extension: 'md',
-  config_schema: null,
+  config_schema: { fields: [], supports_direct_export: false },
+  is_configured: true,
+  can_enable: true,
+  is_extension: false,
+  metadata: {
+    name: 'markdown',
+    display_name: 'Markdown',
+    description: 'Export as Markdown file',
+    icon: 'mdi:language-markdown',
+    file_extension: 'md',
+    mime_type: 'text/markdown',
+    ui_color: null,
+  },
 };
 
 // Combine built-in markdown with configured exporters (avoid duplicates)
@@ -117,8 +127,12 @@ const selectExporter = (exporter: Exporter, event: Event) => {
   emit('select', exporter);
 };
 
-const getExporterIcon = (name: string) => {
-  return exporterIcons[name.toLowerCase()] || FileText;
+/**
+ * Get the icon string for an exporter.
+ * Uses metadata.icon if available, otherwise falls back to a generic export icon.
+ */
+const getExporterIcon = (exporter: Exporter): string => {
+  return exporter.metadata?.icon || FALLBACK_ICON;
 };
 
 // Close dropdown on click outside
@@ -196,8 +210,8 @@ onUnmounted(() => {
               class="flex items-center gap-2 cursor-pointer px-3 py-2 text-sm text-text-primary transition-colors hover:bg-bg-hover"
               @click="selectExporter(exporter, $event)"
             >
-              <component :is="getExporterIcon(exporter.name)" :size="14" class="text-text-muted" />
-              <span class="capitalize">{{ exporter.name }}</span>
+              <Icon :icon="getExporterIcon(exporter)" :width="14" :height="14" class="text-text-muted flex-shrink-0" />
+              <span>{{ exporter.metadata?.display_name || exporter.name }}</span>
             </li>
           </ul>
         </div>

@@ -166,7 +166,11 @@ function closeModal(): void {
 }
 
 function handleSuccess(): void {
-  // Modal closes automatically via @success event
+  const message = editingSource.value
+    ? 'Source updated successfully'
+    : 'Source created successfully';
+  toast.success(message);
+  closeModal();
 }
 </script>
 

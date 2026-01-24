@@ -229,19 +229,22 @@ def register_extension_settings(
 
     prefix = get_extension_settings_prefix(ext_type, name)
 
-    # Always register enabled setting
-    enabled_key = f"{prefix}.enabled"
-    if enabled_key not in SETTINGS_REGISTRY:
-        # Default: disabled if has required fields, enabled otherwise
-        has_required = any(f.get("required", False) for f in (config_fields or []))
-        SETTINGS_REGISTRY[enabled_key] = SettingDef(
-            category="extension",
-            type=bool,
-            default=not has_required,
-            editable=True,
-            env_var="",
-            description=f"Whether {name} extension is enabled",
-        )
+    # Register enabled setting only for exporters (for auto-export feature control)
+    # Providers are always available if configured, fetchers are always active
+    # (This matches the behavior in settings_registry.register_component_settings)
+    if ext_type not in (ExtensionType.PROVIDER, ExtensionType.FETCHER):
+        enabled_key = f"{prefix}.enabled"
+        if enabled_key not in SETTINGS_REGISTRY:
+            # Default: disabled if has required fields, enabled otherwise
+            has_required = any(f.get("required", False) for f in (config_fields or []))
+            SETTINGS_REGISTRY[enabled_key] = SettingDef(
+                category="extension",
+                type=bool,
+                default=not has_required,
+                editable=True,
+                env_var="",
+                description=f"Whether {name} extension is enabled",
+            )
 
     # Register config fields
     if config_fields:

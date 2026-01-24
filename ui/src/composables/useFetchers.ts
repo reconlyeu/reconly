@@ -1,14 +1,12 @@
 /**
  * Composable for managing fetchers via Vue Query
  *
- * Provides reactive queries and mutations for:
+ * Provides reactive queries for:
  * - Listing available fetchers with their config schemas
- * - Toggling fetcher enabled state
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
+import { useQuery } from '@tanstack/vue-query';
 import { fetchersApi } from '@/services/api';
-import type { Fetcher } from '@/types/entities';
 import { computed } from 'vue';
 
 /**
@@ -44,48 +42,6 @@ export function useFetcher(name: string) {
     isError,
     error,
   };
-}
-
-/**
- * Hook to get only enabled fetchers
- */
-export function useEnabledFetchers() {
-  const { data: fetchers, isLoading, isError, error } = useFetchersList();
-
-  const enabledFetchers = computed(() => {
-    if (!fetchers.value) return [];
-    return fetchers.value.filter((f) => f.enabled);
-  });
-
-  return {
-    fetchers: enabledFetchers,
-    isLoading,
-    isError,
-    error,
-  };
-}
-
-/**
- * Hook for toggling fetcher enabled state
- */
-export function useToggleFetcher(options?: {
-  onSuccess?: (data: Fetcher) => void;
-  onError?: (error: Error) => void;
-}) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
-      fetchersApi.setEnabled(name, enabled),
-    onSuccess: (data) => {
-      // Invalidate fetchers list to refresh activation states
-      queryClient.invalidateQueries({ queryKey: FETCHERS_QUERY_KEY });
-      options?.onSuccess?.(data);
-    },
-    onError: (error: Error) => {
-      options?.onError?.(error);
-    },
-  });
 }
 
 /**

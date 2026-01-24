@@ -297,3 +297,72 @@ body {
   background-color: rgba(250, 41, 33, 0.1);
   color: var(--color-accent-error);
 }
+
+/* Running border sweep animation */
+@keyframes borderSweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.running-border {
+  position: relative;
+  overflow: hidden;
+}
+
+.running-border::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--color-status-running) 25%,
+    var(--color-accent-primary) 50%,
+    var(--color-status-running) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: borderSweep 1.5s linear infinite;
+}
+
+/* Pulsing dot for running indicator */
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+.pulse-dot {
+  animation: pulseDot 1s ease-in-out infinite;
+}
+
+/* Dark mode select/input dropdowns */
+.dark-select {
+  color-scheme: dark;
+}
+
+/* Subtle pulsing glow animation for running button */
+@keyframes runningButtonGlow {
+  0%, 100% {
+    box-shadow: 0 0 6px 1px rgba(24, 194, 73, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 10px 3px rgba(24, 194, 73, 0.4);
+  }
+}
+
+.running-button-glow {
+  animation: runningButtonGlow 2s ease-in-out infinite;
+}

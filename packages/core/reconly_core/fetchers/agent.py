@@ -26,7 +26,7 @@ import asyncio
 import logging
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Optional
 
 from reconly_core.config_types import ConfigField
@@ -293,7 +293,7 @@ class AgentFetcher(BaseFetcher):
                 )
 
             # Format as fetcher result
-            formatted = self._format_result(prompt, result, strategy_name, summarizer)
+            formatted = self._format_result(prompt, result, strategy_name, summarizer, db)
             if agent_run_id is not None:
                 formatted['agent_run_id'] = agent_run_id
             return formatted
@@ -555,12 +555,63 @@ class AgentFetcher(BaseFetcher):
 
         return metadata
 
+    def _generate_unique_agent_url(
+        self,
+        prompt: str,
+        db: Optional["Session"] = None,
+    ) -> str:
+        """Generate a unique agent URL with date prefix and sequence fallback.
+
+        Creates URLs in the format:
+        - agent://2026-01-24/topic-name (first run of the day)
+        - agent://2026-01-24-2/topic-name (second run same day)
+        - agent://2026-01-24-3/topic-name (third run same day)
+
+        Args:
+            prompt: The research prompt to include in the URL
+            db: Optional database session for checking existing URLs
+
+        Returns:
+            Unique synthetic URL for the agent digest
+        """
+        # Sanitize prompt for URL
+        safe_prompt = prompt[:50].replace(' ', '-').replace('/', '-')
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+        # Base URL without sequence number
+        base_url = f"agent://{today}/{safe_prompt}"
+
+        # If no database session, return base URL (can't check for duplicates)
+        if db is None:
+            return base_url
+
+        # Check if base URL already exists
+        from reconly_core.database.models import Digest
+
+        existing = db.query(Digest).filter(Digest.url == base_url).first()
+        if not existing:
+            return base_url
+
+        # Find next available sequence number
+        sequence = 2
+        while sequence <= 100:  # Safety limit
+            sequenced_url = f"agent://{today}-{sequence}/{safe_prompt}"
+            existing = db.query(Digest).filter(Digest.url == sequenced_url).first()
+            if not existing:
+                return sequenced_url
+            sequence += 1
+
+        # Fallback: use timestamp if too many runs (shouldn't happen in practice)
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')
+        return f"agent://{timestamp}/{safe_prompt}"
+
     def _format_result(
         self,
         prompt: str,
         result: "AgentResult",
         strategy_name: str,
         summarizer: "BaseProvider",
+        db: Optional["Session"] = None,
     ) -> dict[str, object]:
         """Format strategy result as fetcher output.
 
@@ -569,13 +620,14 @@ class AgentFetcher(BaseFetcher):
             result: AgentResult from research strategy
             strategy_name: Name of the strategy used (simple, comprehensive, deep)
             summarizer: LLM provider instance (for model info)
+            db: Optional database session for checking existing URLs
 
         Returns:
             Dict with url, title, content, source_type, and metadata
         """
-        # Create synthetic URL from prompt (sanitized)
-        safe_prompt = prompt[:50].replace(' ', '-').replace('/', '-')
-        synthetic_url = f"agent://{safe_prompt}"
+        # Create synthetic URL from prompt with date prefix for uniqueness
+        # Format: agent://YYYY-MM-DD/topic-name or agent://YYYY-MM-DD-N/topic-name
+        synthetic_url = self._generate_unique_agent_url(prompt, db)
 
         metadata: dict[str, object] = {
             'iterations': result.iterations,
