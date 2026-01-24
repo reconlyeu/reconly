@@ -43,6 +43,7 @@ const { data: feeds, isLoading, isError, error, refetch } = useQuery({
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
+    console.log('[FeedList] mutationFn called, feedId=', feedId);
     addRunningFeed(feedId);
     return await feedsApi.run(feedId);
   },
