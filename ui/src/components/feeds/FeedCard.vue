@@ -125,7 +125,6 @@ const lastRunConfig = computed(() => {
 </script>
 
 <template>
-  <div :class="{ 'running-border': isRunning }">
   <BaseCard glow-color="primary">
       <template #header>
       <div class="flex items-start justify-between">
@@ -255,7 +254,6 @@ const lastRunConfig = computed(() => {
       </div>
     </template>
   </BaseCard>
-  </div>
 </template>
 
 <style scoped>
@@ -279,39 +277,6 @@ const lastRunConfig = computed(() => {
   50% {
     opacity: 0.5;
     transform: scale(1.2);
-  }
-}
-
-/* Running border - animated gradient sweep along bottom edge */
-.running-border {
-  position: relative;
-  border-radius: 1rem; /* match card border-radius */
-  overflow: hidden;
-}
-
-.running-border::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--color-status-running) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: border-sweep 1.5s ease-in-out infinite;
-}
-
-@keyframes border-sweep {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
   }
 }
 </style>
