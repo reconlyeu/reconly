@@ -46,6 +46,9 @@ class FetcherMetadata(ComponentMetadata):
         supports_test_fetch: Whether the fetcher supports test fetching during validation.
                              If True, validate() with test_fetch=True will attempt
                              to actually fetch content.
+        show_in_settings: Whether the fetcher should appear in the settings UI.
+                          Set to False for fetchers with dedicated configuration
+                          pages (e.g., Agent Research).
 
     Example:
         >>> metadata = FetcherMetadata(
@@ -66,6 +69,7 @@ class FetcherMetadata(ComponentMetadata):
     supports_incremental: bool = False
     supports_validation: bool = True
     supports_test_fetch: bool = True
+    show_in_settings: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary for API responses.
@@ -86,4 +90,5 @@ class FetcherMetadata(ComponentMetadata):
             "supports_incremental": self.supports_incremental,
             "supports_validation": self.supports_validation,
             "supports_test_fetch": self.supports_test_fetch,
+            "show_in_settings": self.show_in_settings,
         }

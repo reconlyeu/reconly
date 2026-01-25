@@ -100,6 +100,7 @@ class AgentFetcher(BaseFetcher):
         supports_incremental=False,
         supports_validation=False,
         supports_test_fetch=False,
+        show_in_settings=False,  # Agent has dedicated Agent Research tab
     )
 
     def fetch(

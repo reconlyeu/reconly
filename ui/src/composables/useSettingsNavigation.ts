@@ -4,7 +4,7 @@
  */
 import { ref } from 'vue';
 
-export type SettingsTab = 'providers' | 'email' | 'exports' | 'fetchers' | 'extensions';
+export type SettingsTab = 'providers' | 'email' | 'exports' | 'fetchers' | 'extensions' | 'agent';
 
 interface NavigationTarget {
   tab: SettingsTab;

@@ -4,7 +4,7 @@ This module defines common data structures used across different component types
 for configuration schemas and settings registration.
 """
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any
 
 
 @dataclass
@@ -23,6 +23,7 @@ class ConfigField:
         editable: Whether field can be edited via UI (False = env-only, for secrets)
         secret: Whether field contains sensitive data (should be masked in responses)
         options_from: Source for select options (e.g., "models" to populate from models list)
+        options: Static options for select fields: [{"value": "...", "label": "..."}]
     """
     key: str
     type: str  # "string" | "boolean" | "integer" | "path" | "select"
@@ -35,6 +36,7 @@ class ConfigField:
     editable: bool = True
     secret: bool = False
     options_from: str = ""
+    options: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -44,7 +46,7 @@ class ComponentConfigSchema:
     Attributes:
         fields: List of configurable fields
     """
-    fields: List[ConfigField] = field(default_factory=list)
+    fields: list[ConfigField] = field(default_factory=list)
 
 
 @dataclass

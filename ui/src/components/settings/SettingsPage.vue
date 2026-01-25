@@ -6,6 +6,7 @@ import EmailSettings from './EmailSettings.vue';
 import ExportSettings from './ExportSettings.vue';
 import FetcherSettings from './FetcherSettings.vue';
 import ExtensionsSection from './ExtensionsSection.vue';
+import AgentSettings from './AgentSettings.vue';
 import { useSettingsNavigation, type SettingsTab } from '@/composables/useSettingsNavigation';
 
 const activeTab = ref<SettingsTab>('providers');
@@ -28,6 +29,7 @@ const tabs = [
   { key: 'providers' as const, label: strings.settings.tabs.providers },
   { key: 'fetchers' as const, label: strings.settings.tabs.fetchers },
   { key: 'exports' as const, label: strings.settings.tabs.exports },
+  { key: 'agent' as const, label: strings.settings.tabs.agent },
   { key: 'extensions' as const, label: strings.settings.tabs.extensions },
   { key: 'email' as const, label: strings.settings.tabs.email },
 ];
@@ -75,6 +77,11 @@ const tabs = [
       <!-- Exports Tab -->
       <div v-if="activeTab === 'exports'">
         <ExportSettings />
+      </div>
+
+      <!-- Agent Tab -->
+      <div v-if="activeTab === 'agent'">
+        <AgentSettings />
       </div>
 
       <!-- Extensions Tab -->

@@ -58,6 +58,7 @@ def _fetcher_metadata_to_response(fetcher) -> Optional[FetcherMetadataResponse]:
             supports_incremental=metadata.supports_incremental,
             supports_validation=metadata.supports_validation,
             supports_test_fetch=metadata.supports_test_fetch,
+            show_in_settings=metadata.show_in_settings,
         )
     except (AttributeError, NotImplementedError):
         # Fetcher doesn't have get_metadata() or it's not implemented
