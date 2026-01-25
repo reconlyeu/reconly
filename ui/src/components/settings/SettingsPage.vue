@@ -30,8 +30,8 @@ const tabs = [
   { key: 'fetchers' as const, label: strings.settings.tabs.fetchers },
   { key: 'exports' as const, label: strings.settings.tabs.exports },
   { key: 'agent' as const, label: strings.settings.tabs.agent },
-  { key: 'extensions' as const, label: strings.settings.tabs.extensions },
   { key: 'email' as const, label: strings.settings.tabs.email },
+  { key: 'extensions' as const, label: strings.settings.tabs.extensions },
 ];
 </script>
 
@@ -84,14 +84,14 @@ const tabs = [
         <AgentSettings />
       </div>
 
-      <!-- Extensions Tab -->
-      <div v-if="activeTab === 'extensions'">
-        <ExtensionsSection />
-      </div>
-
       <!-- Email Tab -->
       <div v-if="activeTab === 'email'">
         <EmailSettings />
+      </div>
+
+      <!-- Extensions Tab -->
+      <div v-if="activeTab === 'extensions'">
+        <ExtensionsSection />
       </div>
     </div>
   </div>
