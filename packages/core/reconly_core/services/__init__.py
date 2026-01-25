@@ -23,6 +23,20 @@ from reconly_core.services.settings_registry import (
     get_all_categories,
 )
 from reconly_core.services.content_filter import ContentFilter
+from reconly_core.services.connection_service import (
+    create_connection,
+    get_connection,
+    get_connection_decrypted,
+    list_connections,
+    update_connection,
+    delete_connection,
+    update_connection_health,
+    get_sources_using_connection,
+    ConnectionError,
+    ConnectionNotFoundError,
+    ConnectionInUseError,
+    ConnectionEncryptionError,
+)
 
 __all__ = [
     # Digest service (legacy, single URL processing)
@@ -47,4 +61,17 @@ __all__ = [
     'get_all_categories',
     # Content filter
     'ContentFilter',
+    # Connection service
+    'create_connection',
+    'get_connection',
+    'get_connection_decrypted',
+    'list_connections',
+    'update_connection',
+    'delete_connection',
+    'update_connection_health',
+    'get_sources_using_connection',
+    'ConnectionError',
+    'ConnectionNotFoundError',
+    'ConnectionInUseError',
+    'ConnectionEncryptionError',
 ]

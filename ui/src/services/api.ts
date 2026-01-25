@@ -84,6 +84,13 @@ import type {
   OAuthAuthorizeResponse,
   OAuthStatusResponse,
   OAuthRevokeResponse,
+  // Connection types
+  Connection,
+  ConnectionType,
+  ConnectionCreate,
+  ConnectionUpdate,
+  ConnectionTestResult,
+  ConnectionListResponse,
 } from '@/types/entities';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1063,6 +1070,67 @@ export const graphApi = {
     const { data } = await apiClient.get<GraphResponse>(`/graph/expand/${nodeId}`, {
       params: { depth, min_similarity: minSimilarity },
     });
+    return data;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONNECTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export const connectionsApi = {
+  /**
+   * List all connections, optionally filtered by type.
+   * @param type - Optional connection type filter
+   */
+  list: async (type?: ConnectionType): Promise<{ total: number; items: Connection[] }> => {
+    const params = type ? { type } : {};
+    const { data } = await apiClient.get<ConnectionListResponse>('/connections', { params });
+    return data;
+  },
+
+  /**
+   * Create a new connection.
+   * Config will be encrypted before storage - credentials are never exposed in responses.
+   */
+  create: async (connection: ConnectionCreate): Promise<Connection> => {
+    const { data } = await apiClient.post<Connection>('/connections', connection);
+    return data;
+  },
+
+  /**
+   * Get a specific connection by ID.
+   */
+  get: async (id: number): Promise<Connection> => {
+    const { data } = await apiClient.get<Connection>(`/connections/${id}`);
+    return data;
+  },
+
+  /**
+   * Update an existing connection (partial update).
+   * Can update name, provider, or config (credentials).
+   */
+  update: async (id: number, connection: ConnectionUpdate): Promise<Connection> => {
+    const { data } = await apiClient.patch<Connection>(`/connections/${id}`, connection);
+    return data;
+  },
+
+  /**
+   * Delete a connection.
+   * @param id - Connection ID
+   * @param force - If true, deletes even if sources are using this connection
+   */
+  delete: async (id: number, force = false): Promise<void> => {
+    const params = force ? { force: true } : {};
+    await apiClient.delete(`/connections/${id}`, { params });
+  },
+
+  /**
+   * Test a connection to verify credentials work.
+   * For IMAP connections, attempts to connect to the mail server.
+   */
+  test: async (id: number): Promise<ConnectionTestResult> => {
+    const { data } = await apiClient.post<ConnectionTestResult>(`/connections/${id}/test`);
     return data;
   },
 };

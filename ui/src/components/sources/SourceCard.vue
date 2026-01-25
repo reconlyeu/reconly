@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Rss, Youtube, Globe, BookOpen, Edit, Trash2, Mail, Bot, RefreshCw } from 'lucide-vue-next';
+import { Rss, Youtube, Globe, BookOpen, Edit, Trash2, Mail, Bot, RefreshCw, Server } from 'lucide-vue-next';
 import type { Source } from '@/types/entities';
 import { useConfirm } from '@/composables/useConfirm';
 import {
@@ -187,6 +187,14 @@ const handleDelete = () => {
       <p class="truncate text-sm text-text-muted">
         {{ source.url }}
       </p>
+    </div>
+
+    <!-- Connection Name (for sources using a Connection) -->
+    <div v-if="source.connection_name" class="mt-1 flex items-center gap-1.5">
+      <Server :size="12" class="text-text-muted" />
+      <span class="text-xs text-text-muted">
+        {{ strings.sources.viaConnection.replace('{name}', source.connection_name) }}
+      </span>
     </div>
 
     <template #footer>

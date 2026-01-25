@@ -17,6 +17,8 @@ class SourceBase(BaseModel):
     url: str = Field(..., max_length=2048)
     config: Optional[Dict[str, Any]] = None
     enabled: Optional[bool] = True
+    # Connection reference for sources using reusable credentials
+    connection_id: Optional[int] = Field(None, description="ID of the Connection to use for credentials")
     # Content filtering
     include_keywords: Optional[List[str]] = None
     exclude_keywords: Optional[List[str]] = None
@@ -50,6 +52,8 @@ class SourceUpdate(BaseModel):
     url: Optional[str] = Field(None, max_length=2048)
     config: Optional[Dict[str, Any]] = None
     enabled: Optional[bool] = None
+    # Connection reference for sources using reusable credentials
+    connection_id: Optional[int] = Field(None, description="ID of the Connection to use for credentials")
     # Content filtering
     include_keywords: Optional[List[str]] = None
     exclude_keywords: Optional[List[str]] = None
@@ -78,6 +82,11 @@ class SourceResponse(SourceBase):
     user_id: Optional[int] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
+    # Connection info - connection_id is inherited from SourceBase
+    connection_name: Optional[str] = Field(
+        None,
+        description="Name of the associated Connection (for display in UI)"
+    )
     # IMAP-specific fields
     auth_status: Optional[AuthStatus] = Field(
         None,
@@ -95,10 +104,15 @@ class IMAPSourceCreateRequest(BaseModel):
     """Request schema for creating an IMAP source.
 
     For OAuth providers (gmail, outlook), credentials are handled via OAuth flow.
-    For generic IMAP, password is validated and encrypted before storage.
+    For generic IMAP, a connection_id referencing an email_imap Connection is required.
     """
     name: str = Field(..., min_length=1, max_length=255, description="Source name")
     provider: IMAPProvider = Field(..., description="IMAP provider type")
+    # Connection reference for generic IMAP - credentials come from Connection
+    connection_id: Optional[int] = Field(
+        None,
+        description="ID of email_imap Connection to use for credentials (required for generic IMAP)"
+    )
     # Content filtering (optional)
     include_keywords: Optional[List[str]] = Field(None, description="Keywords to include")
     exclude_keywords: Optional[List[str]] = Field(None, description="Keywords to exclude")
@@ -108,23 +122,13 @@ class IMAPSourceCreateRequest(BaseModel):
     folders: Optional[List[str]] = Field(None, description="IMAP folders to fetch (default: INBOX)")
     from_filter: Optional[str] = Field(None, description="Filter emails by sender pattern")
     subject_filter: Optional[str] = Field(None, description="Filter emails by subject pattern")
-    # Generic IMAP only
-    imap_host: Optional[str] = Field(None, description="IMAP server hostname (required for generic)")
-    imap_port: Optional[int] = Field(993, description="IMAP server port")
-    imap_username: Optional[str] = Field(None, description="IMAP username (required for generic)")
-    imap_password: Optional[str] = Field(None, description="IMAP password (required for generic, never returned)")
-    imap_use_ssl: Optional[bool] = Field(True, description="Use SSL/TLS for connection")
 
     @model_validator(mode='after')
     def validate_generic_imap_fields(self):
-        """Validate that generic IMAP has required fields."""
+        """Validate that generic IMAP has a connection_id."""
         if self.provider == "generic":
-            if not self.imap_host:
-                raise ValueError("imap_host is required for generic IMAP provider")
-            if not self.imap_username:
-                raise ValueError("imap_username is required for generic IMAP provider")
-            if not self.imap_password:
-                raise ValueError("imap_password is required for generic IMAP provider")
+            if not self.connection_id:
+                raise ValueError("connection_id is required for generic IMAP provider")
         return self
 
 

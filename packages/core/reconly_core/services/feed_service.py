@@ -32,6 +32,12 @@ from reconly_core.tracking import FeedTracker
 from reconly_core.logging import get_logger, generate_trace_id, clear_trace_id
 from reconly_core.services.email_service import EmailService
 from reconly_core.services.content_filter import ContentFilter
+from reconly_core.services.connection_service import (
+    get_connection,
+    get_connection_decrypted,
+    update_connection_health,
+    ConnectionEncryptionError,
+)
 from reconly_core.resilience import SourceCircuitBreaker, CircuitBreakerConfig
 
 logger = get_logger(__name__)
@@ -989,26 +995,81 @@ class FeedService:
     ) -> Dict[str, Any]:
         """Process an IMAP email source.
 
-        Fetches emails from IMAP server using credentials stored in source.config,
-        processes each email through summarization, and tracks processed message IDs
-        for incremental fetching.
+        IMAP sources MUST have a connection_id linking to a Connection entity
+        that stores the encrypted credentials. The feed_service resolves and
+        injects credentials with `_connection_` prefix before calling the fetcher.
+
+        Source.config stores only variable aspects:
+        - folders: List of folders to fetch
+        - from_filter: Filter by sender pattern
+        - subject_filter: Filter by subject pattern
+        - processed_message_ids: Tracking for incremental fetch
         """
         if fetcher is None:
             fetcher = get_fetcher('imap')
 
-        # Extract IMAP config from source
+        # IMAP sources MUST have a connection_id
+        if not source.connection_id:
+            logger.error(
+                "imap_source_missing_connection",
+                source_id=source.id,
+                source_name=source.name,
+            )
+            return {
+                "success": False,
+                "error": "IMAP sources require a Connection. Please configure a connection for this source."
+            }
+
+        # Resolve Connection and get decrypted config
+        connection = get_connection(session, source.connection_id)
+        if not connection:
+            logger.error(
+                "imap_connection_not_found",
+                source_id=source.id,
+                source_name=source.name,
+                connection_id=source.connection_id,
+            )
+            return {
+                "success": False,
+                "error": f"Connection {source.connection_id} not found. Please reconfigure this source."
+            }
+
+        try:
+            conn_config = get_connection_decrypted(session, source.connection_id)
+            if not conn_config:
+                raise ConnectionEncryptionError("Connection config could not be decrypted")
+        except ConnectionEncryptionError as e:
+            logger.error(
+                "imap_connection_decrypt_failed",
+                source_id=source.id,
+                source_name=source.name,
+                connection_id=source.connection_id,
+                connection_name=connection.name,
+                error=str(e),
+            )
+            update_connection_health(session, source.connection_id, success=False)
+            session.commit()
+            return {
+                "success": False,
+                "error": f"Failed to decrypt connection credentials: {e}"
+            }
+
+        # Extract source-specific config (variable aspects only)
         source_config = source.config or {}
 
-        # Build kwargs for IMAP fetcher
+        # Build kwargs with injected Connection credentials (_connection_* prefix)
+        # and source-specific variable config
         imap_kwargs = {
-            'imap_provider': source_config.get('provider', 'generic'),
-            'imap_host': source_config.get('imap_host'),
-            'imap_port': source_config.get('imap_port', 993),
-            'imap_username': source_config.get('imap_username'),
-            # Support both plaintext (dev/testing) and encrypted (production) passwords
-            'imap_password': source_config.get('imap_password'),
-            'imap_password_encrypted': source_config.get('imap_password_encrypted'),
-            'imap_use_ssl': source_config.get('imap_use_ssl', True),
+            # Credentials from Connection (static, injected with prefix)
+            '_connection_host': conn_config.get('host'),
+            '_connection_port': conn_config.get('port', 993),
+            '_connection_username': conn_config.get('username'),
+            '_connection_password': conn_config.get('password'),
+            '_connection_use_ssl': conn_config.get('use_ssl', True),
+            'connection_id': source.connection_id,
+            # Provider info from Connection (for logging)
+            'imap_provider': connection.provider or 'generic',
+            # Variable config from Source
             'imap_folders': source_config.get('folders', ['INBOX']),
             'imap_from_filter': source_config.get('from_filter'),
             'imap_subject_filter': source_config.get('subject_filter'),
@@ -1024,6 +1085,8 @@ class FeedService:
             "imap_fetch_start",
             source_id=source.id,
             source_name=source.name,
+            connection_id=connection.id,
+            connection_name=connection.name,
             provider=imap_kwargs['imap_provider'],
             folders=imap_kwargs['imap_folders'],
         )
@@ -1031,16 +1094,23 @@ class FeedService:
         try:
             # Fetch emails
             emails = fetcher.fetch(
-                source.url or f"imap://{imap_kwargs['imap_host']}",
+                source.url or f"imap://{imap_kwargs['_connection_host']}",
                 since=last_read,
                 max_items=max_items,
                 **imap_kwargs
             )
+            # Update connection health on success
+            update_connection_health(session, source.connection_id, success=True)
         except Exception as e:
+            # Update connection health on failure
+            update_connection_health(session, source.connection_id, success=False)
+            session.commit()
             logger.error(
                 "imap_fetch_error",
                 source_id=source.id,
                 source_name=source.name,
+                connection_id=connection.id,
+                connection_name=connection.name,
                 error=str(e),
                 exc_info=True,
             )
@@ -1051,6 +1121,8 @@ class FeedService:
                 "imap_fetch_empty",
                 source_id=source.id,
                 source_name=source.name,
+                connection_id=connection.id,
+                connection_name=connection.name,
             )
             return {"success": True, "items_count": 0}
 
@@ -1062,6 +1134,8 @@ class FeedService:
             "imap_fetch_complete",
             source_id=source.id,
             source_name=source.name,
+            connection_id=connection.id,
+            connection_name=connection.name,
             email_count=len(emails),
         )
 
@@ -1158,6 +1232,8 @@ class FeedService:
                 logger.error(
                     "imap_email_process_error",
                     source_id=source.id,
+                    connection_id=connection.id,
+                    connection_name=connection.name,
                     email_subject=email.get("title", "unknown"),
                     error=str(e),
                     exc_info=True,
@@ -1178,6 +1254,8 @@ class FeedService:
             "imap_source_complete",
             source_id=source.id,
             source_name=source.name,
+            connection_id=connection.id,
+            connection_name=connection.name,
             items_processed=items_count,
             total_cost=total_cost,
         )

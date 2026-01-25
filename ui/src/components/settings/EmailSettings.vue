@@ -3,8 +3,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query';
 import { settingsApi, apiClient } from '@/services/api';
 import SettingField from './SettingField.vue';
+import ConnectionList from './ConnectionList.vue';
 import { useToast } from '@/composables/useToast';
-import { Loader2, Save, RotateCcw, Mail, Send } from 'lucide-vue-next';
+import { Loader2, Save, RotateCcw, Mail, Send, Inbox } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 import type { SettingValue } from '@/types/entities';
 
@@ -138,7 +139,19 @@ const getEmailSetting = (key: string): SettingValue => {
 
 <template>
   <div class="space-y-6">
-    <!-- Email Settings Card -->
+    <!-- Email Connections (Incoming) Section -->
+    <div class="rounded-2xl border border-border-subtle bg-bg-elevated p-8">
+      <div class="flex items-center gap-3 mb-6">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+          <Inbox :size="20" class="text-blue-500" />
+        </div>
+        <h2 class="text-lg font-semibold text-text-primary">{{ strings.settings.email.connectionsSection }}</h2>
+      </div>
+
+      <ConnectionList />
+    </div>
+
+    <!-- SMTP Configuration (Outgoing) Card -->
     <div class="rounded-2xl border border-border-subtle bg-bg-elevated p-8">
       <div class="flex items-center gap-3 mb-6">
         <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-accent-primary/10">

@@ -297,7 +297,7 @@ class MyFetcher(BaseFetcher):
 | Property | Type | Description |
 |----------|------|-------------|
 | `key` | str | Unique identifier for setting |
-| `type` | str | `"string"`, `"boolean"`, `"integer"`, or `"path"` |
+| `type` | str | `"string"`, `"boolean"`, `"integer"`, `"path"`, or `"connection"` |
 | `label` | str | Human-readable label for UI |
 | `description` | str | Help text |
 | `required` | bool | Whether field is required for activation |
@@ -306,12 +306,220 @@ class MyFetcher(BaseFetcher):
 | `secret` | bool | Mask value in UI (for API keys) |
 | `env_var` | str | Environment variable name |
 | `editable` | bool | Whether editable in UI (False = env var only) |
+| `connection_type` | str | For `type="connection"`, filter connections by type |
 
 ### Activation Behavior
 
 - Extensions with **no required fields**: Auto-enabled on install
 - Extensions with **required fields**: Disabled until all required fields are configured
 - Users configure via Settings > Extensions > Configure
+
+---
+
+## Using Connections for Authentication
+
+Extensions can use the Connections system for reusable credential management. This is useful for per-user credentials that vary by installation.
+
+### When to Use Connections
+
+**Use Connections for:**
+- Per-user credentials (IMAP passwords, personal API keys)
+- Reusable credentials across multiple sources/exporters
+- Credentials that need health tracking and testing
+
+**Use ConfigField with env_var for:**
+- System-wide API keys shared across all users
+- Infrastructure configuration (database URLs, service endpoints)
+- Settings that don't vary per user
+
+### Declaring Connection Requirements
+
+Add connection metadata to your component:
+
+**For fetchers:**
+```python
+from reconly_core.fetchers.base import BaseFetcher, FetcherMetadata
+
+class MyFetcher(BaseFetcher):
+    # Extension metadata
+    __extension_name__ = "My Service Fetcher"
+    __extension_version__ = "1.0.0"
+    __extension_author__ = "Your Name"
+    __extension_min_reconly__ = "0.5.0"
+
+    # Component metadata with connection requirements
+    metadata = FetcherMetadata(
+        name='my-service',
+        display_name='My Service',
+        description='Fetch from My Service',
+        icon='mdi:cloud',
+
+        # Connection requirements
+        requires_connection=True,
+        connection_types=['api_key', 'http_basic'],  # Supported types
+    )
+
+    def get_config_schema(self):
+        return FetcherConfigSchema(
+            fields=[
+                ConfigField(
+                    key='connection_id',
+                    type='connection',
+                    label='Connection',
+                    description='Authentication credentials',
+                    required=True,
+                    connection_type='api_key',  # Filter to this type
+                ),
+                # Other source-specific fields...
+            ]
+        )
+```
+
+**For exporters:**
+```python
+from reconly_core.exporters.base import BaseExporter, ExporterMetadata
+
+class MyExporter(BaseExporter):
+    # Extension metadata
+    __extension_name__ = "My Service Exporter"
+    __extension_version__ = "1.0.0"
+    __extension_author__ = "Your Name"
+    __extension_min_reconly__ = "0.5.0"
+
+    # Component metadata with connection requirements
+    metadata = ExporterMetadata(
+        name='my-service',
+        display_name='My Service',
+        description='Export to My Service',
+        icon='mdi:upload',
+        file_extension='.json',
+        mime_type='application/json',
+
+        # Connection requirements
+        requires_connection=True,
+        connection_types=['api_key'],
+    )
+
+    def get_config_schema(self):
+        return ExporterConfigSchema(
+            fields=[
+                ConfigField(
+                    key='connection_id',
+                    type='connection',
+                    label='Connection',
+                    description='Authentication credentials',
+                    required=True,
+                    connection_type='api_key',
+                ),
+                # Other exporter-specific fields...
+            ]
+        )
+```
+
+### Accessing Injected Credentials
+
+The backend automatically injects decrypted credentials with a `_connection_` prefix:
+
+**For fetchers:**
+```python
+def fetch(self, url, since=None, max_items=None, **kwargs):
+    # Credentials automatically injected by backend
+    api_key = kwargs.get('_connection_api_key')
+    endpoint = kwargs.get('_connection_endpoint', 'https://api.example.com')
+
+    # Use for API calls
+    headers = {'Authorization': f'Bearer {api_key}'}
+    response = requests.get(f'{endpoint}/items', headers=headers)
+    # ... process response
+```
+
+**For exporters:**
+```python
+def export(self, digests, config=None):
+    config = config or {}
+
+    # Credentials automatically injected by backend
+    api_key = config.get('_connection_api_key')
+    endpoint = config.get('_connection_endpoint', 'https://api.example.com')
+
+    # Use for API calls
+    headers = {'Authorization': f'Bearer {api_key}'}
+    # ... export digests
+```
+
+### Connection Types
+
+| Type | Use Case | Injected Fields |
+|------|----------|-----------------|
+| `email_imap` | IMAP mailboxes | `_connection_host`, `_connection_port`, `_connection_username`, `_connection_password`, `_connection_use_ssl` |
+| `email_oauth` | OAuth providers | `_connection_provider`, `_connection_access_token`, `_connection_refresh_token` |
+| `http_basic` | HTTP Basic Auth | `_connection_username`, `_connection_password` |
+| `api_key` | API key auth | `_connection_api_key`, `_connection_endpoint` (optional) |
+
+### Example: Reddit Fetcher with Connections
+
+```python
+"""Reddit fetcher with connection-based authentication."""
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from reconly_core.fetchers.base import BaseFetcher, FetcherMetadata, FetcherConfigSchema
+from reconly_core.config_types import ConfigField
+
+
+class RedditFetcher(BaseFetcher):
+    """Fetch posts from Reddit subreddits."""
+
+    __extension_name__ = "Reddit Fetcher"
+    __extension_version__ = "1.0.0"
+    __extension_author__ = "Your Name"
+    __extension_min_reconly__ = "0.5.0"
+
+    metadata = FetcherMetadata(
+        name='reddit',
+        display_name='Reddit',
+        description='Fetch posts from Reddit',
+        icon='mdi:reddit',
+        requires_connection=True,
+        connection_types=['api_key'],  # Reddit uses app credentials
+    )
+
+    def get_config_schema(self):
+        return FetcherConfigSchema(
+            supports_incremental_fetch=True,
+            fields=[
+                ConfigField(
+                    key='connection_id',
+                    type='connection',
+                    label='Reddit API Connection',
+                    description='Reddit app credentials',
+                    required=True,
+                    connection_type='api_key',
+                ),
+                ConfigField(
+                    key='max_posts',
+                    type='integer',
+                    label='Max Posts',
+                    description='Maximum posts to fetch per run',
+                    default=50,
+                    required=False,
+                ),
+            ],
+        )
+
+    def fetch(self, url, since=None, max_items=None, **kwargs):
+        # Access injected credentials
+        api_key = kwargs.get('_connection_api_key')
+        if not api_key:
+            raise ValueError("Reddit API key not configured")
+
+        # Access source-specific config
+        max_posts = kwargs.get('max_posts', 50)
+
+        # Use credentials for API calls
+        headers = {'Authorization': f'Bearer {api_key}'}
+        # ... fetch from Reddit API
+```
 
 ---
 

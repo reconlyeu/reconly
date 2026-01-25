@@ -69,6 +69,9 @@ export interface Source {
   default_language?: string | null;
   default_provider?: string | null;
   default_model?: string | null;
+  // Connection reference for sources using reusable credentials
+  connection_id?: number | null;
+  connection_name?: string | null;
   // Content filtering
   include_keywords?: string[] | null;
   exclude_keywords?: string[] | null;
@@ -1203,6 +1206,8 @@ export interface GraphFilters {
 export interface IMAPSourceCreate {
   name: string;
   provider: IMAPProvider;
+  // Connection reference for generic IMAP - credentials come from Connection
+  connection_id?: number | null;
   // Content filtering (optional)
   include_keywords?: string[] | null;
   exclude_keywords?: string[] | null;
@@ -1212,12 +1217,6 @@ export interface IMAPSourceCreate {
   folders?: string[];
   from_filter?: string;
   subject_filter?: string;
-  // Generic IMAP only
-  imap_host?: string;
-  imap_port?: number;
-  imap_username?: string;
-  imap_password?: string;
-  imap_use_ssl?: boolean;
 }
 
 export interface IMAPSourceCreateResponse {
@@ -1367,4 +1366,108 @@ export interface ChatStreamDoneEvent {
 
 export interface ChatStreamErrorEvent {
   error: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CONNECTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Connection type determines the credential structure.
+ */
+export type ConnectionType = 'email_imap' | 'email_oauth' | 'http_basic' | 'api_key';
+
+/**
+ * Provider for email connections (auto-fills host/port).
+ */
+export type ConnectionProvider = 'gmail' | 'outlook' | 'generic';
+
+/**
+ * IMAP connection configuration.
+ * Used when creating EMAIL_IMAP connections.
+ */
+export interface EmailIMAPConfig {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  use_ssl: boolean;
+}
+
+/**
+ * HTTP Basic authentication configuration.
+ */
+export interface HTTPBasicConfig {
+  username: string;
+  password: string;
+}
+
+/**
+ * API key authentication configuration.
+ */
+export interface APIKeyConfig {
+  api_key: string;
+  endpoint?: string | null;
+}
+
+/**
+ * Connection response - credentials are NEVER included.
+ */
+export interface Connection {
+  id: number;
+  name: string;
+  type: ConnectionType;
+  provider: ConnectionProvider | null;
+
+  // Health tracking
+  last_check_at: string | null;
+  last_success_at: string | null;
+  last_failure_at: string | null;
+
+  // Credential indicator (not the actual password)
+  has_password: boolean;
+
+  // Usage tracking
+  source_count: number;
+
+  // Timestamps
+  created_at: string;
+  updated_at: string | null;
+}
+
+/**
+ * Schema for creating a new connection.
+ * Config is a plaintext dict that gets encrypted before storage.
+ */
+export interface ConnectionCreate {
+  name: string;
+  type: ConnectionType;
+  provider?: ConnectionProvider | null;
+  config: EmailIMAPConfig | HTTPBasicConfig | APIKeyConfig | Record<string, unknown>;
+}
+
+/**
+ * Schema for updating an existing connection (partial update).
+ */
+export interface ConnectionUpdate {
+  name?: string;
+  provider?: ConnectionProvider | null;
+  config?: EmailIMAPConfig | HTTPBasicConfig | APIKeyConfig | Record<string, unknown>;
+}
+
+/**
+ * Result of testing a connection.
+ */
+export interface ConnectionTestResult {
+  success: boolean;
+  message: string;
+  response_time_ms: number | null;
+}
+
+/**
+ * Paginated list of connections.
+ */
+export interface ConnectionListResponse {
+  total: number;
+  items: Connection[];
 }

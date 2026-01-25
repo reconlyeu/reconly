@@ -6,8 +6,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session, joinedload
 
-from reconly_core.database.models import OAuthCredential, Source
-from reconly_core.email.crypto import encrypt_token, TokenEncryptionError
+from reconly_core.database.models import Connection, OAuthCredential, Source
 from reconly_core.email.oauth import create_oauth_state, get_redirect_uri
 from reconly_core.email.gmail import generate_gmail_auth_url
 from reconly_core.email.outlook import generate_outlook_auth_url
@@ -66,9 +65,12 @@ def _source_to_response(source: Source) -> SourceResponse:
     Handles:
     - Sanitizing sensitive config fields
     - Adding oauth_credential_id from relationship
+    - Adding connection_name from relationship
     """
     # oauth_credentials is uselist=False, so it's a single object or None
     oauth_credential = getattr(source, 'oauth_credentials', None)
+    # connection is loaded via joinedload or may be None
+    connection = getattr(source, 'connection', None)
 
     return SourceResponse(
         id=source.id,
@@ -77,6 +79,8 @@ def _source_to_response(source: Source) -> SourceResponse:
         url=source.url,
         config=_sanitize_source_config(source.config, source.type),
         enabled=source.enabled,
+        connection_id=source.connection_id,
+        connection_name=connection.name if connection else None,
         include_keywords=source.include_keywords,
         exclude_keywords=source.exclude_keywords,
         filter_mode=source.filter_mode,
@@ -110,6 +114,7 @@ def _build_imap_source(
     url: str,
     config: dict,
     auth_status: str,
+    connection_id: Optional[int] = None,
 ) -> Source:
     """Build a Source model for IMAP source creation.
 
@@ -118,6 +123,7 @@ def _build_imap_source(
         url: The computed URL for the source
         config: The IMAP configuration dict
         auth_status: Authentication status ('active' or 'pending_oauth')
+        connection_id: Optional Connection ID for credential reference
 
     Returns:
         Source model instance (not yet committed)
@@ -129,6 +135,7 @@ def _build_imap_source(
         config=config,
         enabled=True,
         auth_status=auth_status,
+        connection_id=connection_id,
         include_keywords=imap_request.include_keywords,
         exclude_keywords=imap_request.exclude_keywords,
         filter_mode=imap_request.filter_mode,
@@ -260,7 +267,10 @@ async def list_sources(
     db: Session = Depends(get_db)
 ):
     """List all sources with optional filtering."""
-    query = db.query(Source).options(joinedload(Source.oauth_credentials))
+    query = db.query(Source).options(
+        joinedload(Source.oauth_credentials),
+        joinedload(Source.connection),
+    )
 
     if type:
         query = query.filter(Source.type == type)
@@ -347,22 +357,13 @@ async def create_imap_source(
     - User must complete OAuth at returned URL to activate source
 
     For generic IMAP:
-    - Validates IMAP connection with provided credentials
-    - Encrypts password before storing in config
+    - Requires a connection_id referencing an email_imap Connection
+    - Credentials are retrieved from the Connection at fetch time
     - Sets auth_status="active" on success
 
     Rate limited to 10 requests per minute per IP.
     """
     provider = imap_request.provider
-
-    # Build URL based on provider
-    if provider == "gmail":
-        url = "gmail://"
-    elif provider == "outlook":
-        url = "outlook://"
-    else:
-        # Generic IMAP URL
-        url = f"imap://{imap_request.imap_host}:{imap_request.imap_port}"
 
     # Build IMAP config (shared fields)
     config = {
@@ -376,6 +377,9 @@ async def create_imap_source(
 
     # Handle OAuth providers
     if provider in ("gmail", "outlook"):
+        # Build URL based on provider
+        url = "gmail://" if provider == "gmail" else "outlook://"
+
         # Check if OAuth is configured
         if not _is_oauth_provider_configured(provider):
             env_prefix = "GOOGLE" if provider == "gmail" else "MICROSOFT"
@@ -425,36 +429,40 @@ async def create_imap_source(
             )
 
     else:
-        # Generic IMAP - validate and encrypt credentials
-        config["imap_host"] = imap_request.imap_host
-        config["imap_port"] = imap_request.imap_port
-        config["imap_username"] = imap_request.imap_username
-        config["imap_use_ssl"] = imap_request.imap_use_ssl
+        # Generic IMAP - requires a Connection for credentials
+        connection_id = imap_request.connection_id
 
-        # Encrypt password before storing
-        try:
-            encrypted_password = encrypt_token(imap_request.imap_password)
-            config["imap_password_encrypted"] = encrypted_password
-        except TokenEncryptionError as e:
-            logger.error(f"Failed to encrypt IMAP password: {e}")
+        # Validate connection exists and is the right type
+        connection = db.query(Connection).filter(Connection.id == connection_id).first()
+        if not connection:
             raise HTTPException(
-                status_code=500,
-                detail="Failed to encrypt credentials. Ensure SECRET_KEY is set."
+                status_code=404,
+                detail=f"Connection with id {connection_id} not found"
+            )
+        if connection.type != "email_imap":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Connection must be type 'email_imap', got '{connection.type}'"
             )
 
-        # TODO: Optionally validate IMAP connection before saving
-        # This would require importing GenericIMAPProvider and testing connection
-        # For now, we trust the user's credentials and set status to active
+        # Build URL from connection (imap:// with connection reference)
+        # The actual host/port comes from the Connection at fetch time
+        url = f"imap://connection/{connection_id}"
 
-        db_source = _build_imap_source(imap_request, url, config, "active")
+        # Create source with connection_id - credentials come from Connection at fetch time
+        db_source = _build_imap_source(imap_request, url, config, "active", connection_id)
         db.add(db_source)
         db.commit()
         db.refresh(db_source)
 
+        # Set the connection relationship to avoid lazy load (we already fetched it)
+        db_source.connection = connection
+
         logger.info(
-            "Created generic IMAP source",
+            "Created generic IMAP source with connection",
             source_id=db_source.id,
-            host=imap_request.imap_host,
+            connection_id=connection_id,
+            connection_name=connection.name,
         )
 
         return IMAPSourceCreateResponse(
@@ -471,7 +479,8 @@ async def get_source(
 ):
     """Get a specific source."""
     source = db.query(Source).options(
-        joinedload(Source.oauth_credentials)
+        joinedload(Source.oauth_credentials),
+        joinedload(Source.connection),
     ).filter(Source.id == source_id).first()
 
     if not source:
@@ -526,7 +535,8 @@ def _apply_source_update(
     Shared logic for PUT and PATCH endpoints.
     """
     db_source = db.query(Source).options(
-        joinedload(Source.oauth_credentials)
+        joinedload(Source.oauth_credentials),
+        joinedload(Source.connection),
     ).filter(Source.id == source_id).first()
 
     if not db_source:

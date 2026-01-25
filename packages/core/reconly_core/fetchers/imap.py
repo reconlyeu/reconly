@@ -124,6 +124,8 @@ class IMAPFetcher(BaseFetcher):
         supports_incremental=True,
         supports_validation=True,
         supports_test_fetch=True,
+        requires_connection=True,
+        connection_types=['email_imap'],
     )
 
     def __init__(self):
@@ -325,57 +327,71 @@ class IMAPFetcher(BaseFetcher):
     def _build_config(self, url: str, **kwargs) -> IMAPConfig:
         """Build IMAPConfig from URL and kwargs.
 
+        IMAP sources MUST have credentials injected via _connection_* kwargs from
+        feed_service. The feed_service resolves the Connection entity and injects
+        decrypted credentials with the _connection_ prefix.
+
+        Expected kwargs:
+            _connection_host: IMAP server hostname (from Connection)
+            _connection_port: IMAP server port (from Connection)
+            _connection_username: Email account username (from Connection)
+            _connection_password: Email account password (from Connection)
+            _connection_use_ssl: Use SSL/TLS (from Connection)
+            imap_provider: Provider type for logging (gmail, outlook, generic)
+            imap_folders: List of folders to fetch (from Source.config)
+            imap_from_filter: Filter by sender (from Source.config)
+            imap_subject_filter: Filter by subject (from Source.config)
+
         Args:
-            url: IMAP URL or config identifier
-            **kwargs: Configuration options
+            url: IMAP URL (used for fallback host extraction only)
+            **kwargs: Configuration options with _connection_* prefix for credentials
 
         Returns:
             IMAPConfig instance
+
+        Raises:
+            IMAPError: If required _connection_* credentials are missing
         """
-        # Extract provider type
+        # Extract provider type (for logging/display)
         provider = kwargs.get("imap_provider", "generic")
 
-        # Map provider to host if not specified
-        host = kwargs.get("imap_host")
+        # REQUIRE credentials from Connection (injected with _connection_ prefix)
+        host = kwargs.get("_connection_host")
+        port = kwargs.get("_connection_port", 993)
+        username = kwargs.get("_connection_username")
+        password = kwargs.get("_connection_password")
+        use_ssl = kwargs.get("_connection_use_ssl", True)
+
+        # Validate required credentials
         if not host:
-            if provider == "gmail":
-                host = "imap.gmail.com"
-            elif provider == "outlook":
-                host = "outlook.office365.com"
-            elif url.startswith("imap://"):
-                # Extract host from URL
-                host = url.replace("imap://", "").split("/")[0].split(":")[0]
-
-        # Get password - either plaintext or decrypt from encrypted storage
-        password = kwargs.get("imap_password", "")
-        if not password and kwargs.get("imap_password_encrypted"):
-            try:
-                from reconly_core.email.crypto import decrypt_token
-                password = decrypt_token(kwargs["imap_password_encrypted"])
-                if not password:
-                    raise ValueError("Decrypted password is empty")
-            except Exception as e:
-                logger.error(f"Failed to decrypt IMAP password: {e}")
-                raise IMAPError(
-                    f"Cannot decrypt IMAP password. Ensure SECRET_KEY is set correctly. "
-                    f"Error: {e}"
-                )
-
-        # Validate we have a password
-        if not password:
-            logger.error("No IMAP password provided (neither plaintext nor encrypted)")
+            logger.error("IMAP _connection_host not provided - Connection credentials not injected")
             raise IMAPError(
-                "IMAP password not configured. Please reconfigure the source with credentials."
+                "IMAP connection credentials not configured. "
+                "IMAP sources require a Connection with host, username, and password."
             )
 
-        # Build config
+        if not username:
+            logger.error("IMAP _connection_username not provided - Connection credentials not injected")
+            raise IMAPError(
+                "IMAP connection username not configured. "
+                "Please ensure the Connection has a valid username."
+            )
+
+        if not password:
+            logger.error("IMAP _connection_password not provided - Connection credentials not injected")
+            raise IMAPError(
+                "IMAP connection password not configured. "
+                "Please ensure the Connection has a valid password."
+            )
+
+        # Build config with credentials from Connection and variable config from Source
         return IMAPConfig(
             provider=provider,
             host=host,
-            port=int(kwargs.get("imap_port", 993)),
-            username=kwargs.get("imap_username", ""),
+            port=int(port),
+            username=username,
             password=password,
-            use_ssl=kwargs.get("imap_use_ssl", True),
+            use_ssl=use_ssl,
             folders=kwargs.get("imap_folders", ["INBOX"]),
             from_filter=kwargs.get("imap_from_filter"),
             subject_filter=kwargs.get("imap_subject_filter"),
@@ -497,62 +513,27 @@ class IMAPFetcher(BaseFetcher):
     def get_config_schema(self) -> FetcherConfigSchema:
         """Get the configuration schema for this fetcher.
 
+        IMAP sources require a Connection for credentials (host, port, username,
+        password, ssl). This schema only includes source-specific variable config
+        like folders and filters.
+
         Returns:
-            FetcherConfigSchema with IMAP configuration fields
+            FetcherConfigSchema with IMAP source configuration fields
         """
         return FetcherConfigSchema(
             fields=[
+                # Connection selector (credentials come from Connection entity)
                 ConfigField(
-                    key="imap_provider",
-                    type="string",
-                    label="Email Provider",
-                    description="Email provider type",
-                    default="generic",
-                    placeholder="generic",
-                ),
-                ConfigField(
-                    key="imap_host",
-                    type="string",
-                    label="IMAP Server",
-                    description="IMAP server hostname (e.g., imap.gmail.com)",
+                    key="connection_id",
+                    type="connection",
+                    label="Email Connection",
+                    description="Select an email connection with IMAP credentials",
                     required=True,
-                    placeholder="imap.example.com",
+                    connection_type="email_imap",
                 ),
+                # Source-specific variable config (stored in Source.config)
                 ConfigField(
-                    key="imap_port",
-                    type="integer",
-                    label="IMAP Port",
-                    description="IMAP server port (993 for SSL)",
-                    default=993,
-                ),
-                ConfigField(
-                    key="imap_username",
-                    type="string",
-                    label="Username",
-                    description="Email account username/address",
-                    required=True,
-                    placeholder="user@example.com",
-                    env_var="IMAP_USERNAME",
-                ),
-                ConfigField(
-                    key="imap_password",
-                    type="string",
-                    label="Password",
-                    description="Email account password or app-specific password",
-                    required=True,
-                    secret=True,
-                    editable=False,
-                    env_var="IMAP_PASSWORD",
-                ),
-                ConfigField(
-                    key="imap_use_ssl",
-                    type="boolean",
-                    label="Use SSL/TLS",
-                    description="Connect using SSL/TLS encryption",
-                    default=True,
-                ),
-                ConfigField(
-                    key="imap_folders",
+                    key="folders",
                     type="string",
                     label="Folders",
                     description="Comma-separated list of folders to fetch (e.g., INBOX,Sent)",
@@ -560,14 +541,14 @@ class IMAPFetcher(BaseFetcher):
                     placeholder="INBOX",
                 ),
                 ConfigField(
-                    key="imap_from_filter",
+                    key="from_filter",
                     type="string",
                     label="From Filter",
                     description="Filter emails by sender (supports * wildcard)",
                     placeholder="*@newsletter.example.com",
                 ),
                 ConfigField(
-                    key="imap_subject_filter",
+                    key="subject_filter",
                     type="string",
                     label="Subject Filter",
                     description="Filter emails by subject (supports * wildcard)",
