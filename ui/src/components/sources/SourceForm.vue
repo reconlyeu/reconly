@@ -109,14 +109,10 @@ const agentPrompt = ref('');
 
 // IMAP-specific fields
 const imapProvider = ref<IMAPProvider>('gmail');
+const imapConnectionId = ref<number | null>(null);
 const imapFolders = ref('');
 const imapFromFilter = ref('');
 const imapSubjectFilter = ref('');
-const imapHost = ref('');
-const imapPort = ref(993);
-const imapUsername = ref('');
-const imapPassword = ref('');
-const imapUseSsl = ref(true);
 const imapConfig = ref<SourceConfig>({});
 const oauthUrl = ref<string | null>(null);
 
@@ -183,14 +179,10 @@ const resetFilterFields = () => {
   agentPrompt.value = '';
   // Reset IMAP fields
   imapProvider.value = 'gmail';
+  imapConnectionId.value = null;
   imapFolders.value = '';
   imapFromFilter.value = '';
   imapSubjectFilter.value = '';
-  imapHost.value = '';
-  imapPort.value = 993;
-  imapUsername.value = '';
-  imapPassword.value = '';
-  imapUseSsl.value = true;
   imapConfig.value = {};
   oauthUrl.value = null;
 };
@@ -233,23 +225,17 @@ watch(
       // Restore IMAP fields
       if (newSource.type === 'imap') {
         imapProvider.value = newSource.config?.provider || 'generic';
+        imapConnectionId.value = newSource.connection_id ?? null;
         imapFolders.value = newSource.config?.folders?.join(', ') || '';
         imapFromFilter.value = newSource.config?.from_filter || '';
         imapSubjectFilter.value = newSource.config?.subject_filter || '';
-        imapHost.value = newSource.config?.imap_host || '';
-        imapPort.value = newSource.config?.imap_port || 993;
-        imapUsername.value = newSource.config?.imap_username || '';
-        imapUseSsl.value = newSource.config?.imap_use_ssl ?? true;
         imapConfig.value = newSource.config || {};
       } else {
         imapProvider.value = 'gmail';
+        imapConnectionId.value = null;
         imapFolders.value = '';
         imapFromFilter.value = '';
         imapSubjectFilter.value = '';
-        imapHost.value = '';
-        imapPort.value = 993;
-        imapUsername.value = '';
-        imapUseSsl.value = true;
         imapConfig.value = {};
       }
     } else {
@@ -280,13 +266,9 @@ const saveMutation = useMutation({
         use_regex: useRegex.value,
       };
 
-      // Add generic IMAP fields if provider is 'generic'
+      // Add connection_id for generic IMAP (credentials come from Connection)
       if (imapProvider.value === 'generic') {
-        imapRequest.imap_host = imapHost.value;
-        imapRequest.imap_port = imapPort.value;
-        imapRequest.imap_username = imapUsername.value;
-        imapRequest.imap_password = imapPassword.value;
-        imapRequest.imap_use_ssl = imapUseSsl.value;
+        imapRequest.connection_id = imapConnectionId.value;
       }
 
       const response = await sourcesApi.createImap(imapRequest);
@@ -513,14 +495,10 @@ const urlPlaceholder = computed(() => getUrlPlaceholder(type.value));
               v-else-if="type === 'imap'"
               v-model:config="imapConfig"
               v-model:provider="imapProvider"
+              v-model:connection-id="imapConnectionId"
               v-model:folders="imapFolders"
               v-model:from-filter="imapFromFilter"
               v-model:subject-filter="imapSubjectFilter"
-              v-model:imap-host="imapHost"
-              v-model:imap-port="imapPort"
-              v-model:imap-username="imapUsername"
-              v-model:imap-password="imapPassword"
-              v-model:imap-use-ssl="imapUseSsl"
               :is-loading="isSaving"
               :is-edit-mode="isEditMode"
             />

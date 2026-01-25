@@ -423,6 +423,156 @@ Look at existing exporters for examples:
               └──────────────┘
 ```
 
+---
+
+## Credential Management Patterns
+
+Exporters can use two approaches for credential management:
+
+### Option 1: Connections (Per-User Credentials)
+
+Use the Connections system for per-user credentials that vary by installation and need reusability.
+
+**When to use:**
+- Per-user API keys (Notion, Slack, etc.)
+- Credentials that need health tracking and testing
+- Services that require user-specific authentication
+
+**Example: Notion Exporter with Connection**
+```python
+from reconly_core.exporters.metadata import ExporterMetadata
+
+@register_exporter('notion')
+class NotionExporter(BaseExporter):
+    metadata = ExporterMetadata(
+        name='notion',
+        display_name='Notion',
+        description='Export digests to Notion pages',
+        icon='simple-icons:notion',
+        file_extension='.md',
+        mime_type='text/markdown',
+
+        # Connection requirements
+        requires_connection=True,
+        connection_types=['api_key'],
+    )
+
+    def get_config_schema(self):
+        return ExporterConfigSchema(
+            supports_direct_export=False,
+            fields=[
+                ConfigField(
+                    key='connection_id',
+                    type='connection',
+                    label='Notion API Connection',
+                    description='Notion integration credentials',
+                    required=True,
+                    connection_type='api_key',
+                ),
+                # Exporter-specific fields
+                ConfigField(
+                    key='database_id',
+                    type='string',
+                    label='Database ID',
+                    description='Target Notion database ID',
+                    required=True,
+                    placeholder='a1b2c3d4e5f6...',
+                ),
+            ],
+        )
+
+    def export(self, digests, config=None):
+        config = config or {}
+
+        # Access injected credentials (automatically provided by backend)
+        api_key = config['_connection_api_key']
+        endpoint = config.get('_connection_endpoint', 'https://api.notion.com')
+
+        # Access exporter-specific config
+        database_id = config['database_id']
+
+        # Use for API calls
+        headers = {'Authorization': f'Bearer {api_key}'}
+        # ... export to Notion
+```
+
+### Option 2: ConfigField with env_var (System-Wide Credentials)
+
+Use ConfigField with environment variables for system-wide credentials or configuration.
+
+**When to use:**
+- System-wide service credentials
+- Infrastructure configuration (server URLs, endpoints)
+- Settings that don't vary per user
+
+**Example: S3 Exporter with env_var**
+```python
+@register_exporter('s3')
+class S3Exporter(BaseExporter):
+    def get_config_schema(self):
+        return ExporterConfigSchema(
+            supports_direct_export=False,
+            fields=[
+                ConfigField(
+                    key='access_key_id',
+                    type='string',
+                    label='AWS Access Key ID',
+                    description='AWS credentials',
+                    required=True,
+                    env_var='AWS_ACCESS_KEY_ID',
+                    editable=False,
+                    secret=True,
+                ),
+                ConfigField(
+                    key='secret_access_key',
+                    type='string',
+                    label='AWS Secret Access Key',
+                    description='AWS secret key',
+                    required=True,
+                    env_var='AWS_SECRET_ACCESS_KEY',
+                    editable=False,
+                    secret=True,
+                ),
+                ConfigField(
+                    key='bucket_name',
+                    type='string',
+                    label='Bucket Name',
+                    description='S3 bucket for exports',
+                    required=True,
+                ),
+            ],
+        )
+
+    def export(self, digests, config=None):
+        config = config or {}
+
+        # Access from settings service
+        from reconly_core.services.settings_service import SettingsService
+        settings = SettingsService()
+        access_key = settings.get('export.s3.access_key_id')
+        secret_key = settings.get('export.s3.secret_access_key')
+
+        # Access exporter-specific config
+        bucket_name = config['bucket_name']
+
+        # Use for S3 upload
+        # ...
+```
+
+### Comparison
+
+| Aspect | Connections | ConfigField with env_var |
+|--------|-------------|--------------------------|
+| **Scope** | Per-user | System-wide |
+| **Reusability** | Across feeds/exporters | Single exporter type |
+| **Storage** | Encrypted in database | Environment variables |
+| **Health Tracking** | Yes (last success/failure) | No |
+| **UI Management** | Settings > Connections | Settings > Exporters |
+| **Testing** | Built-in test button | Manual |
+| **Example Use Cases** | Notion API key, Slack webhook | AWS credentials, shared service accounts |
+
+---
+
 ## Configuration Schema (UI Integration)
 
 Exporters can define a configuration schema that enables the UI to dynamically render configuration fields. This allows users to configure exporter settings through the Settings page.

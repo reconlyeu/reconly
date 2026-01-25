@@ -26,7 +26,7 @@ class FetcherMetadata(ComponentMetadata):
     """Metadata for content fetchers.
 
     Extends ComponentMetadata with fetcher-specific configuration including
-    URL scheme support, OAuth capabilities, and feature flags.
+    URL scheme support, OAuth capabilities, connection requirements, and feature flags.
 
     Attributes:
         name: Internal identifier (e.g., 'rss', 'imap', 'youtube').
@@ -49,6 +49,12 @@ class FetcherMetadata(ComponentMetadata):
         show_in_settings: Whether the fetcher should appear in the settings UI.
                           Set to False for fetchers with dedicated configuration
                           pages (e.g., Agent Research).
+        requires_connection: Whether the fetcher requires a Connection entity for
+                             credentials. If True, sources using this fetcher must
+                             have a connection_id set.
+        connection_types: List of supported connection types (e.g., ['email_imap']).
+                          Empty list means any connection type is acceptable.
+                          Only relevant if requires_connection is True.
 
     Example:
         >>> metadata = FetcherMetadata(
@@ -60,6 +66,8 @@ class FetcherMetadata(ComponentMetadata):
         ...     supports_oauth=True,
         ...     oauth_providers=["gmail", "outlook"],
         ...     supports_incremental=True,
+        ...     requires_connection=True,
+        ...     connection_types=["email_imap"],
         ... )
     """
 
@@ -70,6 +78,8 @@ class FetcherMetadata(ComponentMetadata):
     supports_validation: bool = True
     supports_test_fetch: bool = True
     show_in_settings: bool = True
+    requires_connection: bool = False
+    connection_types: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert metadata to dictionary for API responses.
@@ -91,4 +101,6 @@ class FetcherMetadata(ComponentMetadata):
             "supports_validation": self.supports_validation,
             "supports_test_fetch": self.supports_test_fetch,
             "show_in_settings": self.show_in_settings,
+            "requires_connection": self.requires_connection,
+            "connection_types": self.connection_types,
         }

@@ -455,6 +455,133 @@ Look at existing fetchers for examples:
               └──────────────┘
 ```
 
+---
+
+## Credential Management Patterns
+
+Fetchers can use two approaches for credential management:
+
+### Option 1: Connections (Per-User Credentials)
+
+Use the Connections system for per-user credentials that vary by installation and need reusability.
+
+**When to use:**
+- Per-user credentials (IMAP passwords, personal API keys)
+- Credentials that need to be reused across multiple sources
+- Credentials that need health tracking and testing
+
+**Example: IMAP Fetcher with Connection**
+```python
+from reconly_core.fetchers.metadata import FetcherMetadata
+
+@register_fetcher('imap')
+class IMAPFetcher(BaseFetcher):
+    metadata = FetcherMetadata(
+        name='imap',
+        display_name='IMAP Email',
+        description='Fetch from IMAP mailboxes',
+        icon='mdi:email',
+
+        # Connection requirements
+        requires_connection=True,
+        connection_types=['email_imap'],
+    )
+
+    def get_config_schema(self):
+        return FetcherConfigSchema(
+            fields=[
+                ConfigField(
+                    key='connection_id',
+                    type='connection',
+                    label='Email Connection',
+                    description='IMAP credentials',
+                    required=True,
+                    connection_type='email_imap',
+                ),
+                # Source-specific fields (folders, filters, etc.)
+                ConfigField(
+                    key='folders',
+                    type='string',
+                    label='Folders',
+                    description='Comma-separated folder names',
+                    default='INBOX',
+                ),
+            ],
+        )
+
+    def fetch(self, url, since=None, max_items=None, **kwargs):
+        # Access injected credentials (automatically provided by backend)
+        host = kwargs['_connection_host']
+        port = kwargs['_connection_port']
+        username = kwargs['_connection_username']
+        password = kwargs['_connection_password']
+        use_ssl = kwargs['_connection_use_ssl']
+
+        # Access source-specific config
+        folders = kwargs.get('folders', 'INBOX').split(',')
+
+        # Use for IMAP connection
+        with imaplib.IMAP4_SSL(host, port) as imap:
+            imap.login(username, password)
+            # ... fetch emails
+```
+
+### Option 2: ConfigField with env_var (System-Wide Credentials)
+
+Use ConfigField with environment variables for system-wide API keys shared across all users.
+
+**When to use:**
+- System-wide API keys (YouTube Data API, OpenAI API key)
+- Infrastructure configuration (database URLs, service endpoints)
+- Settings that don't vary per user
+
+**Example: YouTube Fetcher with env_var**
+```python
+@register_fetcher('youtube')
+class YouTubeFetcher(BaseFetcher):
+    def get_config_schema(self):
+        return FetcherConfigSchema(
+            fields=[
+                ConfigField(
+                    key='api_key',
+                    type='string',
+                    label='YouTube API Key',
+                    description='YouTube Data API v3 key',
+                    required=True,
+                    env_var='YOUTUBE_API_KEY',  # System-wide env var
+                    editable=False,  # Not editable via UI
+                    secret=True,  # Masked in responses
+                ),
+            ],
+        )
+
+    def fetch(self, url, since=None, max_items=None, **kwargs):
+        # Access from settings service
+        from reconly_core.services.settings_service import SettingsService
+        settings = SettingsService()
+        api_key = settings.get('fetch.youtube.api_key')
+
+        if not api_key:
+            raise ValueError("YouTube API key not configured")
+
+        # Use for API calls
+        # ...
+```
+
+### Comparison
+
+| Aspect | Connections | ConfigField with env_var |
+|--------|-------------|--------------------------|
+| **Scope** | Per-user | System-wide |
+| **Reusability** | Across multiple sources | Single fetcher type |
+| **Storage** | Encrypted in database | Environment variables |
+| **Health Tracking** | Yes (last success/failure) | No |
+| **UI Management** | Settings > Email > Connections | Settings > Fetchers |
+| **Testing** | Built-in test button | Manual |
+| **Example Use Cases** | IMAP passwords, private API keys | YouTube API key, SearXNG URL |
+
+---
+
 ## Configuration Schema (Settings Integration)
 
 Fetchers can define a configuration schema to enable settings management through the UI. This allows users to configure API keys, credentials, and other fetcher-specific options.

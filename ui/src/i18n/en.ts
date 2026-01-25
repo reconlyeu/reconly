@@ -279,7 +279,14 @@ export const strings = {
         title: 'Secure OAuth Authentication',
         message: 'After creating this source, you\'ll be redirected to {provider} to authorize access. Your password is never stored - we use secure OAuth tokens.',
       },
+      connection: {
+        label: 'IMAP Connection',
+        description: 'Select an existing connection or create a new one. Credentials are stored securely in the connection, not on the source.',
+        placeholder: 'Select a connection...',
+      },
     },
+    // Connection display on SourceCard
+    viaConnection: 'via {name}',
   },
 
   // Feeds
@@ -956,7 +963,8 @@ export const strings = {
     },
     email: {
       title: 'Email Settings',
-      smtpConfiguration: 'SMTP Configuration',
+      smtpConfiguration: 'SMTP Configuration (Outgoing)',
+      connectionsSection: 'Email Connections (Incoming)',
       testEmailConnection: 'Test Email Connection',
       testEmailAddress: 'Test Email Address',
       testEmailPlaceholder: 'test@example.com',
@@ -982,6 +990,72 @@ export const strings = {
       testFailed: 'Connection failed',
       settingsSaved: 'Email settings saved',
       settingsReset: 'Email settings reset to defaults',
+      // Connection strings
+      connections: {
+        title: 'Email Connections',
+        empty: 'No email connections configured',
+        emptyDescription: 'Add a connection to enable email sources like newsletters and notifications.',
+        addConnection: 'Add Connection',
+        editConnection: 'Edit Connection',
+        deleteConnection: 'Delete Connection',
+        testConnection: 'Test Connection',
+        testing: 'Testing...',
+        saving: 'Saving...',
+        // Card
+        usedBy: 'Used by {count} sources',
+        noSources: 'No sources using this connection',
+        lastCheck: 'Last check',
+        neverChecked: 'Never checked',
+        // Health status
+        healthy: 'Healthy',
+        warning: 'Warning',
+        error: 'Error',
+        // Actions
+        edit: 'Edit',
+        test: 'Test',
+        delete: 'Delete',
+        // Modal
+        modalTitle: 'Connection Details',
+        createTitle: 'Add Email Connection',
+        editTitle: 'Edit Email Connection',
+        fields: {
+          name: 'Connection Name',
+          namePlaceholder: 'My Email Account',
+          provider: 'Email Provider',
+          host: 'IMAP Server',
+          hostPlaceholder: 'imap.example.com',
+          port: 'Port',
+          username: 'Email Address',
+          usernamePlaceholder: 'you@example.com',
+          password: 'Password',
+          passwordPlaceholder: 'App password or account password',
+          useSsl: 'Use SSL/TLS',
+        },
+        providers: {
+          gmail: 'Gmail',
+          outlook: 'Outlook',
+          generic: 'Generic IMAP',
+        },
+        providerHints: {
+          gmail: 'Use an app password from your Google Account settings',
+          outlook: 'Use your Microsoft account password or app password',
+          generic: 'Enter your IMAP server details manually',
+        },
+        testResult: {
+          success: 'Connection successful',
+          failed: 'Connection failed',
+        },
+        confirmDelete: 'Are you sure you want to delete this connection?',
+        deleteWarning: 'This will affect {count} sources using this connection.',
+        deleteSuccess: 'Connection deleted',
+        deleteFailed: 'Failed to delete connection',
+        createSuccess: 'Connection created',
+        createFailed: 'Failed to create connection',
+        updateSuccess: 'Connection updated',
+        updateFailed: 'Failed to update connection',
+        testSuccess: 'Connection test successful',
+        testFailed: 'Connection test failed',
+      },
     },
     exports: {
       title: 'Export Settings',

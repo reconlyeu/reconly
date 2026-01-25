@@ -47,6 +47,8 @@ def _exporter_metadata_to_response(exporter) -> Optional[ExporterMetadataRespons
             file_extension=metadata.file_extension,
             mime_type=metadata.mime_type,
             ui_color=metadata.ui_color,
+            requires_connection=metadata.requires_connection,
+            connection_types=metadata.connection_types,
         )
     except (AttributeError, NotImplementedError):
         # Exporter doesn't have get_metadata() or it's not implemented

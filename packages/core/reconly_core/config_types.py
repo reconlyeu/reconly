@@ -13,7 +13,7 @@ class ConfigField:
 
     Attributes:
         key: Setting key (e.g., "timeout", "vault_path")
-        type: Field type - "string", "boolean", "integer", "path", or "select"
+        type: Field type - "string", "boolean", "integer", "path", "select", or "connection"
         label: Human-readable label for UI
         description: Help text describing the field
         default: Default value if not configured
@@ -24,9 +24,10 @@ class ConfigField:
         secret: Whether field contains sensitive data (should be masked in responses)
         options_from: Source for select options (e.g., "models" to populate from models list)
         options: Static options for select fields: [{"value": "...", "label": "..."}]
+        connection_type: For type="connection", filters connections by type (e.g., "email_imap")
     """
     key: str
-    type: str  # "string" | "boolean" | "integer" | "path" | "select"
+    type: str  # "string" | "boolean" | "integer" | "path" | "select" | "connection"
     label: str
     description: str
     default: Any = None
@@ -37,6 +38,7 @@ class ConfigField:
     secret: bool = False
     options_from: str = ""
     options: list[dict[str, str]] = field(default_factory=list)
+    connection_type: str = ""  # For type="connection": filter by connection type
 
 
 @dataclass

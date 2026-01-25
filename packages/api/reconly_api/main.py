@@ -25,7 +25,7 @@ from reconly_api.middleware import DemoModeMiddleware, SecurityHeadersMiddleware
 from reconly_api.routes import (
     digests, health, sources, feeds, feed_runs, templates,
     analytics, providers, dashboard, auth, exporters, fetchers, tags, bundles,
-    extensions, search, rag, graph, agent_runs, oauth, chat
+    extensions, search, rag, graph, agent_runs, oauth, chat, connections
 )
 from reconly_api.routes import settings as settings_routes
 from reconly_api.auth.password import is_public_route
@@ -446,6 +446,13 @@ app.include_router(
     chat.router,
     prefix=f"{settings.api_v1_prefix}/chat",
     tags=["chat"]
+)
+
+# Connections (reusable credential storage)
+app.include_router(
+    connections.router,
+    prefix=f"{settings.api_v1_prefix}/connections",
+    tags=["connections"]
 )
 
 

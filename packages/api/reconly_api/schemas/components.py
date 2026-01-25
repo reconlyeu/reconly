@@ -59,7 +59,7 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
     """Fetcher metadata in API response.
 
     Extends ComponentMetadataResponse with fetcher-specific fields for
-    URL scheme support, OAuth capabilities, and feature flags.
+    URL scheme support, OAuth capabilities, connection requirements, and feature flags.
     """
 
     url_schemes: list[str] = Field(
@@ -83,6 +83,13 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
     show_in_settings: bool = Field(
         default=True, description="Whether fetcher should appear in settings UI"
     )
+    requires_connection: bool = Field(
+        default=False, description="Whether fetcher requires a Connection for credentials"
+    )
+    connection_types: list[str] = Field(
+        default_factory=list,
+        description="Supported connection types (e.g., ['email_imap'])",
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -99,6 +106,8 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
                 "supports_validation": True,
                 "supports_test_fetch": True,
                 "show_in_settings": True,
+                "requires_connection": False,
+                "connection_types": [],
             }
         },
     )
@@ -108,7 +117,7 @@ class ExporterMetadataResponse(ComponentMetadataResponse):
     """Exporter metadata in API response.
 
     Extends ComponentMetadataResponse with exporter-specific fields for
-    file format information and UI styling.
+    file format information, connection requirements, and UI styling.
 
     Security Note: path_setting_key is intentionally NOT exposed as it's
     an internal configuration detail.
@@ -118,6 +127,13 @@ class ExporterMetadataResponse(ComponentMetadataResponse):
     mime_type: str = Field(..., description="MIME type for HTTP responses")
     ui_color: Optional[str] = Field(
         default=None, description="Hex color code for UI theming (e.g., '#7C3AED')"
+    )
+    requires_connection: bool = Field(
+        default=False, description="Whether exporter requires a Connection for credentials"
+    )
+    connection_types: list[str] = Field(
+        default_factory=list,
+        description="Supported connection types (e.g., ['http_basic', 'api_key'])",
     )
 
     model_config = ConfigDict(
@@ -131,6 +147,8 @@ class ExporterMetadataResponse(ComponentMetadataResponse):
                 "file_extension": ".md",
                 "mime_type": "text/markdown",
                 "ui_color": "#7C3AED",
+                "requires_connection": False,
+                "connection_types": [],
             }
         },
     )

@@ -59,6 +59,8 @@ def _fetcher_metadata_to_response(fetcher) -> Optional[FetcherMetadataResponse]:
             supports_validation=metadata.supports_validation,
             supports_test_fetch=metadata.supports_test_fetch,
             show_in_settings=metadata.show_in_settings,
+            requires_connection=metadata.requires_connection,
+            connection_types=metadata.connection_types,
         )
     except (AttributeError, NotImplementedError):
         # Fetcher doesn't have get_metadata() or it's not implemented

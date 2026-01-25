@@ -105,6 +105,7 @@ class User(Base):
     llm_usage_logs = relationship('LLMUsageLog', back_populates='user')
     agent_runs = relationship('AgentRun', back_populates='user')
     chat_conversations = relationship('ChatConversation', back_populates='user', cascade='all, delete-orphan')
+    connections = relationship('Connection', back_populates='user', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
@@ -145,6 +146,11 @@ class Source(Base):
 
     enabled = Column(Boolean, default=True, nullable=False)
 
+    # Connection reference for sources using reusable credentials
+    # When set, source uses credentials from the linked Connection
+    # When NULL, source uses its own embedded config or no auth
+    connection_id = Column(Integer, ForeignKey('connections.id', ondelete='SET NULL'), nullable=True, index=True)
+
     # Authentication status for sources requiring credentials (IMAP, etc.)
     # - NULL: No authentication required (RSS, websites)
     # - 'active': Authenticated and working
@@ -183,6 +189,7 @@ class Source(Base):
     user = relationship('User', back_populates='sources')
     feed_sources = relationship('FeedSource', back_populates='source', cascade='all, delete-orphan')
     oauth_credentials = relationship('OAuthCredential', back_populates='source', cascade='all, delete-orphan', uselist=False)
+    connection = relationship('Connection', back_populates='sources')
 
     # Indexes
     __table_args__ = (
@@ -201,6 +208,7 @@ class Source(Base):
             'url': self.url,
             'config': self.config,
             'enabled': self.enabled,
+            'connection_id': self.connection_id,
             'auth_status': self.auth_status,
             'default_language': self.default_language,
             'default_provider': self.default_provider,
@@ -1232,6 +1240,98 @@ class OAuthCredential(Base):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CONNECTION (Reusable Credentials)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class Connection(Base):
+    """
+    Reusable credential storage for email and other authenticated sources.
+
+    Connections separate credential management from per-source configuration,
+    enabling credential reuse across multiple sources (e.g., same Gmail account
+    for multiple email sources with different filters).
+
+    Config is encrypted as a JSON blob using Fernet symmetric encryption via
+    the crypto module. Never expose decrypted config in API responses or logs.
+
+    Connection Types:
+    - 'email_imap': IMAP credentials (host, port, username, password)
+    - 'email_oauth': OAuth2 credentials (tokens, provider info)
+    - 'http_basic': HTTP Basic Auth (username, password)
+    - 'api_key': API key authentication (key, optional header name)
+
+    Providers (for email types):
+    - 'gmail': Google Gmail
+    - 'outlook': Microsoft Outlook/Office 365
+    - 'generic': Generic IMAP/SMTP server
+    """
+    __tablename__ = 'connections'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+
+    # Core fields
+    name = Column(String(255), nullable=False)
+    type = Column(String(50), nullable=False, index=True)  # email_imap, email_oauth, http_basic, api_key
+    provider = Column(String(50), nullable=True)  # gmail, outlook, generic (for email types)
+
+    # Encrypted configuration (JSON blob)
+    # Contains type-specific credentials encrypted via reconly_core.email.crypto
+    config_encrypted = Column(Text, nullable=False)
+
+    # Health tracking (simple timestamps for display, no circuit breaker logic here)
+    # Circuit breaker pattern is handled at the Source level
+    last_check_at = Column(DateTime, nullable=True)
+    last_success_at = Column(DateTime, nullable=True)
+    last_failure_at = Column(DateTime, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship('User', back_populates='connections')
+    sources = relationship('Source', back_populates='connection')
+
+    # Indexes
+    __table_args__ = (
+        Index('ix_connections_user_type', 'user_id', 'type'),
+    )
+
+    def __repr__(self):
+        return f"<Connection(id={self.id}, name='{self.name}', type='{self.type}')>"
+
+    def to_dict(self):
+        """Convert to dictionary format, EXCLUDING encrypted config."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'type': self.type,
+            'provider': self.provider,
+            'last_check_at': self.last_check_at.isoformat() if self.last_check_at else None,
+            'last_success_at': self.last_success_at.isoformat() if self.last_success_at else None,
+            'last_failure_at': self.last_failure_at.isoformat() if self.last_failure_at else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'source_count': len(self.sources) if self.sources else 0,
+        }
+
+    def update_health_success(self) -> None:
+        """Update health timestamps after a successful connection check."""
+        now = datetime.utcnow()
+        self.last_check_at = now
+        self.last_success_at = now
+
+    def update_health_failure(self) -> None:
+        """Update health timestamps after a failed connection check."""
+        now = datetime.utcnow()
+        self.last_check_at = now
+        self.last_failure_at = now
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
