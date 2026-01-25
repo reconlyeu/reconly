@@ -80,6 +80,9 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
     supports_test_fetch: bool = Field(
         default=True, description="Whether fetcher supports test fetching during validation"
     )
+    show_in_settings: bool = Field(
+        default=True, description="Whether fetcher should appear in settings UI"
+    )
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -95,6 +98,7 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
                 "supports_incremental": True,
                 "supports_validation": True,
                 "supports_test_fetch": True,
+                "show_in_settings": True,
             }
         },
     )

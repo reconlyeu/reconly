@@ -16,5 +16,6 @@ class ConfigFieldResponse(BaseModel):
     editable: bool = Field(default=True, description="Whether field can be edited via UI (False = env-only)")
     secret: bool = Field(default=False, description="Whether field contains sensitive data")
     options_from: Optional[str] = Field(default=None, description="Source for select options (e.g., 'models')")
+    options: list[dict[str, str]] = Field(default_factory=list, description="Static options for select fields: [{value, label}]")
 
     model_config = ConfigDict(from_attributes=True)

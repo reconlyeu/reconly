@@ -34,7 +34,13 @@ onMounted(() => {
 const selectedFetcherName = ref<string | null>(null);
 
 // Fetch fetchers list using the composable
-const { data: fetchers, isLoading, isError, error, refetch } = useFetchersList();
+const { data: fetchersRaw, isLoading, isError, error, refetch } = useFetchersList();
+
+// Filter out fetchers that shouldn't appear in settings (e.g., Agent has its own tab)
+const fetchers = computed(() => {
+  if (!fetchersRaw.value) return null;
+  return fetchersRaw.value.filter(f => f.metadata?.show_in_settings !== false);
+});
 
 // Get the currently selected fetcher object
 const selectedFetcher = computed<Fetcher | null>(() => {

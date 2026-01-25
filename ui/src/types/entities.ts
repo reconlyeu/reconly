@@ -539,6 +539,7 @@ export interface FetcherMetadata extends ComponentMetadata {
   supports_incremental: boolean;
   supports_validation: boolean;
   supports_test_fetch: boolean;
+  show_in_settings: boolean;
 }
 
 /**
