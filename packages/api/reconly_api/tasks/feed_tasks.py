@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 def run_feed_task(
     feed_id: int,
     triggered_by: str = "manual",
-    triggered_by_user_id: Optional[int] = None
+    triggered_by_user_id: Optional[int] = None,
+    feed_run_id: Optional[int] = None
 ) -> dict:
     """
     Run a specific feed.
@@ -23,6 +24,7 @@ def run_feed_task(
         feed_id: Feed ID to run
         triggered_by: How the run was triggered (schedule, manual, api)
         triggered_by_user_id: User who triggered (if manual/api)
+        feed_run_id: Existing FeedRun ID to update (if created synchronously)
 
     Returns:
         Run result dictionary
@@ -35,6 +37,7 @@ def run_feed_task(
         options = FeedRunOptions(
             triggered_by=triggered_by,
             triggered_by_user_id=triggered_by_user_id,
+            feed_run_id=feed_run_id,
             enable_fallback=True,
             show_progress=False,
         )

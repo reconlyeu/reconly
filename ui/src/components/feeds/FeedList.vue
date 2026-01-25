@@ -10,7 +10,6 @@ import type { Feed } from '@/types/entities';
 import { Layers, Upload, Plus } from 'lucide-vue-next';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
-import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import { strings } from '@/i18n/en';
 
 interface Emits {
@@ -23,7 +22,8 @@ const queryClient = useQueryClient();
 const toast = useToast();
 const { confirmDelete } = useConfirm();
 
-const { runningFeeds, startPolling, addRunningFeed, removeRunningFeed } = useFeedRunPolling();
+// Local state for immediate button feedback (brief timeout for optimistic UI)
+const runningFeeds = ref<Set<number>>(new Set());
 const showImportModal = ref(false);
 
 // Fetch feeds
@@ -43,26 +43,30 @@ const { data: feeds, isLoading, isError, error, refetch } = useQuery({
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
-    addRunningFeed(feedId);
+    // Immediate optimistic update for button feedback
+    runningFeeds.value.add(feedId);
     return await feedsApi.run(feedId);
   },
   onSuccess: (_data, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
-    // Refetch immediately to get the new run status
+    // Refetch immediately - FeedRun is already created with 'pending' status
     queryClient.invalidateQueries({ queryKey: ['feeds'] });
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
-    // Start polling for completion (polls latest run for this feed)
-    startPolling(feedId);
   },
   onError: (error: any, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-    removeRunningFeed(feedId);
+    runningFeeds.value.delete(feedId);
+  },
+  onSettled: (_data, _error, feedId) => {
+    // Clear local optimistic state after brief delay
+    // API status will be the source of truth after refetch
+    setTimeout(() => runningFeeds.value.delete(feedId), 2000);
   },
 });
 

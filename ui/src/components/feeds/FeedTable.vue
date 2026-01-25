@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Layers, PlayCircle, Edit, Trash2, Clock, CheckCircle2 } from 'lucide-vue-next';
+import { Layers, PlayCircle, Edit, Trash2, Clock, CheckCircle2, Loader2, AlertCircle } from 'lucide-vue-next';
 import BaseTable, { type TableColumn } from '@/components/common/BaseTable.vue';
 import BulkActionBar from '@/components/common/BulkActionBar.vue';
 import ToggleSwitch from '@/components/common/ToggleSwitch.vue';
@@ -61,12 +61,12 @@ const getScheduleText = (cron?: string | null) => {
   }
 };
 
-const getLastRunConfig = (lastRunAt?: string | null) => {
-  if (!lastRunAt) {
+const getLastRunConfig = (feed: Feed) => {
+  if (!feed.last_run_at) {
     return { text: strings.feeds.status.never, icon: Clock, color: 'text-text-muted' };
   }
 
-  const date = new Date(lastRunAt);
+  const date = new Date(feed.last_run_at);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -78,10 +78,29 @@ const getLastRunConfig = (lastRunAt?: string | null) => {
   else if (diffHours < 24) text = strings.time.hoursAgo.replace('{count}', String(diffHours));
   else text = date.toLocaleDateString();
 
+  // Use status-appropriate icon and color
+  const status = feed.last_run_status;
+  if (status === 'failed') {
+    return { text, icon: AlertCircle, color: 'text-status-failed' };
+  } else if (status === 'completed_with_errors') {
+    return { text, icon: AlertCircle, color: 'text-status-warning' };
+  }
   return { text, icon: CheckCircle2, color: 'text-status-success' };
 };
 
-const isRunning = (feedId: number) => props.runningFeeds.has(feedId);
+const isRunning = (feed: Feed) => {
+  // Check both local optimistic state AND API status
+  const apiSaysRunning = feed.last_run_status === 'running' || feed.last_run_status === 'pending';
+  return props.runningFeeds.has(feed.id) || apiSaysRunning;
+};
+
+// Row class for running feeds - subtle glow effect
+const getRowClass = (feed: Feed) => {
+  if (isRunning(feed)) {
+    return 'running-row';
+  }
+  return '';
+};
 
 const handleRun = (feed: Feed, e: Event) => {
   e.stopPropagation();
@@ -143,6 +162,7 @@ defineExpose({
       entity-name="feed"
       selectable
       :skeleton-rows="4"
+      :row-class="getRowClass"
       @selection-change="handleSelectionChange"
       @retry="$emit('retry')"
     >
@@ -179,15 +199,24 @@ defineExpose({
 
     <!-- Last Run Cell -->
     <template #cell-last_run="{ item }">
-      <div class="flex items-center gap-1.5">
+      <!-- Running state -->
+      <div v-if="isRunning(item)" class="flex items-center gap-2">
+        <div class="relative flex items-center justify-center">
+          <span class="absolute inline-flex h-4 w-4 animate-ping rounded-full bg-accent-primary/40"></span>
+          <Loader2 :size="14" class="relative animate-spin text-accent-primary" :stroke-width="2.5" />
+        </div>
+        <span class="text-sm font-medium text-accent-primary">Running...</span>
+      </div>
+      <!-- Normal state -->
+      <div v-else class="flex items-center gap-1.5">
         <component
-          :is="getLastRunConfig(item.last_run_at).icon"
+          :is="getLastRunConfig(item).icon"
           :size="14"
-          :class="getLastRunConfig(item.last_run_at).color"
+          :class="getLastRunConfig(item).color"
           :stroke-width="2"
         />
-        <span :class="getLastRunConfig(item.last_run_at).color" class="text-sm">
-          {{ getLastRunConfig(item.last_run_at).text }}
+        <span :class="getLastRunConfig(item).color" class="text-sm">
+          {{ getLastRunConfig(item).text }}
         </span>
       </div>
     </template>
@@ -208,14 +237,14 @@ defineExpose({
       <div class="flex items-center justify-end gap-1">
         <button
           @click="handleRun(item, $event)"
-          :disabled="isRunning(item.id)"
+          :disabled="isRunning(item)"
           class="rounded-lg p-1.5 text-status-success transition-colors hover:bg-status-success/10 disabled:opacity-50 disabled:cursor-not-allowed"
-          :title="isRunning(item.id) ? strings.feeds.running : strings.feeds.runNow"
+          :title="isRunning(item) ? strings.feeds.running : strings.feeds.runNow"
         >
           <PlayCircle
             :size="16"
             :stroke-width="2"
-            :class="isRunning(item.id) ? 'animate-spin' : ''"
+            :class="isRunning(item) ? 'animate-spin' : ''"
           />
         </button>
         <button
@@ -246,3 +275,25 @@ defineExpose({
     />
   </div>
 </template>
+
+<style scoped>
+/* Animated glow effect for running rows */
+:deep(.running-row) {
+  background-color: rgba(99, 102, 241, 0.12) !important;
+  box-shadow: inset 4px 0 0 0 #6366f1;
+  animation: row-pulse 2s ease-in-out infinite;
+}
+
+:deep(.running-row) td:first-child {
+  position: relative;
+}
+
+@keyframes row-pulse {
+  0%, 100% {
+    background-color: rgba(99, 102, 241, 0.12);
+  }
+  50% {
+    background-color: rgba(99, 102, 241, 0.06);
+  }
+}
+</style>

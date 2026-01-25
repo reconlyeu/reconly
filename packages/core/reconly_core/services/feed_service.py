@@ -139,6 +139,7 @@ class FeedRunOptions:
     """Options for running a feed."""
     triggered_by: str = "manual"  # manual, schedule, api
     triggered_by_user_id: Optional[int] = None
+    feed_run_id: Optional[int] = None  # Use existing FeedRun (created synchronously by API)
     enable_fallback: bool = True
     api_key: Optional[str] = None
     show_progress: bool = True
@@ -371,19 +372,45 @@ class FeedService:
             triggered_by=options.triggered_by,
         )
 
-        # Create FeedRun record with trace_id
-        feed_run = FeedRun(
-            feed_id=feed_id,
-            triggered_by=options.triggered_by,
-            triggered_by_user_id=options.triggered_by_user_id,
-            status="running",
-            started_at=datetime.utcnow(),
-            sources_total=len(sources),
-            trace_id=trace_id,
-            created_at=datetime.utcnow(),
-        )
-        session.add(feed_run)
-        session.commit()
+        # Use existing FeedRun or create new one
+        if options.feed_run_id:
+            # Update existing FeedRun (created synchronously by API)
+            feed_run = session.query(FeedRun).filter(FeedRun.id == options.feed_run_id).first()
+            if feed_run:
+                feed_run.status = "running"
+                feed_run.started_at = datetime.utcnow()
+                feed_run.trace_id = trace_id
+                feed_run.sources_total = len(sources)
+                session.commit()
+            else:
+                # Fallback: create new if not found
+                logger.warning("FeedRun not found, creating new", feed_run_id=options.feed_run_id)
+                feed_run = FeedRun(
+                    feed_id=feed_id,
+                    triggered_by=options.triggered_by,
+                    triggered_by_user_id=options.triggered_by_user_id,
+                    status="running",
+                    started_at=datetime.utcnow(),
+                    sources_total=len(sources),
+                    trace_id=trace_id,
+                    created_at=datetime.utcnow(),
+                )
+                session.add(feed_run)
+                session.commit()
+        else:
+            # Create new FeedRun record with trace_id
+            feed_run = FeedRun(
+                feed_id=feed_id,
+                triggered_by=options.triggered_by,
+                triggered_by_user_id=options.triggered_by_user_id,
+                status="running",
+                started_at=datetime.utcnow(),
+                sources_total=len(sources),
+                trace_id=trace_id,
+                created_at=datetime.utcnow(),
+            )
+            session.add(feed_run)
+            session.commit()
 
         if options.show_progress:
             print(f"\n{'='*80}")

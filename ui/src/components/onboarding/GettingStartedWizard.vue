@@ -17,9 +17,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { sourcesApi, feedsApi, providersApi, promptTemplatesApi, reportTemplatesApi } from '@/services/api';
 import { useOnboarding } from '@/composables/useOnboarding';
 import { useToast } from '@/composables/useToast';
-import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import { strings } from '@/i18n/en';
-import type { Source, Feed, FeedRun, PromptTemplate, ReportTemplate } from '@/types/entities';
+import type { Source, Feed, FeedRun, PromptTemplate, ReportTemplate, FeedRunStatus } from '@/types/entities';
 import {
   X,
   Loader2,
@@ -40,7 +39,53 @@ const t = strings.onboarding.wizard;
 const queryClient = useQueryClient();
 const toast = useToast();
 const { shouldShowWizard, skipOnboarding, finishOnboarding, closeWizard } = useOnboarding();
-const { startPolling } = useFeedRunPolling();
+
+// Inline polling for wizard-specific completion tracking
+let pollingInterval: ReturnType<typeof setInterval> | null = null;
+
+const isTerminalStatus = (status: FeedRunStatus): boolean => {
+  return status === 'completed' || status === 'completed_with_errors' || status === 'failed';
+};
+
+const stopPolling = () => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+};
+
+const startPolling = (feedId: number, options: { onComplete?: (run: FeedRun) => void; onError?: () => void }) => {
+  stopPolling();
+  let pollCount = 0;
+  const maxPolls = 300; // 10 minutes max
+
+  pollingInterval = setInterval(async () => {
+    if (pollCount >= maxPolls) {
+      stopPolling();
+      options.onError?.();
+      return;
+    }
+    pollCount++;
+
+    try {
+      const { items } = await feedsApi.getRuns(feedId, 1, 1);
+      const latestRun = items[0];
+
+      if (!latestRun) return;
+
+      if (isTerminalStatus(latestRun.status)) {
+        stopPolling();
+        queryClient.invalidateQueries({ queryKey: ['feeds'] });
+        queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
+        queryClient.invalidateQueries({ queryKey: ['digests'] });
+        options.onComplete?.(latestRun);
+      }
+    } catch {
+      stopPolling();
+      options.onError?.();
+    }
+  }, 2000);
+};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STATE
@@ -274,6 +319,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('keydown', handleKeydown);
+  stopPolling();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

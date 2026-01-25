@@ -43,6 +43,8 @@ interface Props {
   rowClickable?: boolean;
   /** Number of skeleton rows while loading */
   skeletonRows?: number;
+  /** Function to compute custom row classes */
+  rowClass?: (item: T) => string;
 }
 
 interface Emits {
@@ -221,6 +223,7 @@ defineExpose({
             :class="[
               rowClickable ? 'cursor-pointer hover:bg-bg-hover' : '',
               selection?.isSelected(item.id) ? 'bg-accent-primary/5' : '',
+              rowClass?.(item) ?? '',
             ]"
           >
             <!-- Row Checkbox - entire cell is clickable -->

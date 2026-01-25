@@ -11,7 +11,6 @@ import ViewModeToggle from '@/components/common/ViewModeToggle.vue';
 import { useViewMode } from '@/composables/useViewMode';
 import { useToast } from '@/composables/useToast';
 import { useConfirm } from '@/composables/useConfirm';
-import { useFeedRunPolling } from '@/composables/useFeedRunPolling';
 import type { Feed } from '@/types/entities';
 import { Plus } from 'lucide-vue-next';
 
@@ -26,8 +25,8 @@ const isModalOpen = ref(false);
 const editingFeed = ref<Feed | null>(null);
 const feedTableRef = ref<InstanceType<typeof FeedTable> | null>(null);
 
-// Use shared polling composable for tracking feed run status
-const { runningFeeds, startPolling, addRunningFeed, removeRunningFeed } = useFeedRunPolling();
+// Local state for immediate button feedback (brief timeout for optimistic UI)
+const runningFeeds = ref<Set<number>>(new Set());
 
 // Handle ?edit= query param to open edit modal on page load
 onMounted(async () => {
@@ -77,25 +76,30 @@ const feeds = computed(() => feedsData.value || []);
 // Run feed mutation
 const runFeedMutation = useMutation({
   mutationFn: async (feedId: number) => {
-    addRunningFeed(feedId);
+    // Immediate optimistic update for button feedback
+    runningFeeds.value.add(feedId);
     return await feedsApi.run(feedId);
   },
   onSuccess: (_data, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.success(`${feedName} started successfully`);
+    // Refetch immediately - FeedRun is already created with 'pending' status
     queryClient.invalidateQueries({ queryKey: ['feeds'] });
     queryClient.invalidateQueries({ queryKey: ['feed-runs'] });
     queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
-    // Start polling for completion (polls latest run for this feed)
-    startPolling(feedId);
   },
   onError: (error: any, feedId) => {
     const feed = feeds.value?.find(f => f.id === feedId);
     const feedName = feed?.name || 'Feed';
     toast.error(`Failed to run ${feedName}: ${error.detail || error.message || 'Unknown error'}`);
-    removeRunningFeed(feedId);
+    runningFeeds.value.delete(feedId);
+  },
+  onSettled: (_data, _error, feedId) => {
+    // Clear local optimistic state after brief delay
+    // API status will be the source of truth after refetch
+    setTimeout(() => runningFeeds.value.delete(feedId), 2000);
   },
 });
 

@@ -60,15 +60,28 @@ async def list_feeds(
         func.max(FeedRun.created_at).label('max_created_at')
     ).group_by(FeedRun.feed_id).subquery()
 
-    # Join to get the actual id and status
-    latest_runs = db.query(FeedRun.feed_id, FeedRun.id, FeedRun.status).join(
+    # Join to get the actual id, status, and timestamps
+    latest_runs = db.query(
+        FeedRun.feed_id,
+        FeedRun.id,
+        FeedRun.status,
+        FeedRun.created_at,
+        FeedRun.completed_at
+    ).join(
         latest_run_subq,
         (FeedRun.feed_id == latest_run_subq.c.feed_id) &
         (FeedRun.created_at == latest_run_subq.c.max_created_at)
     ).all()
 
-    # Build lookup dict
-    run_info_map = {run.feed_id: {'id': run.id, 'status': run.status} for run in latest_runs}
+    # Build lookup dict - use completed_at if available, otherwise created_at
+    run_info_map = {
+        run.feed_id: {
+            'id': run.id,
+            'status': run.status,
+            'at': run.completed_at or run.created_at
+        }
+        for run in latest_runs
+    }
 
     # Build response with status
     result = []
@@ -77,6 +90,7 @@ async def list_feeds(
         run_info = run_info_map.get(feed.id, {})
         feed_dict['last_run_id'] = run_info.get('id')
         feed_dict['last_run_status'] = run_info.get('status')
+        feed_dict['last_run_at'] = run_info.get('at')
         result.append(feed_dict)
 
     return result
@@ -150,13 +164,19 @@ async def get_feed(
         raise HTTPException(status_code=404, detail="Feed not found")
 
     # Get latest run info
-    latest_run = db.query(FeedRun.id, FeedRun.status).filter(
+    latest_run = db.query(
+        FeedRun.id,
+        FeedRun.status,
+        FeedRun.created_at,
+        FeedRun.completed_at
+    ).filter(
         FeedRun.feed_id == feed_id
     ).order_by(FeedRun.created_at.desc()).first()
 
     feed_dict = FeedResponse.model_validate(feed).model_dump()
     feed_dict['last_run_id'] = latest_run.id if latest_run else None
     feed_dict['last_run_status'] = latest_run.status if latest_run else None
+    feed_dict['last_run_at'] = (latest_run.completed_at or latest_run.created_at) if latest_run else None
     return feed_dict
 
 
@@ -244,14 +264,35 @@ async def run_feed(
     db: Session = Depends(get_db)
 ):
     """Trigger a manual feed run."""
+    from reconly_core.database.models import FeedRun
+
     feed = db.query(Feed).filter(Feed.id == feed_id).first()
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
 
-    # Trigger async task
-    background_tasks.add_task(run_feed_task, feed_id, "manual", None)
+    # Count sources for the run
+    sources_total = db.query(FeedSource).filter(
+        FeedSource.feed_id == feed_id,
+        FeedSource.enabled == True
+    ).count()
 
-    return {"message": "Feed run started", "feed_id": feed_id}
+    # Create FeedRun with 'pending' status SYNCHRONOUSLY before background task
+    # This ensures the run exists immediately when frontend refetches
+    feed_run = FeedRun(
+        feed_id=feed_id,
+        triggered_by="manual",
+        status="pending",
+        sources_total=sources_total,
+        created_at=datetime.utcnow(),
+    )
+    db.add(feed_run)
+    db.commit()
+    db.refresh(feed_run)
+
+    # Dispatch background task with feed_run_id so it updates existing record
+    background_tasks.add_task(run_feed_task, feed_id, "manual", None, feed_run.id)
+
+    return {"id": feed_run.id, "feed_id": feed_id, "status": "pending"}
 
 
 @router.get("/{feed_id}/runs")
