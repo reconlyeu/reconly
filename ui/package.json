@@ -17,7 +17,7 @@
     "@vitest/coverage-v8": "^3.0.4",
     "@vue/test-utils": "^2.4.6",
     "happy-dom": "^16.6.0",
-    "vitest": "^3.0.4"
+    "vitest": "^4.0.18"
   },
   "dependencies": {
     "@iconify/vue": "^4.3.0",
