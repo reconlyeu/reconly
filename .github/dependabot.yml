@@ -51,6 +51,16 @@ updates:
       - "javascript"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      # Major version upgrades to review later
+      - dependency-name: "vitest"
+        versions: [">=4.0.0"]
+      - dependency-name: "@vitest/coverage-v8"
+        versions: [">=4.0.0"]
+      - dependency-name: "@iconify/vue"
+        versions: [">=5.0.0"]
+      - dependency-name: "zod"
+        versions: [">=4.0.0"]
 
   # Docker - OSS image
   - package-ecosystem: "docker"
