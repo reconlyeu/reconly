@@ -36,7 +36,7 @@
 **1. Set up Ollama** (for AI summarization)
 ```bash
 # Install from https://ollama.com/download, then:
-ollama pull qwen2.5:7b    # or qwen2.5:3b for 8GB RAM machines
+ollama pull qwen2.5:7b
 ```
 
 **2. Start Reconly**
