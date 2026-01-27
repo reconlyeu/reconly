@@ -657,12 +657,15 @@ def resolve_default_provider(
 
         if is_available:
             # Found an available provider - get its default model
+            # Priority: DB setting > provider-specific env var (e.g., OLLAMA_MODEL)
             model = None
             try:
+                # Build provider-specific env var name (e.g., OLLAMA_MODEL, LMSTUDIO_MODEL)
+                provider_model_env_var = f"{provider_name.upper()}_MODEL"
                 model = _get_setting_with_db_fallback(
                     f"provider.{provider_name}.model",
                     db=db,
-                    env_var=None,
+                    env_var=provider_model_env_var,
                     default=None,
                 )
             except Exception:

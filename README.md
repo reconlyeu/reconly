@@ -51,6 +51,8 @@ Open **http://localhost:8000** — the getting started wizard will guide you thr
 
 > **Alternative LLM options:** [LM Studio](https://lmstudio.ai) (local), or cloud APIs (Anthropic, OpenAI) — configure in `.env`
 
+**Want more features?** See the [Feature Setup Guide](docs/feature-setup-guide.md) to enable semantic search, AI research agents, email fetching, and more.
+
 ---
 
 ## Why Reconly?
@@ -102,6 +104,7 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 | | |
 |---|---|
 | [Setup Guide](docs/setup.md) | Installation, database, AI providers |
+| [Feature Setup Guide](docs/feature-setup-guide.md) | Enable RAG, agents, email, and more |
 | [AI Research Agents](docs/sources/agent-research-source.md) | Autonomous research configuration |
 | [RAG & Knowledge Graph](docs/rag-setup.md) | Semantic search, embeddings |
 | [Configuration](docs/configuration.md) | All environment variables |
