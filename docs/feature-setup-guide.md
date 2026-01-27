@@ -1,12 +1,14 @@
 # Feature Setup Guide
 
-After completing the [Quick Start](../README.md#quick-start), you have basic RSS summarization working. This guide shows how to enable additional features based on your needs and hardware capabilities.
+After completing the [Quick Start](../README.md#quick-start), you have RSS, YouTube, and website summarization working. This guide shows how to enable additional features based on your needs and hardware capabilities.
 
 ## Feature Matrix
 
 | Feature | Quick Start | What You Need | Setup Time |
 |---------|-------------|---------------|------------|
-| **RSS/YouTube Summarization** | ✅ Included | Ollama + any model | - |
+| **RSS Summarization** | ✅ Included | Ollama + any model | - |
+| **YouTube Summarization** | ✅ Included | Same as above | - |
+| **Website Summarization** | ✅ Included | Same as above | - |
 | **Chat Interface** | ✅ Included | Same as above | - |
 | **Semantic Search (RAG)** | ❌ Needs setup | Embedding model | ~5 min |
 | **Knowledge Graph** | ❌ Needs setup | Embedding model | ~5 min |
