@@ -5,6 +5,7 @@
  * - Pinia for state management
  * - TanStack Vue Query for data fetching
  * - Vue Toastification for toast notifications
+ * - Iconify icon bundles for offline use
  */
 
 import type { App } from 'vue';
@@ -13,6 +14,10 @@ import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import ToastPlugin from 'vue-toastification';
 import 'vue-toastification/dist/index.css';
 import { toastOptions } from './plugins/toast';
+import { registerIcons } from './plugins/icons';
+
+// Register bundled icons for offline use (runs once at module load)
+registerIcons();
 
 // Handle ESM interop - the plugin might be at .default
 const Toast = (ToastPlugin as any).default || ToastPlugin;
