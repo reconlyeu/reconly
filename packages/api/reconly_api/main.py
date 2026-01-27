@@ -31,6 +31,33 @@ from reconly_api.routes import settings as settings_routes
 from reconly_api.auth.password import is_public_route
 
 
+def ensure_default_templates() -> dict:
+    """
+    Ensure default prompt and report templates exist in the database.
+
+    This runs on every startup but only creates templates if they don't exist.
+    Unlike sample data (feeds, sources), templates are essential for the app
+    to function and should always be present.
+
+    Returns:
+        Dict with counts of created/skipped templates
+    """
+    from reconly_core.database.seed import seed_default_templates
+
+    try:
+        db = SessionLocal()
+        try:
+            result = seed_default_templates(db)
+            if result["prompt_templates_created"] > 0 or result["report_templates_created"] > 0:
+                print(f"[Startup] Created default templates: {result['prompt_templates_created']} prompt, {result['report_templates_created']} report")
+            return result
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[Startup] Failed to seed default templates: {e}")
+        return {"prompt_templates_created": 0, "report_templates_created": 0}
+
+
 def migrate_deprecated_settings() -> None:
     """
     Run one-time settings migrations on startup.
@@ -148,6 +175,9 @@ async def lifespan(app: FastAPI):
     # Create database tables if they don't exist
     logger.info("Initializing database tables")
     Base.metadata.create_all(bind=engine)
+
+    # Startup: Ensure default templates exist (essential for app to function)
+    ensure_default_templates()
 
     # Startup: Clean up any stale feed runs from previous sessions
     cleanup_stale_feed_runs()
