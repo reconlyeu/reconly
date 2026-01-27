@@ -33,6 +33,13 @@
 
 ## Quick Start
 
+**1. Set up Ollama** (for AI summarization)
+```bash
+# Install from https://ollama.com/download, then:
+ollama pull qwen2.5:7b    # or qwen2.5:3b for 8GB RAM machines
+```
+
+**2. Start Reconly**
 ```bash
 git clone https://github.com/reconlyeu/reconly.git
 cd reconly/docker/oss
@@ -40,9 +47,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open **http://localhost:8000** — sample feeds and digests ready to explore.
+Open **http://localhost:8000** — the getting started wizard will guide you through creating your first feed.
 
-For AI summarization, install [Ollama](https://ollama.com) or [LM Studio](https://lmstudio.ai) (both free & local), or add a cloud API key. Then configure your provider and model in `.env` or via the UI at **Settings**.
+> **Alternative LLM options:** [LM Studio](https://lmstudio.ai) (local), or cloud APIs (Anthropic, OpenAI) — configure in `.env`
 
 ---
 

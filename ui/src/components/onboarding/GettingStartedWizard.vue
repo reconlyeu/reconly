@@ -29,7 +29,6 @@ import {
   Play,
   CheckCircle,
   AlertTriangle,
-  Settings,
   ExternalLink,
 } from 'lucide-vue-next';
 
@@ -38,7 +37,7 @@ const t = strings.onboarding.wizard;
 
 const queryClient = useQueryClient();
 const toast = useToast();
-const { shouldShowWizard, skipOnboarding, finishOnboarding, closeWizard } = useOnboarding();
+const { shouldShowWizard, skipOnboarding, finishOnboarding } = useOnboarding();
 
 // Inline polling for wizard-specific completion tracking
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
@@ -139,7 +138,7 @@ const { data: reportTemplates } = useQuery({
 const hasLlmConfigured = computed(() => {
   if (!providersData.value) return false;
   // Check if any provider is available (has models and is ready)
-  return providersData.value.providers.some(p => p.is_available && p.models.length > 0);
+  return providersData.value.providers.some(p => p.status === 'available' && p.models.length > 0);
 });
 
 // Get first available prompt template
@@ -170,6 +169,7 @@ const createSourceMutation = useMutation({
       url: sourceUrl.value,
       type: 'rss',
       enabled: true,
+      config: { max_items: 3 },  // Limit items for faster onboarding
     });
   },
   onSuccess: (source) => {
@@ -300,11 +300,6 @@ const handleViewResults = () => {
   window.location.href = '/digests';
 };
 
-const handleGoToSettings = () => {
-  finishOnboarding();
-  // Navigate to settings providers tab
-  window.location.href = '/settings?tab=providers';
-};
 
 // Handle escape key
 const handleKeydown = (e: KeyboardEvent) => {
@@ -548,16 +543,15 @@ const stepIcons = [
                 <div v-if="!hasLlmConfigured" class="space-y-4">
                   <div class="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
                     <AlertTriangle class="mt-0.5 flex-shrink-0 text-amber-500" :size="18" />
-                    <p class="text-sm text-amber-200">{{ t.steps.run.noLlm }}</p>
+                    <div class="text-sm text-amber-200">
+                      <p class="font-medium mb-2">No LLM provider detected</p>
+                      <p class="mb-3">To run feeds, you need Ollama with a model. Run these commands:</p>
+                      <div class="bg-black/30 rounded p-2 font-mono text-xs space-y-1">
+                        <div><span class="text-text-muted">$</span> ollama pull qwen2.5:7b</div>
+                      </div>
+                      <p class="mt-3 text-amber-200/70">Then refresh this page and try again.</p>
+                    </div>
                   </div>
-
-                  <button
-                    @click="handleGoToSettings"
-                    class="flex w-full items-center justify-center gap-2 rounded-lg bg-accent-primary px-4 py-3 font-medium text-white transition-colors hover:bg-accent-primary-hover"
-                  >
-                    <Settings :size="18" />
-                    {{ t.steps.run.goToSettings }}
-                  </button>
                 </div>
 
                 <!-- LLM Configured - Show Run State -->

@@ -298,7 +298,8 @@ async def run_feed(
 @router.get("/{feed_id}/runs")
 async def get_feed_runs(
     feed_id: int,
-    limit: int = 20,
+    page: int = 1,
+    per_page: int = 20,
     db: Session = Depends(get_db)
 ):
     """Get run history for a feed."""
@@ -308,11 +309,16 @@ async def get_feed_runs(
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
 
+    # Get total count
+    total = db.query(FeedRun).filter(FeedRun.feed_id == feed_id).count()
+
+    # Get paginated runs
+    offset = (page - 1) * per_page
     runs = db.query(FeedRun).filter(
         FeedRun.feed_id == feed_id
-    ).order_by(FeedRun.created_at.desc()).limit(limit).all()
+    ).order_by(FeedRun.created_at.desc()).offset(offset).limit(per_page).all()
 
-    return runs
+    return {"items": runs, "total": total}
 
 
 @router.post("/batch-delete", response_model=BatchDeleteResponse)
