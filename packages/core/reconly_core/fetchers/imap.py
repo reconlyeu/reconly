@@ -124,6 +124,7 @@ class IMAPFetcher(BaseFetcher):
         supports_incremental=True,
         supports_validation=True,
         supports_test_fetch=True,
+        show_in_settings=False,  # Credentials managed via Connections, no global settings
         requires_connection=True,
         connection_types=['email_imap'],
     )
