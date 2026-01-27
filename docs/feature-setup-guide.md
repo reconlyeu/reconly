@@ -10,9 +10,11 @@ After completing the [Quick Start](../README.md#quick-start), you have RSS, YouT
 | **YouTube Summarization** | ✅ Included | Same as above | - |
 | **Website Summarization** | ✅ Included | Same as above | - |
 | **Chat Interface** | ✅ Included | Same as above | - |
+| **Webhook Export** | ✅ Included | Just configure URL | - |
 | **Semantic Search (RAG)** | ❌ Needs setup | Embedding model | ~5 min |
 | **Knowledge Graph** | ❌ Needs setup | Embedding model | ~5 min |
 | **AI Research Agents** | ❌ Needs setup | Search provider | ~10 min |
+| **Email Digest Delivery** | ❌ Needs setup | SMTP credentials | ~5 min |
 | **Email Fetching** | ❌ Needs setup | IMAP credentials | ~5 min |
 | **GPT Researcher (Deep)** | ❌ Needs setup | pip install + search | ~15 min |
 
@@ -188,7 +190,56 @@ You should see `"comprehensive": {"available": true}` in the response.
 
 ---
 
-## 4. Email Fetching (IMAP)
+## 4. Email Digest Delivery (SMTP)
+
+Send digest summaries directly to your inbox.
+
+### What You Get
+
+- **Scheduled Delivery**: Receive digests via email on your schedule
+- **Formatted Summaries**: Clean HTML emails with your digest content
+- **Any SMTP Provider**: Gmail, SendGrid, Mailgun, or self-hosted
+
+### Requirements
+
+- SMTP server credentials (Gmail app password, SendGrid API key, etc.)
+
+### Setup
+
+**1. Configure SMTP** (add to your `.env`):
+
+```bash
+# Gmail example
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_EMAIL=your-email@gmail.com
+SMTP_FROM_NAME=Reconly Digests
+SMTP_USE_TLS=true
+```
+
+**2. For Gmail**, create an App Password:
+   - Go to [Google Account Security](https://myaccount.google.com/security)
+   - Enable 2-Step Verification
+   - Create an App Password for "Mail"
+
+**3. Restart Reconly** and configure email delivery in feed settings.
+
+### Alternative Providers
+
+| Provider | SMTP_HOST | Notes |
+|----------|-----------|-------|
+| Gmail | `smtp.gmail.com` | Requires app password |
+| SendGrid | `smtp.sendgrid.net` | Use `apikey` as username |
+| Mailgun | `smtp.mailgun.org` | Domain-specific credentials |
+| AWS SES | `email-smtp.{region}.amazonaws.com` | IAM credentials |
+
+**Detailed guide:** [Configuration - Email (SMTP)](configuration.md#email-smtp)
+
+---
+
+## 5. Email Fetching (IMAP)
 
 Summarize newsletters and email digests automatically.
 
