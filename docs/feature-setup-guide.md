@@ -4,23 +4,20 @@ After completing the [Quick Start](../README.md#quick-start), you have RSS, YouT
 
 ## Feature Matrix
 
-| Feature | Quick Start | What You Need | Setup Time |
-|---------|-------------|---------------|------------|
-| **RSS Summarization** | ✅ Included | Ollama + any model | - |
-| **YouTube Summarization** | ✅ Included | Same as above | - |
-| **Website Summarization** | ✅ Included | Same as above | - |
-| **Chat Interface** | ✅ Included | Same as above | - |
-| **Webhook Export** | ✅ Included | Just configure URL | - |
-| **Semantic Search (RAG)** | ❌ Needs setup | Embedding model | ~5 min |
-| **Knowledge Graph** | ❌ Needs setup | Embedding model | ~5 min |
-| **AI Research Agents** | ❌ Needs setup | Search provider | ~10 min |
-| **Email Digest Delivery** | ❌ Needs setup | SMTP credentials | ~5 min |
-| **Email Fetching** | ❌ Needs setup | IMAP credentials | ~5 min |
-| **GPT Researcher (Deep)** | ❌ Needs setup | pip install + search | ~15 min |
+| Feature | Quick Start | What You Need |
+|---------|-------------|---------------|
+| **RSS Summarization** | ✅ Included | Ollama + any model |
+| **YouTube Summarization** | ✅ Included | Same as above |
+| **Website Summarization** | ✅ Included | Same as above |
+| **Chat Interface** | ✅ Included | Same as above |
+| **Webhook Export** | ✅ Included | Just configure URL |
+| **Semantic Search & Knowledge Graph** | ❌ Optional | Embedding model |
+| **AI Research Agents** | ❌ Optional | GPT Researcher + search provider |
+| **Email Integration** | ❌ Optional | SMTP and/or IMAP credentials |
 
 ---
 
-## 1. Semantic Search & Knowledge Graph (RAG)
+## 1. Semantic Search & Knowledge Graph
 
 Enable intelligent search across your digest archive and visualize topic connections.
 
@@ -89,45 +86,64 @@ Enable autonomous web research on topics you define.
 
 ### What You Get
 
-- **Automated Research**: Define a topic, get comprehensive reports
+- **Comprehensive Reports**: 2000+ word reports with 20-50 sources
 - **Multi-Source**: Searches the web, synthesizes findings, cites sources
 - **Scheduled Research**: Run research on a schedule like any other source
 
 ### Requirements
 
-- Search provider (SearXNG recommended for self-hosted, or Tavily API)
-- LLM with good reasoning (qwen2.5:7b works, larger models better)
+- GPT Researcher package (powers the research engine)
+- Search provider (SearXNG recommended)
+- LLM with good reasoning (qwen2.5:7b minimum, larger models better)
 
-### Setup Option A: SearXNG (Self-Hosted, Unlimited)
+### Step 1: Install GPT Researcher
 
-**1. Start SearXNG with Docker:**
+GPT Researcher powers the multi-agent research architecture. Without it, research results are limited.
 
 ```bash
+# Option A: Install directly
+pip install gpt-researcher>=0.9.0
+
+# Option B: Install with research extras
+pip install -e "packages/core[research]"
+```
+
+Verify installation:
+```bash
+curl http://localhost:8000/api/v1/agent-runs/capabilities
+# Should show "comprehensive": {"available": true}
+```
+
+### Step 2: Configure Search Provider
+
+#### Option A: SearXNG (Recommended)
+
+Self-hosted, unlimited searches, privacy-respecting.
+
+```bash
+# Start SearXNG
 docker run -d --name searxng \
   -p 8888:8080 \
   -e SEARXNG_BASE_URL=http://localhost:8888 \
   searxng/searxng
 ```
 
-**2. Configure (add to your `.env`):**
-
+Add to `.env`:
 ```bash
 SEARXNG_URL=http://localhost:8888
 ```
 
-### Setup Option B: Tavily API (Cloud, Easy)
+#### Option B: Tavily API
 
-**1. Get API key** from [tavily.com](https://tavily.com) (1000 free searches/month)
-
-**2. Configure:**
+Cloud-based, easy setup. Get API key from [tavily.com](https://tavily.com) (1000 free searches/month).
 
 ```bash
 TAVILY_API_KEY=tvly-your-key-here
 ```
 
-### Setup Option C: DuckDuckGo (No Setup, Rate Limited)
+#### Option C: DuckDuckGo
 
-Works out of the box but has aggressive rate limits. Good for testing.
+Works out of the box but has aggressive rate limits. Good for testing only.
 
 ### Using Agent Sources
 
@@ -137,76 +153,21 @@ Works out of the box but has aggressive rate limits. Good for testing.
 4. Choose strategy: Simple (fast) or Comprehensive (thorough)
 5. Add to a feed and run
 
+**Note:** Comprehensive research takes 3-5 minutes and uses significant LLM tokens.
+
 **Detailed guide:** [AI Research Agents](sources/agent-research-source.md)
 
 ---
 
-## 3. GPT Researcher (Comprehensive Research)
+## 3. Email Integration
 
-Enable deep, multi-agent research for thorough analysis.
+Send digests to your inbox and/or fetch newsletters to summarize. Configure one or both based on your needs.
 
-### What You Get
+### Sending Digests (SMTP)
 
-- **Comprehensive Reports**: 2000+ word reports with 20-50 sources
-- **Multi-Agent Architecture**: Planner → Executors → Publisher
-- **Deep Analysis**: Due diligence level research
+Receive your feed digests via email on a schedule.
 
-### Requirements
-
-- Search provider (from step 2 above)
-- `gpt-researcher` Python package
-- More capable LLM recommended (llama3.1:70b ideal, qwen2.5:7b minimum)
-
-### Setup
-
-**1. Install GPT Researcher:**
-
-```bash
-# If using pip install directly
-pip install gpt-researcher>=0.9.0
-
-# Or install with research extras
-pip install -e "packages/core[research]"
-```
-
-**2. Verify installation:**
-
-```bash
-curl http://localhost:8000/api/v1/agent-runs/capabilities
-```
-
-You should see `"comprehensive": {"available": true}` in the response.
-
-### Using Deep Research
-
-1. Create an Agent source
-2. Select **Comprehensive** or **Deep** strategy
-3. Configure max subtopics (3-5 recommended)
-4. Run the source
-
-**Note:** Deep research takes 3-5 minutes and uses significant LLM tokens.
-
-**Detailed guide:** [AI Research Agents - GPT Researcher](sources/agent-research-source.md#gpt-researcher-setup)
-
----
-
-## 4. Email Digest Delivery (SMTP)
-
-Send digest summaries directly to your inbox.
-
-### What You Get
-
-- **Scheduled Delivery**: Receive digests via email on your schedule
-- **Formatted Summaries**: Clean HTML emails with your digest content
-- **Any SMTP Provider**: Gmail, SendGrid, Mailgun, or self-hosted
-
-### Requirements
-
-- SMTP server credentials (Gmail app password, SendGrid API key, etc.)
-
-### Setup
-
-**1. Configure SMTP** (add to your `.env`):
+**Configure SMTP** (add to your `.env`):
 
 ```bash
 # Gmail example
@@ -219,92 +180,48 @@ SMTP_FROM_NAME=Reconly Digests
 SMTP_USE_TLS=true
 ```
 
-**2. For Gmail**, create an App Password:
-   - Go to [Google Account Security](https://myaccount.google.com/security)
-   - Enable 2-Step Verification
-   - Create an App Password for "Mail"
+**For Gmail**, create an App Password at [Google Account Security](https://myaccount.google.com/security) (requires 2-Step Verification).
 
-**3. Restart Reconly** and configure email delivery in feed settings.
-
-### Alternative Providers
+**Other providers:**
 
 | Provider | SMTP_HOST | Notes |
 |----------|-----------|-------|
-| Gmail | `smtp.gmail.com` | Requires app password |
 | SendGrid | `smtp.sendgrid.net` | Use `apikey` as username |
 | Mailgun | `smtp.mailgun.org` | Domain-specific credentials |
 | AWS SES | `email-smtp.{region}.amazonaws.com` | IAM credentials |
 
-**Detailed guide:** [Configuration - Email (SMTP)](configuration.md#email-smtp)
+After configuring, enable email delivery in your feed settings.
 
----
-
-## 5. Email Fetching (IMAP)
+### Fetching Newsletters (IMAP)
 
 Summarize newsletters and email digests automatically.
 
-### What You Get
+**Setup:**
+1. Go to **Sources** → **Add Source**
+2. Select **Email (IMAP)**
+3. Enter your IMAP credentials (Gmail requires an App Password)
+4. Configure folders and filters
 
-- **Newsletter Summarization**: Daily/weekly newsletter digests
-- **Multi-Provider**: Gmail, Outlook, or any IMAP server
-- **Filtering**: By sender, subject, or folder
-- **OAuth Support**: Secure authentication for Gmail/Outlook
+**Filtering options:**
 
-### Requirements
+| Option | Example |
+|--------|---------|
+| `folders` | `INBOX`, `Newsletters` |
+| `from_filter` | `*@newsletter.com` |
+| `subject_filter` | `*Weekly Digest*` |
 
-- IMAP credentials (app password recommended)
-- Or OAuth setup for Gmail/Outlook
-
-### Quick Setup (Generic IMAP)
-
-**1. Create app password** (for Gmail):
-   - Go to [Google Account Security](https://myaccount.google.com/security)
-   - Enable 2-Step Verification
-   - Create an App Password for "Mail"
-
-**2. Add email source:**
-   - Go to **Sources** → **Add Source**
-   - Select **Email (IMAP)**
-   - Enter your credentials
-   - Configure folders and filters
-
-### Configuration Options
-
-| Option | Description |
-|--------|-------------|
-| `folders` | Which folders to fetch from (`INBOX`, `Newsletters`, etc.) |
-| `from_filter` | Filter by sender (`*@newsletter.com`) |
-| `subject_filter` | Filter by subject (`*Weekly Digest*`) |
-
-**Detailed guide:** [Email Source Setup](sources/imap-email-source.md)
+**Detailed guides:** [SMTP Configuration](configuration.md#email-smtp) · [IMAP Source Setup](sources/imap-email-source.md)
 
 ---
 
 ## Hardware Recommendations
 
-### Minimum (Basic Summarization)
+| Tier | RAM | Disk | Models |
+|------|-----|------|--------|
+| **Minimum** | 8GB | 10GB | qwen2.5:7b |
+| **Recommended** | 16GB | 50GB | qwen2.5:7b + bge-m3 |
 
-- **CPU**: Any modern CPU
-- **RAM**: 8GB
-- **Disk**: 10GB free
-- **GPU**: Not required
-- **Model**: qwen2.5:7b or phi3:mini
-
-### Recommended (Full Features)
-
-- **CPU**: 4+ cores
-- **RAM**: 16GB
-- **Disk**: 50GB free (for models + embeddings)
-- **GPU**: Optional but helpful
-- **Models**: qwen2.5:7b + bge-m3 embedding
-
-### Power User (Deep Research)
-
-- **CPU**: 8+ cores
-- **RAM**: 32GB+
-- **Disk**: 100GB+ free
-- **GPU**: Recommended (RTX 3080+ or Apple M1 Pro+)
-- **Models**: llama3.1:70b or claude-3-5-sonnet
+GPU is optional but speeds up inference. Any modern CPU works.
 
 ---
 
@@ -312,27 +229,25 @@ Summarize newsletters and email digests automatically.
 
 ### Embeddings Not Working
 
-**Symptom:** Chat says "No relevant content found" or semantic search returns nothing.
+Chat says "No relevant content found" or semantic search returns nothing.
 
-**Fix:**
 1. Check embedding model is pulled: `ollama list`
 2. Verify EMBEDDING_MODEL in .env matches a pulled model
 3. Re-embed digests: `curl -X POST localhost:8000/api/v1/embeddings/embed-all`
 
 ### Agent Research Fails
 
-**Symptom:** Agent sources fail with "Search provider not configured"
+Agent sources fail with "Search provider not configured" or produce poor results.
 
-**Fix:**
-1. Set SEARXNG_URL or TAVILY_API_KEY in .env
-2. Test search: `curl http://localhost:8888/search?q=test` (for SearXNG)
-3. Restart Reconly
+1. Verify GPT Researcher is installed: `curl localhost:8000/api/v1/agent-runs/capabilities`
+2. Set SEARXNG_URL or TAVILY_API_KEY in .env
+3. Test search: `curl http://localhost:8888/search?q=test` (for SearXNG)
+4. Restart Reconly
 
 ### "(no model selected)" in Chat
 
-**Symptom:** Chat sidebar shows provider but "(no model selected)"
+Chat sidebar shows provider but "(no model selected)".
 
-**Fix:**
 1. Set OLLAMA_MODEL in .env (e.g., `OLLAMA_MODEL=qwen2.5:7b`)
 2. Restart Reconly
 3. Verify: `curl localhost:8000/api/v1/providers/default`
