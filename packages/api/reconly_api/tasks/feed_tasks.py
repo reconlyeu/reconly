@@ -60,6 +60,32 @@ def run_feed_task(
 
     except Exception as e:
         logger.error(f"Failed to run feed {feed_id}: {e}", exc_info=True)
+
+        # Update FeedRun status to 'failed' if we have a feed_run_id
+        # This ensures the run doesn't stay stuck in 'running' status
+        if feed_run_id:
+            try:
+                from datetime import datetime
+                from sqlalchemy import create_engine
+                from sqlalchemy.orm import sessionmaker
+                from reconly_core.database.models import FeedRun
+
+                engine = create_engine(settings.database_url)
+                Session = sessionmaker(bind=engine)
+                session = Session()
+                try:
+                    feed_run = session.query(FeedRun).filter(FeedRun.id == feed_run_id).first()
+                    if feed_run and feed_run.status == "running":
+                        feed_run.status = "failed"
+                        feed_run.completed_at = datetime.utcnow()
+                        feed_run.error_log = str(e)
+                        session.commit()
+                        logger.info(f"Updated FeedRun {feed_run_id} status to 'failed'")
+                finally:
+                    session.close()
+            except Exception as db_error:
+                logger.error(f"Failed to update FeedRun {feed_run_id} status: {db_error}")
+
         return {
             "success": False,
             "feed_id": feed_id,

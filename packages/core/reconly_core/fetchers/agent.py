@@ -44,13 +44,15 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Strategy timeout values in seconds
+# Strategy timeout values in seconds (configurable via environment variables)
 # Note: Local LLMs (Ollama) need longer timeouts than cloud APIs
-STRATEGY_TIMEOUTS: dict[str, int] = {
-    "simple": 180,        # 3 minutes
-    "comprehensive": 600,  # 10 minutes (increased for local LLMs)
-    "deep": 900,          # 15 minutes
-}
+def _get_strategy_timeouts() -> dict[str, int]:
+    """Get strategy timeouts from environment or use defaults."""
+    return {
+        "simple": int(os.getenv("AGENT_TIMEOUT_SIMPLE", "180")),           # 3 minutes default
+        "comprehensive": int(os.getenv("AGENT_TIMEOUT_COMPREHENSIVE", "600")),  # 10 minutes default
+        "deep": int(os.getenv("AGENT_TIMEOUT_DEEP", "1200")),              # 20 minutes default
+    }
 
 # Valid strategy names
 VALID_STRATEGIES = frozenset(["simple", "comprehensive", "deep"])
@@ -270,7 +272,7 @@ class AgentFetcher(BaseFetcher):
             )
 
             # Get timeout for this strategy
-            timeout = STRATEGY_TIMEOUTS.get(strategy_name, 120)
+            timeout = _get_strategy_timeouts().get(strategy_name, 120)
 
             logger.info(
                 "Running research strategy",
@@ -300,7 +302,7 @@ class AgentFetcher(BaseFetcher):
             return formatted
 
         except asyncio.TimeoutError:
-            timeout = STRATEGY_TIMEOUTS.get(strategy_name, 120)
+            timeout = _get_strategy_timeouts().get(strategy_name, 120)
             error_msg = (
                 f"Research strategy '{strategy_name}' timed out after {timeout} seconds"
             )

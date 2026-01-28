@@ -112,7 +112,7 @@ class GPTResearcherStrategy(ResearchStrategy):
                     report_type=report_type,
                     report_format=settings.gptr_report_format,
                     max_subtopics=settings.gptr_max_subtopics,
-                    verbose=False,
+                    verbose=True,
                 )
 
                 await researcher.conduct_research()
