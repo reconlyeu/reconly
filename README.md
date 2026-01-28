@@ -90,7 +90,7 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
-| Ollama / LM Studio | Free | 100% Local | [5 min setup](docs/setup.md#option-a-ollama-local-free-private) |
+| Ollama / LM Studio | Free | 100% Local | [Setup guide](docs/setup.md#option-a-ollama-local-free-private) |
 | HuggingFace | Free tier | Cloud | API key |
 | OpenAI | ~$0.02/article | Cloud | API key |
 | Anthropic | ~$0.04/article | Cloud | API key |
