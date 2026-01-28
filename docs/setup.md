@@ -80,8 +80,8 @@ Reconly supports multiple AI providers with intelligent fallback:
 
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
-| **Ollama** | Free | 100% Local | 5 min |
-| **LM Studio** | Free | 100% Local | 5 min |
+| **Ollama** | Free | 100% Local | [See below](#option-a-ollama-local-free-private) |
+| **LM Studio** | Free | 100% Local | [See below](#option-b-lm-studio-local-free-private) |
 | **HuggingFace** | Free tier | Cloud | API key |
 | **OpenAI** | ~$0.02/article | Cloud | API key |
 | **Anthropic** | ~$0.04/article | Cloud | API key |
