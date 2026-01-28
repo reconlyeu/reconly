@@ -8,7 +8,7 @@ After completing the [Quick Start](../README.md#quick-start), you have RSS, YouT
 |---------|-------------|---------------|
 | **Content Summarization** (RSS, YouTube, Website) | ✅ Included | Ollama + any model |
 | **Chat Interface** | ✅ Included | Same as above |
-| **Webhook Export** | ✅ Included | Just configure URL |
+| **Webhook & PKM Export** | ✅ Included | Just configure URL |
 | **Semantic Search & Knowledge Graph** | ❌ Optional | Embedding model |
 | **AI Research Agents** | ❌ Optional | GPT Researcher + search provider |
 | **Email Integration** | ❌ Optional | SMTP and/or IMAP credentials |
