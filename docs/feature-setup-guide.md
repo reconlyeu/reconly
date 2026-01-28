@@ -6,9 +6,7 @@ After completing the [Quick Start](../README.md#quick-start), you have RSS, YouT
 
 | Feature | Quick Start | What You Need |
 |---------|-------------|---------------|
-| **RSS Summarization** | ✅ Included | Ollama + any model |
-| **YouTube Summarization** | ✅ Included | Same as above |
-| **Website Summarization** | ✅ Included | Same as above |
+| **Content Summarization** (RSS, YouTube, Website) | ✅ Included | Ollama + any model |
 | **Chat Interface** | ✅ Included | Same as above |
 | **Webhook Export** | ✅ Included | Just configure URL |
 | **Semantic Search & Knowledge Graph** | ❌ Optional | Embedding model |

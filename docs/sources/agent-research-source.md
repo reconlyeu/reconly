@@ -2,7 +2,7 @@
 
 > **Status:** Available in v1.5+
 > **Source Type:** `agent`
-> **Requires:** LLM provider configured (Ollama, LM Studio, OpenAI, or Anthropic)
+> **Requires:** GPT Researcher package, search provider, LLM provider
 
 This guide explains how to use Reconly's AI Agent source for autonomous web research.
 
@@ -12,11 +12,10 @@ This guide explains how to use Reconly's AI Agent source for autonomous web rese
 
 1. [Overview](#overview)
 2. [Research Strategies](#research-strategies)
-3. [Basic Setup](#basic-setup)
-4. [GPT Researcher Setup](#gpt-researcher-setup)
-5. [Configuration Options](#configuration-options)
-6. [Cost Expectations](#cost-expectations)
-7. [Troubleshooting](#troubleshooting)
+3. [Setup](#setup)
+4. [Configuration Options](#configuration-options)
+5. [Cost Expectations](#cost-expectations)
+6. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -41,7 +40,7 @@ The Agent source type uses an LLM with web tools to autonomously research topics
 
 ## Research Strategies
 
-Reconly supports three research strategies with different depth/speed tradeoffs:
+Reconly uses [GPT Researcher](https://github.com/assafelovic/gpt-researcher) to power autonomous research. Three strategies with different depth/speed tradeoffs:
 
 | Strategy | Duration | Sources | Best For |
 |----------|----------|---------|----------|
@@ -49,46 +48,64 @@ Reconly supports three research strategies with different depth/speed tradeoffs:
 | **Comprehensive** | ~3 minutes | 20+ | Deep research, competitive intel |
 | **Deep** | ~5 minutes | 50+ | Exhaustive analysis, due diligence |
 
-### Simple Strategy (Default)
-
-Uses a basic ReAct loop with `web_search` and `web_fetch` tools. Fast and efficient for straightforward queries.
-
-- No additional dependencies
-- Works with any LLM provider
-- Lower cost per research
-
-### Comprehensive & Deep Strategies
-
-Uses [GPT Researcher](https://github.com/assafelovic/gpt-researcher), a battle-tested open-source framework that:
+GPT Researcher is a battle-tested open-source framework that:
 
 - Employs multi-agent architecture (planner → parallel executors → publisher)
 - Aggregates 20-50+ sources per query
 - Produces 2000+ word reports with proper citations
 - Includes source curation to filter low-quality results
 
-**Requires:** `gpt-researcher` package (see [GPT Researcher Setup](#gpt-researcher-setup))
-
 ---
 
-## Basic Setup
+## Setup
 
-### 1. Configure a Search Provider
+### Step 1: Install GPT Researcher
 
-Agent sources require a search provider. Configure one in Settings → Agent:
+GPT Researcher powers the research engine. Install it first:
+
+```bash
+# Option A: Install with research extras
+pip install -e "packages/core[research]"
+
+# Option B: Install directly
+pip install gpt-researcher>=0.9.0
+```
+
+Verify installation:
+
+```bash
+curl http://localhost:8000/api/v1/agent-runs/capabilities
+# Should show "gpt_researcher_installed": true
+```
+
+### Step 2: Configure a Search Provider
 
 | Provider | Setup | Notes |
 |----------|-------|-------|
-| **DuckDuckGo** | No setup needed | Free, no API key, rate limited |
-| **SearXNG** | Set `SEARXNG_URL` | Self-hosted, unlimited, recommended |
+| **SearXNG** | Set `SEARXNG_URL` | Self-hosted, unlimited, **recommended** |
 | **Tavily** | Set `TAVILY_API_KEY` | Best results, 1000 free searches/month |
+| **DuckDuckGo** | No setup needed | Free, but aggressive rate limits |
 
-### 2. Create an Agent Source
+**SearXNG setup:**
+```bash
+docker run -d --name searxng \
+  -p 8888:8080 \
+  -e SEARXNG_BASE_URL=http://localhost:8888 \
+  searxng/searxng
+```
+
+Add to `.env`:
+```bash
+SEARXNG_URL=http://localhost:8888
+```
+
+### Step 3: Create an Agent Source
 
 1. Go to **Sources** → **Add Source**
 2. Select **AI Agent** as the source type
 3. Enter your research topic/prompt
-4. (Optional) Adjust max iterations
-5. Save the source
+4. Choose strategy (Simple, Comprehensive, or Deep)
+5. Save and add to a feed
 
 ### Example Prompts
 
@@ -102,49 +119,15 @@ Analyze the competitive landscape of cloud-native database solutions,
 comparing pricing, features, and market positioning.
 ```
 
----
-
-## GPT Researcher Setup
-
-To use **Comprehensive** or **Deep** strategies, install the GPT Researcher package:
-
-```bash
-# From the reconly directory
-pip install -e ".[research]"
-
-# Or install directly
-pip install gpt-researcher>=0.9.0
-```
-
-### Verify Installation
-
-After installation, the UI will show Comprehensive and Deep options in the strategy selector. You can also check via API:
-
-```bash
-curl http://localhost:8000/api/v1/agent-runs/capabilities
-```
-
-Response when installed:
-```json
-{
-  "strategies": {
-    "simple": {"available": true, "description": "Quick research (~30s)"},
-    "comprehensive": {"available": true, "description": "Comprehensive research (~3min)"},
-    "deep": {"available": true, "description": "Deep research (~5min)"}
-  },
-  "gpt_researcher_installed": true
-}
-```
-
 ### LLM Provider Mapping
 
 GPT Researcher automatically uses your configured LLM provider:
 
 | Reconly Provider | GPT Researcher Config |
 |------------------|----------------------|
+| Ollama | Uses `OLLAMA_BASE_URL`, model as `SMART_LLM` |
 | OpenAI | Uses `OPENAI_API_KEY`, model as `SMART_LLM` |
 | Anthropic | Uses `ANTHROPIC_API_KEY`, model as `SMART_LLM` |
-| Ollama | Uses `OLLAMA_BASE_URL`, model as `SMART_LLM` |
 | LM Studio | Uses `OPENAI_BASE_URL` (OpenAI-compatible API) |
 
 ---
@@ -198,20 +181,22 @@ Costs vary by strategy and LLM provider. Estimates using GPT-4o:
 
 ### "GPT Researcher not installed"
 
-Install the research dependencies:
+GPT Researcher is required. Install it:
 ```bash
-pip install -e ".[research]"
+pip install -e "packages/core[research]"
+# or
+pip install gpt-researcher>=0.9.0
 ```
 
 ### "Search provider not configured"
 
-Set the appropriate environment variable:
+Set a search provider in `.env`:
 ```bash
-# For Tavily
-export TAVILY_API_KEY=tvly-xxxxx
+# Recommended: SearXNG
+SEARXNG_URL=http://localhost:8888
 
-# For SearXNG
-export SEARXNG_URL=http://localhost:8080
+# Or: Tavily
+TAVILY_API_KEY=tvly-xxxxx
 ```
 
 ### Research times out
