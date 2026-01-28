@@ -1,5 +1,8 @@
-"""CSV exporter for digests."""
-import csv
+"""Plain Markdown exporter for digests.
+
+Exports digests to plain Markdown format without frontmatter,
+suitable for general-purpose markdown viewing and sharing.
+"""
 from datetime import date
 from io import StringIO
 from pathlib import Path
@@ -16,33 +19,23 @@ from reconly_core.exporters.metadata import ExporterMetadata
 from reconly_core.exporters.registry import register_exporter
 
 
-# Default fields to include in CSV export
-DEFAULT_FIELDS = [
-    'id', 'title', 'url', 'summary', 'source_type', 'author',
-    'published_at', 'created_at', 'provider', 'language', 'tags'
-]
+@register_exporter('markdown')
+class MarkdownExporter(BaseExporter):
+    """Export digests as plain Markdown.
 
-# Extended fields including content
-EXTENDED_FIELDS = DEFAULT_FIELDS + ['content']
-
-
-@register_exporter('csv')
-class CSVExporter(BaseExporter):
-    """Export digests as CSV.
-
-    Exports digests to comma-separated values format with headers.
-    Supports direct export to filesystem.
+    Exports digests to clean Markdown format without YAML frontmatter.
+    Suitable for general-purpose use, sharing, and viewing.
     """
 
     metadata = ExporterMetadata(
-        name='csv',
-        display_name='CSV',
-        description='Export digests as CSV spreadsheet',
-        icon='mdi:file-delimited',
-        file_extension='.csv',
-        mime_type='text/csv',
+        name='markdown',
+        display_name='Markdown',
+        description='Export digests as plain Markdown files',
+        icon='mdi:language-markdown',
+        file_extension='.md',
+        mime_type='text/markdown',
         path_setting_key='export_path',
-        ui_color='#22A74E',  # Spreadsheet green
+        ui_color='#083FA1',  # Markdown blue
     )
 
     def export(
@@ -51,62 +44,91 @@ class CSVExporter(BaseExporter):
         config: Dict[str, Any] = None
     ) -> ExportResult:
         """
-        Export digests to CSV format.
+        Export digests to plain Markdown format.
 
         Args:
             digests: List of Digest model instances
-            config: Optional config with 'fields' key (list of field names)
-                    and 'include_content' key (bool)
+            config: Optional config with:
+                - 'include_content': Whether to include full content (default: True)
 
         Returns:
-            ExportResult with CSV content
+            ExportResult with Markdown content
         """
         config = config or {}
-        include_content = config.get('include_content', False)
-        fieldnames = config.get('fields', EXTENDED_FIELDS if include_content else DEFAULT_FIELDS)
+        include_content = config.get('include_content', True)
 
         output = StringIO()
 
-        if digests:
-            writer = csv.DictWriter(output, fieldnames=fieldnames)
-            writer.writeheader()
-
-            for digest in digests:
-                digest_dict = digest.to_dict()
-                row = {k: digest_dict.get(k, '') for k in fieldnames}
-                # Format tags as comma-separated string for CSV
-                if 'tags' in row and isinstance(row['tags'], list):
-                    row['tags'] = ', '.join(row['tags'])
-                writer.writerow(row)
+        for i, digest in enumerate(digests):
+            if i > 0:
+                output.write("\n---\n\n")
+            self._write_digest(output, digest, include_content)
 
         return ExportResult(
             content=output.getvalue(),
-            filename='digests.csv',
+            filename='digests.md',
             content_type=self.get_content_type(),
             digest_count=len(digests)
         )
 
+    def _write_digest(
+        self,
+        output: StringIO,
+        digest: Any,
+        include_content: bool
+    ) -> None:
+        """Write a single digest to the output stream."""
+        # Title
+        output.write(f"# {digest.title or 'Untitled'}\n\n")
+
+        # Metadata as a clean list
+        if digest.url:
+            output.write(f"**Source:** [{digest.url}]({digest.url})\n")
+        if digest.author:
+            output.write(f"**Author:** {digest.author}\n")
+        if digest.published_at:
+            output.write(f"**Published:** {digest.published_at.strftime('%Y-%m-%d %H:%M')}\n")
+        if digest.source_type:
+            output.write(f"**Type:** {digest.source_type}\n")
+
+        # Tags
+        tags_list = [tag.tag.name for tag in digest.tags] if digest.tags else []
+        if tags_list:
+            output.write(f"**Tags:** {', '.join(tags_list)}\n")
+
+        output.write("\n")
+
+        # Summary
+        if digest.summary:
+            output.write("## Summary\n\n")
+            output.write(f"{digest.summary}\n\n")
+
+        # Full content
+        if include_content and digest.content:
+            output.write("## Content\n\n")
+            output.write(f"{digest.content}\n\n")
+
     def get_format_name(self) -> str:
-        return 'csv'
+        return 'markdown'
 
     def get_content_type(self) -> str:
-        return 'text/csv'
+        return 'text/markdown'
 
     def get_file_extension(self) -> str:
-        return 'csv'
+        return 'md'
 
     def get_description(self) -> str:
-        return 'Comma-separated values with headers'
+        return 'Plain Markdown format'
 
     def get_config_schema(self) -> ExporterConfigSchema:
-        """Return configuration schema for CSV export."""
+        """Return configuration schema for Markdown export."""
         return ExporterConfigSchema(
             fields=[
                 ConfigField(
                     key="export_path",
                     type="path",
                     label="Export Path",
-                    description="Directory to save exported CSV files (required for direct export)",
+                    description="Directory to save exported Markdown files",
                     default=None,
                     required=False,
                     placeholder="/path/to/export/folder"
@@ -115,8 +137,8 @@ class CSVExporter(BaseExporter):
                     key="include_content",
                     type="boolean",
                     label="Include Full Content",
-                    description="Include full article content column (can make files large)",
-                    default=False,
+                    description="Include full article content (can be large)",
+                    default=True,
                     required=False
                 ),
                 ConfigField(
@@ -138,7 +160,7 @@ class CSVExporter(BaseExporter):
         config: Optional[Dict[str, Any]] = None
     ) -> ExportToPathResult:
         """
-        Export digests directly to the filesystem as CSV.
+        Export digests directly to the filesystem as Markdown.
 
         Args:
             digests: List of Digest model instances
@@ -149,7 +171,7 @@ class CSVExporter(BaseExporter):
             ExportToPathResult with written files and any errors
         """
         config = config or {}
-        include_content = config.get("include_content", False)
+        include_content = config.get("include_content", True)
         one_per_file = config.get("one_file_per_digest", False)
 
         base = Path(base_path)
@@ -170,7 +192,6 @@ class CSVExporter(BaseExporter):
 
         if one_per_file:
             # Create separate file for each digest
-            fieldnames = EXTENDED_FIELDS if include_content else DEFAULT_FIELDS
             for digest in digests:
                 filename = self._generate_filename(digest)
                 filepath = base / filename
@@ -179,23 +200,14 @@ class CSVExporter(BaseExporter):
                     skipped += 1
                     continue
                 try:
-                    digest_dict = digest.to_dict()
-                    row = {k: digest_dict.get(k, '') for k in fieldnames}
-                    # Format tags as comma-separated string for CSV
-                    if 'tags' in row and isinstance(row['tags'], list):
-                        row['tags'] = ', '.join(row['tags'])
-
-                    with open(filepath, 'w', newline='', encoding='utf-8') as f:
-                        writer = csv.DictWriter(f, fieldnames=fieldnames)
-                        writer.writeheader()
-                        writer.writerow(row)
-
+                    content = self._render_single_digest(digest, include_content)
+                    filepath.write_text(content, encoding="utf-8")
                     written.append(filename)
                 except Exception as e:
                     errors.append({"file": filename, "error": str(e)})
         else:
             # Create combined file
-            filename = f"digests-{date.today().isoformat()}.csv"
+            filename = f"digests-{date.today().isoformat()}.md"
             filepath = base / filename
             try:
                 result = self.export(digests, {"include_content": include_content})
@@ -218,7 +230,7 @@ class CSVExporter(BaseExporter):
         today = date.today().isoformat()
         digest_id = getattr(digest, 'id', 'unknown')
         title_slug = self._sanitize_filename(digest.title or "untitled")
-        return f"{today}-{title_slug}-{digest_id}.csv"
+        return f"{today}-{title_slug}-{digest_id}.md"
 
     def _sanitize_filename(self, name: str, max_length: int = 50) -> str:
         """Sanitize a string for use as a filename."""
@@ -237,3 +249,18 @@ class CSVExporter(BaseExporter):
             name = name[:max_length].rstrip("-")
 
         return name or "untitled"
+
+    def _render_single_digest(self, digest: Any, include_content: bool = True) -> str:
+        """
+        Render a single digest to markdown string.
+
+        Args:
+            digest: Digest model instance
+            include_content: Whether to include full content
+
+        Returns:
+            Markdown string
+        """
+        output = StringIO()
+        self._write_digest(output, digest, include_content)
+        return output.getvalue()

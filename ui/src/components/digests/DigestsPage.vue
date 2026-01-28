@@ -9,7 +9,6 @@ import DigestModal from './DigestModal.vue';
 import ViewModeToggle from '@/components/common/ViewModeToggle.vue';
 import TagFilterDropdown from '@/components/common/TagFilterDropdown.vue';
 import { useViewMode } from '@/composables/useViewMode';
-import { useExportToPath } from '@/composables/useExporters';
 import { useToast } from '@/composables/useToast';
 import type { Digest, Exporter } from '@/types/entities';
 import { Search, Filter, Loader2 } from 'lucide-vue-next';
@@ -171,25 +170,10 @@ const handleTagsUpdated = (updatedDigest: Digest) => {
 // Toast notifications
 const toast = useToast();
 
-// Export to path mutation for direct export (e.g., Obsidian)
-const exportToPathMutation = useExportToPath({
-  onSuccess: (data) => {
-    if (data.success) {
-      toast.success(`Exported ${data.files_written} file(s) to ${data.target_path}`);
-    } else {
-      toast.error(`Export completed with errors: ${data.errors.map(e => e.error).join(', ')}`);
-    }
-    digestTableRef.value?.clearSelection();
-  },
-  onError: (error) => {
-    toast.error(`Export failed: ${error.message}`);
-  },
-});
-
-// Download export mutation for blob-based exports (JSON, CSV, Markdown)
+// Download export mutation for browser downloads
 const downloadExportMutation = useMutation({
   mutationFn: async ({ ids, format, filename }: { ids: number[]; format: string; filename: string }) => {
-    const blob = await digestsApi.export(ids, format as 'json' | 'csv' | 'obsidian');
+    const blob = await digestsApi.export(ids, format);
     return { blob, filename };
   },
   onSuccess: ({ blob, filename }) => {
@@ -212,40 +196,27 @@ const downloadExportMutation = useMutation({
 const handleExportDigest = (digest: Digest, exporter: Exporter) => {
   const ids = [digest.id];
   const baseFilename = digest.title?.replace(/[^a-z0-9]/gi, '-').toLowerCase() || 'digest';
+  const filename = `${baseFilename}.${exporter.file_extension}`;
 
-  if (exporter.supports_direct_export) {
-    // Direct export to filesystem (e.g., Obsidian vault)
-    exportToPathMutation.mutate({
-      format: exporter.name,
-      digest_ids: ids,
-    });
-  } else {
-    // Download as file
-    const filename = `${baseFilename}.${exporter.file_extension}`;
-    downloadExportMutation.mutate({
-      ids,
-      format: exporter.name,
-      filename,
-    });
-  }
+  // Always use browser download for digest modal/card exports
+  // (supports_direct_export is only for automated feed auto-export with configured paths)
+  downloadExportMutation.mutate({
+    ids,
+    format: exporter.name,
+    filename,
+  });
 };
 
 const handleBulkExport = (ids: number[], exporter: Exporter) => {
-  if (exporter.supports_direct_export) {
-    // Direct export to filesystem
-    exportToPathMutation.mutate({
-      format: exporter.name,
-      digest_ids: ids,
-    });
-  } else {
-    // Download as file
-    const filename = `digests-${new Date().toISOString().split('T')[0]}.${exporter.file_extension}`;
-    downloadExportMutation.mutate({
-      ids,
-      format: exporter.name,
-      filename,
-    });
-  }
+  const filename = `digests-${new Date().toISOString().split('T')[0]}.${exporter.file_extension}`;
+
+  // Always use browser download for bulk exports from digests page
+  // (supports_direct_export is only for automated feed auto-export with configured paths)
+  downloadExportMutation.mutate({
+    ids,
+    format: exporter.name,
+    filename,
+  });
 };
 
 const handlePageChange = (page: number) => {

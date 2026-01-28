@@ -138,9 +138,9 @@ class MarkdownExporter(BaseExporter):
                     key="vault_path",
                     type="path",
                     label="Vault Path",
-                    description="Path to your Obsidian vault",
+                    description="Path to your Obsidian vault (required for direct export)",
                     default=None,
-                    required=True,
+                    required=False,
                     placeholder="/path/to/obsidian/vault"
                 ),
                 ConfigField(

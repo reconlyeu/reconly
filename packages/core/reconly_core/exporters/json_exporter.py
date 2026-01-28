@@ -89,9 +89,9 @@ class JSONExporter(BaseExporter):
                     key="export_path",
                     type="path",
                     label="Export Path",
-                    description="Directory to save exported JSON files",
+                    description="Directory to save exported JSON files (required for direct export)",
                     default=None,
-                    required=True,
+                    required=False,
                     placeholder="/path/to/export/folder"
                 ),
                 ConfigField(

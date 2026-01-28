@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 # Import exporters to ensure they're registered
 from reconly_core.exporters import json_exporter  # noqa: F401
 from reconly_core.exporters import csv_exporter  # noqa: F401
-from reconly_core.exporters import markdown  # noqa: F401
+from reconly_core.exporters import markdown  # noqa: F401 (Obsidian exporter)
+from reconly_core.exporters import markdown_exporter  # noqa: F401 (plain Markdown)
 
 # Track whether extensions have been loaded (lazy loading to avoid circular imports)
 _extensions_loaded = False

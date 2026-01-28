@@ -42,42 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>();
 
-const { exporters: configuredExporters, isLoading } = useEnabledExporters();
-
-// Built-in markdown download - always available as baseline feature
-const builtInMarkdownExporter: Exporter = {
-  name: 'markdown',
-  description: 'Export as Markdown file',
-  content_type: 'text/markdown',
-  enabled: true,
-  supports_direct_export: false,
-  file_extension: 'md',
-  config_schema: { fields: [], supports_direct_export: false },
-  is_configured: true,
-  can_enable: true,
-  is_extension: false,
-  metadata: {
-    name: 'markdown',
-    display_name: 'Markdown',
-    description: 'Export as Markdown file',
-    icon: 'mdi:language-markdown',
-    file_extension: 'md',
-    mime_type: 'text/markdown',
-    ui_color: null,
-  },
-};
-
-// Combine built-in markdown with configured exporters (avoid duplicates)
-const exporters = computed(() => {
-  const configured = configuredExporters.value || [];
-  // Check if markdown is already configured
-  const hasMarkdown = configured.some(e => e.name.toLowerCase() === 'markdown');
-  if (hasMarkdown) {
-    return configured;
-  }
-  // Add built-in markdown as first option
-  return [builtInMarkdownExporter, ...configured];
-});
+const { exporters, isLoading } = useEnabledExporters();
 
 // Dropdown state
 const isOpen = ref(false);
