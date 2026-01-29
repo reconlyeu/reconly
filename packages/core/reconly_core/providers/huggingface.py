@@ -33,6 +33,8 @@ class HuggingFaceProvider(BaseProvider):
         api_key_env_var='HUGGINGFACE_API_KEY',
         timeout_env_var='PROVIDER_TIMEOUT_HUGGINGFACE',
         timeout_default=120,
+        chat_adapter_format='openai',  # Uses OpenAI-compatible chat completions API
+        chat_api_base_url='https://router.huggingface.co/v1',  # HuggingFace router endpoint
     )
 
     # HuggingFace Hub API endpoint for model discovery

@@ -121,11 +121,72 @@ def register_adapter_alias(alias: str, target: str) -> None:
     logger.debug(f"Registered adapter alias '{alias}' -> '{target}'")
 
 
+def _try_register_provider_alias(provider_name: str) -> bool:
+    """Try to register an adapter alias from provider metadata.
+
+    This is called lazily when an adapter is requested but not found.
+    It checks if the provider exists in the provider registry and has
+    a chat_adapter_format defined, then registers the alias.
+
+    Args:
+        provider_name: The provider name to check
+
+    Returns:
+        True if an alias was registered, False otherwise
+    """
+    try:
+        # Import factory to ensure all providers are registered
+        # This triggers the provider module imports which register providers
+        import reconly_core.providers.factory  # noqa: F401
+
+        from reconly_core.providers.registry import (
+            is_provider_registered,
+            get_provider_entry,
+        )
+
+        if not is_provider_registered(provider_name):
+            return False
+
+        entry = get_provider_entry(provider_name)
+        provider_cls = entry.cls
+
+        # Get metadata if available
+        if not hasattr(provider_cls, 'metadata'):
+            return False
+
+        metadata = provider_cls.metadata
+        adapter_format = getattr(metadata, 'chat_adapter_format', None)
+
+        # Need a custom adapter format that's different from provider name
+        if not adapter_format or adapter_format == provider_name:
+            return False
+
+        # Check if target adapter exists
+        if adapter_format not in _ADAPTER_REGISTRY:
+            return False
+
+        # Register the alias
+        _ADAPTER_REGISTRY[provider_name] = adapter_format
+        logger.debug(
+            f"Lazy-registered adapter alias '{provider_name}' -> '{adapter_format}' "
+            f"from provider metadata"
+        )
+        return True
+
+    except Exception as e:
+        logger.debug(f"Could not lazy-register adapter for '{provider_name}': {e}")
+        return False
+
+
 def get_adapter(provider_name: str) -> "BaseToolAdapter":
     """Get an adapter instance by provider name.
 
     Resolves aliases automatically. Returns a fresh instance since
     adapters are stateless.
+
+    If the provider is not directly registered, this function will attempt
+    to register it lazily by checking the provider's metadata for a
+    chat_adapter_format field.
 
     Args:
         provider_name: Provider name or alias (e.g., 'openai', 'lmstudio')
@@ -140,12 +201,14 @@ def get_adapter(provider_name: str) -> "BaseToolAdapter":
         >>> adapter = get_adapter('openai')
         >>> formatted = adapter.format_tools(tools)
     """
+    # Try lazy registration if not found
     if provider_name not in _ADAPTER_REGISTRY:
-        available = list_adapters()
-        raise ValueError(
-            f"Unknown adapter '{provider_name}'. "
-            f"Available adapters: {available}."
-        )
+        if not _try_register_provider_alias(provider_name):
+            available = list_adapters()
+            raise ValueError(
+                f"Unknown adapter '{provider_name}'. "
+                f"Available adapters: {available}."
+            )
 
     entry = _ADAPTER_REGISTRY[provider_name]
 

@@ -39,6 +39,7 @@ class LMStudioProvider(BaseProvider):
         timeout_env_var='PROVIDER_TIMEOUT_LMSTUDIO',
         timeout_default=300,
         availability_endpoint='/models',
+        chat_adapter_format='openai',  # Uses OpenAI-compatible API
     )
 
     # Default timeout for local LMStudio models (longer since they run locally)

@@ -253,6 +253,40 @@ class MyProviderSummarizer(BaseSummarizer):
 | `timeout_env_var` | No | Environment variable for timeout |
 | `timeout_default` | No | Default timeout in seconds |
 | `availability_endpoint` | No | Endpoint path for availability checks |
+| `chat_adapter_format` | No | Chat adapter format for tool calling (see below) |
+| `chat_api_base_url` | No | Base URL for chat API (for OpenAI-compatible providers) |
+
+#### Chat Adapter Format
+
+The `chat_adapter_format` field enables your provider to work with Reconly's chat feature (tool calling). If your provider uses an OpenAI-compatible API, set this field to `'openai'`:
+
+```python
+metadata = ProviderMetadata(
+    name='my-provider',
+    display_name='My Provider',
+    # ... other fields ...
+    chat_adapter_format='openai',  # Uses OpenAI-compatible chat completions API
+    chat_api_base_url='https://api.myprovider.com/v1',  # Custom endpoint (if not standard OpenAI)
+)
+```
+
+**Available formats:**
+- `'openai'` - For providers using OpenAI's chat completions format (most common)
+- `'anthropic'` - For providers using Anthropic's messages format
+- `'ollama'` - For providers using Ollama's native format
+- `None` (default) - Uses the provider name as the adapter format
+
+**When to set `chat_api_base_url`:**
+- Cloud providers with custom endpoints (e.g., HuggingFace uses `https://router.huggingface.co/v1`)
+- Self-hosted or proxy endpoints
+- Not needed for standard OpenAI API or local providers (which use `base_url_default`)
+
+**When to set `chat_adapter_format`:**
+- If your provider uses `router.huggingface.co/v1/chat/completions` → set `'openai'`
+- If your provider is OpenAI-compatible (like LMStudio, Together, etc.) → set `'openai'`
+- If your provider has native adapter support (openai, anthropic, ollama) → leave as `None`
+
+The chat adapter and client are automatically configured based on these metadata fields - no additional code needed.
 
 #### Using Metadata Helper Methods
 

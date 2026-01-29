@@ -56,6 +56,10 @@ class ProviderMetadata(ComponentMetadata):
         availability_endpoint: Relative endpoint path to check if provider is available
                                (e.g., '/api/tags' for Ollama, '/v1/models' for LMStudio).
                                None for cloud providers that don't support health checks.
+        chat_adapter_format: The chat adapter format this provider uses for tool calling
+                             (e.g., 'openai', 'anthropic', 'ollama'). If None, uses provider name.
+                             Set this when a provider uses another provider's API format
+                             (e.g., HuggingFace and LMStudio use 'openai' format).
 
     Example:
         >>> metadata = ProviderMetadata(
@@ -82,6 +86,8 @@ class ProviderMetadata(ComponentMetadata):
     timeout_env_var: str = field(default="PROVIDER_TIMEOUT")
     timeout_default: int = 120
     availability_endpoint: str | None = None
+    chat_adapter_format: str | None = None  # API format for chat adapters (e.g., 'openai', 'anthropic', 'ollama'). None means use provider name.
+    chat_api_base_url: str | None = None  # Base URL for chat API (for OpenAI-compatible providers with non-standard endpoints)
 
     def get_api_key(self) -> str | None:
         """Get API key from environment variable.
@@ -218,4 +224,6 @@ class ProviderMetadata(ComponentMetadata):
             "timeout_env_var": self.timeout_env_var,
             "timeout_default": self.timeout_default,
             "availability_endpoint": self.availability_endpoint,
+            "chat_adapter_format": self.chat_adapter_format,
+            "chat_api_base_url": self.chat_api_base_url,
         }

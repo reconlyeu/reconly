@@ -223,6 +223,30 @@ class ChatService:
                 f"Available adapters: {available}"
             )
 
+    def _get_adapter_format(self, provider: str) -> str:
+        """Get the chat adapter format for a provider.
+
+        Looks up the provider in the registry and returns its chat_adapter_format
+        from metadata, or the provider name if not specified.
+
+        Args:
+            provider: Provider name.
+
+        Returns:
+            Adapter format string (e.g., 'openai', 'anthropic', 'ollama').
+        """
+        provider_lower = provider.lower()
+
+        from reconly_core.providers.registry import is_provider_registered, get_provider_entry
+        import reconly_core.providers.factory  # noqa: F401 - ensure providers are loaded
+
+        if is_provider_registered(provider_lower):
+            entry = get_provider_entry(provider_lower)
+            if hasattr(entry.cls, 'metadata'):
+                return getattr(entry.cls.metadata, 'chat_adapter_format', None) or provider_lower
+
+        return provider_lower
+
     def _get_default_provider(self) -> str:
         """Get the default provider from app settings or environment.
 
@@ -325,6 +349,9 @@ class ChatService:
     def _get_provider_client(self, provider: str, model: str | None = None) -> Any:
         """Get or create an LLM provider client.
 
+        Uses the provider registry to dynamically create clients based on
+        provider metadata. Supports any provider with chat_adapter_format set.
+
         Args:
             provider: Provider name.
             model: Optional model name.
@@ -335,45 +362,75 @@ class ChatService:
         if self.provider_factory:
             return self.provider_factory(provider, model or "")
 
-        # Default provider initialization
         provider_lower = provider.lower()
 
-        if provider_lower == "anthropic":
+        # Import provider registry to get metadata
+        from reconly_core.providers.registry import is_provider_registered, get_provider_entry
+        import reconly_core.providers.factory  # noqa: F401 - ensure providers are loaded
+
+        if not is_provider_registered(provider_lower):
+            raise ProviderError(f"Unknown provider: {provider}")
+
+        entry = get_provider_entry(provider_lower)
+        provider_cls = entry.cls
+
+        if not hasattr(provider_cls, 'metadata'):
+            raise ProviderError(f"Provider '{provider}' has no metadata configured")
+
+        metadata = provider_cls.metadata
+
+        # Determine the adapter format (what API format this provider uses)
+        adapter_format = getattr(metadata, 'chat_adapter_format', None) or provider_lower
+
+        # Create client based on adapter format
+        if adapter_format == "anthropic":
             from anthropic import Anthropic
 
-            api_key = os.getenv("ANTHROPIC_API_KEY")
+            api_key = metadata.get_api_key()
             if not api_key:
+                env_var = metadata.api_key_env_var or "ANTHROPIC_API_KEY"
                 raise ProviderError(
-                    "ANTHROPIC_API_KEY not set. Please configure your API key."
+                    f"{env_var} not set. Please configure your API key."
                 )
             return Anthropic(api_key=api_key)
 
-        elif provider_lower == "openai":
+        elif adapter_format == "openai":
             from openai import OpenAI
 
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
+            api_key = metadata.get_api_key()
+            # Some providers (like LMStudio) don't require API keys
+            if metadata.requires_api_key and not api_key:
+                env_var = metadata.api_key_env_var or "API key"
                 raise ProviderError(
-                    "OPENAI_API_KEY not set. Please configure your API key."
+                    f"{env_var} not set. Please configure your API key."
                 )
-            return OpenAI(api_key=api_key)
 
-        elif provider_lower == "ollama":
+            # Determine base URL: chat_api_base_url > base_url > None (use OpenAI default)
+            base_url = getattr(metadata, 'chat_api_base_url', None) or metadata.get_base_url()
+
+            # Build client kwargs
+            client_kwargs = {}
+            if base_url:
+                client_kwargs["base_url"] = base_url
+            if api_key:
+                client_kwargs["api_key"] = api_key
+            elif not metadata.requires_api_key:
+                # Providers like LMStudio need a dummy key for OpenAI client
+                client_kwargs["api_key"] = "not-required"
+
+            return OpenAI(**client_kwargs)
+
+        elif adapter_format == "ollama":
             import httpx
 
-            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            base_url = metadata.get_base_url() or "http://localhost:11434"
             return {"base_url": base_url, "client": httpx.Client(base_url=base_url, timeout=DEFAULT_OLLAMA_TIMEOUT)}
 
-        elif provider_lower == "lmstudio":
-            # LMStudio uses OpenAI-compatible API
-            from openai import OpenAI
-
-            base_url = os.getenv("LMSTUDIO_BASE_URL", "http://localhost:1234/v1")
-            # LMStudio doesn't require an API key, but OpenAI client needs one
-            return OpenAI(base_url=base_url, api_key="lm-studio")
-
         else:
-            raise ProviderError(f"Unsupported provider: {provider}")
+            raise ProviderError(
+                f"Unsupported chat adapter format '{adapter_format}' for provider '{provider}'. "
+                f"Supported formats: anthropic, openai, ollama"
+            )
 
     # =========================================================================
     # Conversation CRUD
@@ -759,10 +816,10 @@ class ChatService:
         Returns:
             Provider-formatted messages.
         """
-        provider_lower = provider.lower()
+        adapter_format = self._get_adapter_format(provider)
 
-        # Add tool instructions for Ollama
-        if provider_lower == "ollama" and tools:
+        # Add tool instructions for Ollama-format providers
+        if adapter_format == "ollama" and tools:
             tool_prompt = adapter.get_system_prompt_prefix(tools)
             if tool_prompt:
                 # Prepend to system prompt or create one
@@ -789,13 +846,13 @@ class ChatService:
 
         Args:
             messages: Messages list to append to (modified in place).
-            provider: Provider name (anthropic, openai, ollama).
+            provider: Provider name.
             adapter: Provider adapter.
             call: The tool call request.
             result: The tool execution result.
             raw_response: Raw LLM response (needed for Anthropic).
         """
-        provider_lower = provider.lower()
+        adapter_format = self._get_adapter_format(provider)
         tool_call_result = ToolCallResult(
             call_id=call.call_id or "",
             tool_name=call.tool_name,
@@ -803,14 +860,14 @@ class ChatService:
             is_error=not result.success,
         )
 
-        if provider_lower == "anthropic":
+        if adapter_format == "anthropic":
             # Add assistant message with tool use
             if raw_response:
                 messages.append(adapter.format_assistant_tool_use(raw_response))
             messages.append(adapter.format_tool_results_message([tool_call_result]))
 
-        elif provider_lower == "openai" or provider_lower == "lmstudio":
-            # LMStudio uses OpenAI format via adapter alias
+        elif adapter_format == "openai":
+            # OpenAI-compatible format
             openai_adapter = get_adapter("openai")
             messages.append(openai_adapter.format_assistant_tool_call([call]))
             messages.append(adapter.format_tool_result(tool_call_result))
@@ -830,6 +887,8 @@ class ChatService:
     ) -> dict[str, Any]:
         """Call the LLM provider.
 
+        Uses the provider's chat_adapter_format to determine which API to call.
+
         Args:
             provider: Provider name.
             model: Model name.
@@ -840,14 +899,13 @@ class ChatService:
             Provider response dict with 'content', 'tool_calls', 'usage' keys.
         """
         client = self._get_provider_client(provider, model)
-        provider_lower = provider.lower()
+        adapter_format = self._get_adapter_format(provider)
 
-        if provider_lower == "anthropic":
+        if adapter_format == "anthropic":
             return await self._call_anthropic(client, model, messages, tools)
-        elif provider_lower == "openai" or provider_lower == "lmstudio":
-            # LMStudio uses OpenAI-compatible API
+        elif adapter_format == "openai":
             return await self._call_openai(client, model, messages, tools)
-        elif provider_lower == "ollama":
+        elif adapter_format == "ollama":
             return await self._call_ollama(client, model, messages)
         else:
             raise ProviderError(f"Unsupported provider: {provider}")
