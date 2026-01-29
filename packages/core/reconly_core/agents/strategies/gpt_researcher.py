@@ -244,6 +244,16 @@ class GPTResearcherStrategy(ResearchStrategy):
             os.environ["FAST_LLM"] = f"openai:{model_name}"
             os.environ["STRATEGIC_LLM"] = f"openai:{model_name}"
 
+        elif provider_name == "huggingface":
+            # HuggingFace router API is OpenAI-compatible
+            api_key = getattr(provider, "api_key", None)
+            if api_key:
+                os.environ["OPENAI_API_KEY"] = api_key
+            os.environ["OPENAI_BASE_URL"] = "https://router.huggingface.co/v1"
+            os.environ["SMART_LLM"] = f"openai:{model_name}"
+            os.environ["FAST_LLM"] = f"openai:{model_name}"
+            os.environ["STRATEGIC_LLM"] = f"openai:{model_name}"
+
         else:
             log.warning(
                 "gpt_researcher_unsupported_provider",
