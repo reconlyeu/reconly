@@ -118,13 +118,14 @@ class ExporterMetadataResponse(ComponentMetadataResponse):
 
     Extends ComponentMetadataResponse with exporter-specific fields for
     file format information, connection requirements, and UI styling.
-
-    Security Note: path_setting_key is intentionally NOT exposed as it's
-    an internal configuration detail.
     """
 
     file_extension: str = Field(..., description="File extension for exported files (e.g., '.json')")
     mime_type: str = Field(..., description="MIME type for HTTP responses")
+    path_setting_key: str = Field(
+        default="export_path",
+        description="Configuration key for export path setting (e.g., 'export_path', 'vault_path')",
+    )
     ui_color: Optional[str] = Field(
         default=None, description="Hex color code for UI theming (e.g., '#7C3AED')"
     )
@@ -146,6 +147,7 @@ class ExporterMetadataResponse(ComponentMetadataResponse):
                 "icon": "simple-icons:obsidian",
                 "file_extension": ".md",
                 "mime_type": "text/markdown",
+                "path_setting_key": "vault_path",
                 "ui_color": "#7C3AED",
                 "requires_connection": False,
                 "connection_types": [],

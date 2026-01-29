@@ -24,18 +24,6 @@ router = APIRouter(prefix="/fetchers", tags=["fetchers"])
 COMPONENT_TYPE = "fetch"
 
 
-def _get_oauth_providers_for_fetcher(name: str) -> Optional[list[str]]:
-    """Get the list of OAuth providers supported by a fetcher.
-
-    Returns:
-        List of provider names or None if fetcher doesn't support OAuth
-    """
-    # IMAP fetcher supports Gmail and Outlook OAuth
-    if name == "imap":
-        return ["gmail", "outlook"]
-    return None
-
-
 def _fetcher_metadata_to_response(fetcher) -> Optional[FetcherMetadataResponse]:
     """Convert fetcher metadata to API response schema.
 
@@ -87,6 +75,12 @@ def _build_fetcher_response(
         COMPONENT_TYPE, name, schema, settings_service
     )
 
+    # Get metadata to extract oauth_providers dynamically from registry
+    metadata_response = _fetcher_metadata_to_response(fetcher)
+    oauth_providers = None
+    if metadata_response and metadata_response.oauth_providers:
+        oauth_providers = metadata_response.oauth_providers
+
     return FetcherResponse(
         name=name,
         description=fetcher.get_description(),
@@ -95,8 +89,8 @@ def _build_fetcher_response(
         ),
         is_configured=is_configured,
         is_extension=is_fetcher_extension(name),
-        oauth_providers=_get_oauth_providers_for_fetcher(name),
-        metadata=_fetcher_metadata_to_response(fetcher),
+        oauth_providers=oauth_providers,
+        metadata=metadata_response,
     )
 
 

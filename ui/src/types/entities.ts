@@ -551,6 +551,7 @@ export interface FetcherMetadata extends ComponentMetadata {
 export interface ExporterMetadata extends ComponentMetadata {
   file_extension: string;
   mime_type: string;
+  path_setting_key: string;
   ui_color: string | null;
 }
 

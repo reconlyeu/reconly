@@ -46,6 +46,7 @@ def _exporter_metadata_to_response(exporter) -> Optional[ExporterMetadataRespons
             icon=metadata.icon,
             file_extension=metadata.file_extension,
             mime_type=metadata.mime_type,
+            path_setting_key=metadata.path_setting_key,
             ui_color=metadata.ui_color,
             requires_connection=metadata.requires_connection,
             connection_types=metadata.connection_types,

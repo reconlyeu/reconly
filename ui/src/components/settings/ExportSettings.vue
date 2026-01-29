@@ -80,15 +80,10 @@ const configuredPath = computed(() => {
 
   const format = localSettings.value.default_format;
 
+  // Use path_setting_key from exporter metadata for the correct setting key
   // Settings are stored with exporter prefix: obsidian.vault_path, json.export_path, etc.
-  // Different exporters use different path field names:
-  // - Obsidian uses vault_path
-  // - JSON/CSV use export_path
-  if (format === 'obsidian') {
-    return settings.value.categories.export['obsidian.vault_path']?.value as string || null;
-  } else {
-    return settings.value.categories.export[`${format}.export_path`]?.value as string || null;
-  }
+  const pathKey = selectedExporter.value?.metadata?.path_setting_key || 'export_path';
+  return settings.value.categories.export[`${format}.${pathKey}`]?.value as string || null;
 });
 
 // Update local settings when data loads

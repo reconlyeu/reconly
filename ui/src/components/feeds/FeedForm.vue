@@ -65,15 +65,11 @@ const { data: exportSettings } = useQuery({
 const getGlobalExportPath = (exporterName: string): string | null => {
   if (!exportSettings.value?.categories?.export) return null;
 
+  // Use path_setting_key from exporter metadata for the correct setting key
   // Settings are stored with exporter prefix: obsidian.vault_path, json.export_path, etc.
-  // Different exporters use different path field names:
-  // - Obsidian uses vault_path
-  // - JSON, CSV, etc. use export_path
-  if (exporterName === 'obsidian') {
-    return exportSettings.value.categories.export['obsidian.vault_path']?.value as string || null;
-  } else {
-    return exportSettings.value.categories.export[`${exporterName}.export_path`]?.value as string || null;
-  }
+  const exporter = allDirectExportExporters.value?.find(e => e.name === exporterName);
+  const pathKey = exporter?.metadata?.path_setting_key || 'export_path';
+  return exportSettings.value.categories.export[`${exporterName}.${pathKey}`]?.value as string || null;
 };
 
 // Check if an exporter has a path configured (either global or local override)
