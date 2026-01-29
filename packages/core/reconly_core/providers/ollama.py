@@ -41,6 +41,7 @@ class OllamaProvider(BaseProvider):
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: Optional[int] = None,
+        max_content_chars: Optional[int] = None,
     ):
         """
         Initialize the Ollama summarizer.
@@ -51,8 +52,10 @@ class OllamaProvider(BaseProvider):
             base_url: Ollama server URL (default: http://localhost:11434)
             timeout: Request timeout in seconds (default: 900s / 15 min for local models)
                      Can be configured via PROVIDER_TIMEOUT_OLLAMA env var.
+            max_content_chars: Max content length for summarization (None = use global default)
         """
         super().__init__(api_key=None)
+        self.max_content_chars = max_content_chars  # Used by _truncate_content()
         self.base_url = base_url or os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 
         # Timeout priority: param > env var > default
@@ -177,6 +180,15 @@ class OllamaProvider(BaseProvider):
                     editable=True,
                     options_from="models",
                 ),
+                ConfigField(
+                    key="max_content_chars",
+                    type="integer",
+                    label="Max Content Length",
+                    description="Max chars for summarization (0 = no limit, empty = use global default)",
+                    required=False,
+                    env_var="OLLAMA_MAX_CONTENT_CHARS",
+                    editable=True,
+                ),
             ],
             requires_api_key=False,
         )
@@ -254,11 +266,8 @@ class OllamaProvider(BaseProvider):
         if not content:
             raise ValueError("No content to summarize")
 
-        # Truncate content if too long to prevent context window overflow
-        # Most models have 32k context, but we limit to ~20k tokens (~80k chars) to be safe
-        MAX_CONTENT_CHARS = 80000
-        if len(content) > MAX_CONTENT_CHARS:
-            content = content[:MAX_CONTENT_CHARS] + "\n\n[Content truncated due to length...]"
+        # Truncate content using configurable limit
+        content = self._truncate_content(content)
 
         # Use provided prompts or build fallback
         if system_prompt and user_prompt:

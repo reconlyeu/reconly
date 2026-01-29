@@ -13,9 +13,21 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 
 import httpx
-from jinja2 import Template
+from jinja2 import Environment, BaseLoader
 
 from sqlalchemy.orm import Session
+
+# Cache for compiled Jinja2 templates (keyed by template string hash)
+_template_cache: dict[int, any] = {}
+_jinja_env = Environment(loader=BaseLoader(), autoescape=False)
+
+
+def _get_cached_template(template_string: str):
+    """Get a compiled Jinja2 template, using cache if available."""
+    cache_key = hash(template_string)
+    if cache_key not in _template_cache:
+        _template_cache[cache_key] = _jinja_env.from_string(template_string)
+    return _template_cache[cache_key]
 
 from sqlalchemy import create_engine, or_
 from sqlalchemy.orm import sessionmaker
@@ -130,7 +142,8 @@ def _build_prompts_from_template(
         'target_length': template.target_length,
     }
 
-    user_prompt = Template(template.user_prompt_template).render(**context)
+    jinja_template = _get_cached_template(template.user_prompt_template)
+    user_prompt = jinja_template.render(**context)
     return template.system_prompt, user_prompt
 
 
@@ -1695,7 +1708,7 @@ class FeedService:
                 'items': prompt_articles,  # For iteration in templates
                 'target_length': custom_template.target_length,
             }
-            user_prompt = Template(custom_template.user_prompt_template).render(**context)
+            user_prompt = _get_cached_template(custom_template.user_prompt_template).render(**context)
 
             prompts = {
                 'system': custom_template.system_prompt,
@@ -1734,7 +1747,7 @@ class FeedService:
                     'items': prompt_articles,  # For iteration in templates
                     'target_length': consolidated_template.target_length,
                 }
-                user_prompt = Template(consolidated_template.user_prompt_template).render(**context)
+                user_prompt = _get_cached_template(consolidated_template.user_prompt_template).render(**context)
 
                 prompts = {
                     'system': consolidated_template.system_prompt,

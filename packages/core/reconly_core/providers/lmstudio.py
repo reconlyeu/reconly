@@ -50,6 +50,7 @@ class LMStudioProvider(BaseProvider):
         model: Optional[str] = None,
         base_url: Optional[str] = None,
         timeout: Optional[int] = None,
+        max_content_chars: Optional[int] = None,
     ):
         """
         Initialize the LMStudio provider.
@@ -60,8 +61,10 @@ class LMStudioProvider(BaseProvider):
             base_url: LMStudio server URL (default: http://localhost:1234/v1)
             timeout: Request timeout in seconds (default: 300s / 5 min for local models)
                      Can be configured via PROVIDER_TIMEOUT_LMSTUDIO env var.
+            max_content_chars: Max content length for summarization (None = use global default)
         """
         super().__init__(api_key=None)
+        self.max_content_chars = max_content_chars  # Used by _truncate_content()
         self.base_url = base_url or os.getenv('LMSTUDIO_BASE_URL', 'http://localhost:1234/v1')
 
         # Timeout priority: param > env var > default
@@ -203,6 +206,15 @@ class LMStudioProvider(BaseProvider):
                     editable=True,
                     options_from="models",
                 ),
+                ConfigField(
+                    key="max_content_chars",
+                    type="integer",
+                    label="Max Content Length",
+                    description="Max chars for summarization (0 = no limit, empty = use global default)",
+                    required=False,
+                    env_var="LMSTUDIO_MAX_CONTENT_CHARS",
+                    editable=True,
+                ),
             ],
             requires_api_key=False,
         )
@@ -285,11 +297,8 @@ class LMStudioProvider(BaseProvider):
                 "No model available. Load a model in LMStudio before using this provider."
             )
 
-        # Truncate content if too long to prevent context window overflow
-        # Most models have 32k context, but we limit to ~20k tokens (~80k chars) to be safe
-        MAX_CONTENT_CHARS = 80000
-        if len(content) > MAX_CONTENT_CHARS:
-            content = content[:MAX_CONTENT_CHARS] + "\n\n[Content truncated due to length...]"
+        # Truncate content using configurable limit
+        content = self._truncate_content(content)
 
         # Use provided prompts or build fallback
         if system_prompt and user_prompt:

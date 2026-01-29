@@ -8,6 +8,7 @@ Edition Notes:
     - Token tracking (tokens_in, tokens_out) is available in both editions
 """
 from abc import ABC, abstractmethod
+import os
 from typing import ClassVar, Dict, Optional, List, TYPE_CHECKING, Union
 
 from reconly_core.config_types import ProviderConfigSchema
@@ -316,6 +317,53 @@ class BaseProvider(ABC):
             >>> print(f"Max attempts: {config.max_attempts}")
         """
         return RetryConfig.from_env()
+
+    def _truncate_content(self, content: str, max_chars: Optional[int] = None) -> str:
+        """
+        Truncate content to maximum character limit for summarization.
+
+        Resolution order:
+        1. Explicit max_chars parameter (if provided and not None)
+        2. self.max_content_chars (per-provider setting, if set)
+        3. SUMMARIZATION_MAX_CONTENT_CHARS env var (global default)
+        4. Hardcoded default of 30000 chars
+
+        A value of 0 means no truncation.
+
+        Args:
+            content: The content to potentially truncate
+            max_chars: Optional explicit limit (overrides all other settings)
+
+        Returns:
+            The content, truncated if necessary with a notice appended
+        """
+        # Determine effective max chars
+        effective_max = max_chars
+
+        if effective_max is None:
+            # Check instance attribute (set from provider-specific config)
+            effective_max = getattr(self, 'max_content_chars', None)
+
+        if effective_max is None:
+            # Fall back to global setting via env var
+            env_value = os.getenv('SUMMARIZATION_MAX_CONTENT_CHARS')
+            if env_value is not None:
+                try:
+                    effective_max = int(env_value)
+                except ValueError:
+                    effective_max = 30000
+            else:
+                effective_max = 30000
+
+        # Value of 0 means no limit
+        if effective_max == 0:
+            return content
+
+        # Truncate if necessary
+        if len(content) > effective_max:
+            return content[:effective_max] + "\n\n[Content truncated due to length...]"
+
+        return content
 
     @classmethod
     def list_models(cls, api_key: Optional[str] = None) -> List[ModelInfo]:

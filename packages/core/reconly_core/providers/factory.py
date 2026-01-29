@@ -1,5 +1,6 @@
 """Provider factory with fallback chain from settings."""
 import os
+import time
 from typing import Optional, Dict, List, TYPE_CHECKING, Any
 
 import structlog
@@ -121,15 +122,24 @@ class SummarizerWithFallback:
                     )
                     continue
 
+            # Debug: log content size to correlate with timing
+            content_len = len(content_data.get('content', '')) if content_data else 0
+            title = content_data.get('title', 'Unknown')[:50] if content_data else 'Unknown'
+
             logger.info(
                 "summarize_attempt",
                 provider=provider_name,
                 fallback_level=idx,
                 is_fallback=idx > 0,
+                content_chars=content_len,
+                title=title,
             )
 
             # Get provider-specific retry config
             provider_retry_config = summarizer.get_retry_config()
+
+            # Track timing
+            start_time = time.time()
 
             # Use retry_with_result for detailed metadata
             retry_result = retry_with_result(
@@ -138,6 +148,8 @@ class SummarizerWithFallback:
                 config=provider_retry_config,
                 classifier=summarizer.classify_error,
             )
+
+            duration_sec = time.time() - start_time
 
             if retry_result["success"]:
                 result = retry_result["result"]
@@ -157,6 +169,8 @@ class SummarizerWithFallback:
                     provider=provider_name,
                     fallback_level=idx,
                     retry_attempts=retry_result["attempts"],
+                    duration_sec=round(duration_sec, 1),
+                    content_chars=content_len,
                 )
 
                 return result
@@ -323,6 +337,20 @@ def _instantiate_provider(
         if timeout != metadata.timeout_default:  # Only pass if customized via env
             init_kwargs['timeout'] = timeout
 
+    # Handle max_content_chars for local providers
+    # Read provider-specific setting, pass to constructor if set
+    max_content_chars = _get_setting_with_db_fallback(
+        f"provider.{provider_name}.max_content_chars",
+        db=db,
+        env_var=f"{provider_name.upper()}_MAX_CONTENT_CHARS",
+        default=None,
+    )
+    if max_content_chars is not None:
+        try:
+            init_kwargs['max_content_chars'] = int(max_content_chars)
+        except (ValueError, TypeError):
+            pass  # Skip if not a valid integer
+
     # Instantiate provider with kwargs
     try:
         return provider_class(**init_kwargs)
@@ -339,6 +367,14 @@ def _instantiate_provider(
         # Try without timeout
         if 'timeout' in init_kwargs:
             del init_kwargs['timeout']
+            try:
+                return provider_class(**init_kwargs)
+            except TypeError:
+                pass
+
+        # Try without max_content_chars
+        if 'max_content_chars' in init_kwargs:
+            del init_kwargs['max_content_chars']
             try:
                 return provider_class(**init_kwargs)
             except TypeError:

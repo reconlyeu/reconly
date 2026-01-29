@@ -355,6 +355,19 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
         env_var="RAG_GRAPH_AUTO_COMPUTE",
         description="Automatically compute relationships when digests are created",
     ),
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Summarization Settings
+    # Configuration for LLM summarization behavior
+    # ─────────────────────────────────────────────────────────────────────────
+    "summarization.max_content_chars": SettingDef(
+        category="provider",
+        type=int,
+        default=30000,
+        editable=True,
+        env_var="SUMMARIZATION_MAX_CONTENT_CHARS",
+        description="Default max content length (chars) for summarization. Provider settings override this. 0 = no limit.",
+    ),
 }
 
 
