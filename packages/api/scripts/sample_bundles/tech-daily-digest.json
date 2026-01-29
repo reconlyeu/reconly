@@ -41,7 +41,7 @@
     "prompt_template": {
       "name": "Standard Summary (English)",
       "system_prompt": "You are a professional content summarizer.\nCreate concise, informative summaries in English.\nFocus on the most important information and key takeaways.\nIMPORTANT: If the original title is not in English, translate it to English.",
-      "user_prompt_template": "Summarize the following content from a {source_type}.\n\nOriginal Title: {title}\n\nContent:\n{content}\n\nIMPORTANT: You MUST follow this exact output format with approximately {target_length} words:\n\n**Title:** [Write the English title here - translate from original if not English]\n\n**Main Topic:** [1-2 sentences: What is this about?]\n\n**Key Points:**\n- [Point 1]\n- [Point 2]\n- [Point 3]\n\n**Conclusion:** [1-2 sentences: What is the key insight?]\n\nCRITICAL: Start your response with \"**Title:**\" followed by the translated English title.",
+      "user_prompt_template": "Summarize the following content from a {{ source_type }}.\n\nOriginal Title: {{ title }}\n\nContent:\n{{ content }}\n\nIMPORTANT: You MUST follow this exact output format with approximately {{ target_length }} words:\n\n**Title:** [Write the English title here - translate from original if not English]\n\n**Main Topic:** [1-2 sentences: What is this about?]\n\n**Key Points:**\n- [Point 1]\n- [Point 2]\n- [Point 3]\n\n**Conclusion:** [1-2 sentences: What is the key insight?]\n\nCRITICAL: Start your response with \"**Title:**\" followed by the translated English title.",
       "language": "en",
       "target_length": 150,
       "description": "Default English summarization prompt with structured output"

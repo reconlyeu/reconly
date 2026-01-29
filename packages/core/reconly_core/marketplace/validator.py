@@ -26,8 +26,8 @@ class ValidationResult:
 class BundleValidator:
     """Validates feed bundles against schema and business rules."""
 
-    # Valid source types
-    VALID_SOURCE_TYPES = {"rss", "youtube", "website", "blog", "podcast"}
+    # Valid source types (must match SourceType in sources.py)
+    VALID_SOURCE_TYPES = {"rss", "youtube", "website", "blog", "podcast", "imap", "agent"}
 
     # Valid categories
     VALID_CATEGORIES = {"news", "finance", "tech", "science", "entertainment", "sports", "business", "other"}
@@ -283,6 +283,10 @@ class BundleValidator:
             url = source["url"]
             if not isinstance(url, str):
                 result.add_error(f"{prefix}.url must be a string")
+            elif source.get("type") == "agent":
+                # Agent sources use URL field as research prompt (not a URL)
+                if len(url) < 10:
+                    result.add_warning(f"{prefix}.url (research prompt) should be at least 10 characters")
             elif not url.startswith(("http://", "https://")):
                 result.add_warning(f"{prefix}.url should start with http:// or https://")
 

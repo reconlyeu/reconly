@@ -240,7 +240,7 @@ def sample_prompt_template(db_session) -> PromptTemplate:
         name="Test Prompt Template",
         description="A test template",
         system_prompt="You are a helpful assistant.",
-        user_prompt_template="Summarize: {content}",
+        user_prompt_template="Summarize: {{ content }}",
         language="en",
         target_length=150,
         origin="user",

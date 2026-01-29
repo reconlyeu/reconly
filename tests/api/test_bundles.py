@@ -300,7 +300,7 @@ class TestBundleImportAPI:
                 "prompt_template": {
                     "name": "Import Prompt",
                     "system_prompt": "You are helpful.",
-                    "user_prompt_template": "Summarize: {content}",
+                    "user_prompt_template": "Summarize: {{ content }}",
                     "target_length": 150,
                 },
                 "report_template": {

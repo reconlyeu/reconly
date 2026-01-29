@@ -176,7 +176,7 @@ class TestCreateFeedTool:
             prompt_template={
                 "name": "Custom Prompt",
                 "system_prompt": "You are a tech summarizer.",
-                "user_prompt_template": "Summarize: {content}",
+                "user_prompt_template": "Summarize: {{ content }}",
             },
         )
 

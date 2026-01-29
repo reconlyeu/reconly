@@ -56,6 +56,7 @@ class RSSFetcher(BaseFetcher):
         since: Optional[datetime] = None,
         max_items: Optional[int] = None,
         fetch_full_content: bool = False,
+        **kwargs,
     ) -> List[Dict[str, str]]:
         """
         Fetch articles from an RSS/Atom feed.

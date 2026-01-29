@@ -181,7 +181,7 @@ class TestBundleValidator:
         for source_type in ["rss", "youtube", "website", "blog", "podcast"]:
             valid_bundle["bundle"]["sources"][0]["type"] = source_type
             result = validator.validate(valid_bundle)
-            assert result.is_valid is True, f"Type {source_type} should be valid"
+            assert result.is_valid is True, f"Type {{ source_type }} should be valid"
 
     def test_source_url_warning(self, validator, valid_bundle):
         """Test warning for non-http URL."""
@@ -212,7 +212,7 @@ class TestBundleValidator:
         valid_bundle["bundle"]["prompt_template"] = {
             "name": "Test Template",
             "system_prompt": "You are helpful.",
-            "user_prompt_template": "Summarize: {content}",
+            "user_prompt_template": "Summarize: {{ content }}",
         }
         result = validator.validate(valid_bundle)
         assert result.is_valid is True
@@ -245,7 +245,7 @@ class TestBundleValidator:
         valid_bundle["bundle"]["report_template"] = {
             "name": "Test Report",
             "format": "markdown",
-            "template_content": "# Report\n{content}",
+            "template_content": "# Report\n{{ content }}",
         }
         result = validator.validate(valid_bundle)
         assert result.is_valid is True
@@ -454,13 +454,13 @@ class TestBundleValidator:
                 "prompt_template": {
                     "name": "AI Summary",
                     "system_prompt": "You are an AI news analyst.",
-                    "user_prompt_template": "Summarize: {content}",
+                    "user_prompt_template": "Summarize: {{ content }}",
                     "target_length": 200,
                 },
                 "report_template": {
                     "name": "Daily Report",
                     "format": "markdown",
-                    "template_content": "# Report\n\n{content}",
+                    "template_content": "# Report\n\n{{ content }}",
                 },
                 "schedule": {
                     "cron": "0 9 * * *",

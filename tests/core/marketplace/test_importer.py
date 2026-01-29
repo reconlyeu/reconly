@@ -57,13 +57,13 @@ class TestFeedBundleImporter:
                 "prompt_template": {
                     "name": "Test Prompt",
                     "system_prompt": "You are helpful.",
-                    "user_prompt_template": "Summarize: {content}",
+                    "user_prompt_template": "Summarize: {{ content }}",
                     "target_length": 150,
                 },
                 "report_template": {
                     "name": "Test Report",
                     "format": "markdown",
-                    "template_content": "# Report\n\n{content}",
+                    "template_content": "# Report\n\n{{ content }}",
                 },
                 "schedule": {
                     "cron": "0 9 * * *",

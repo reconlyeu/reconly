@@ -309,7 +309,8 @@ class YouTubeFetcher(BaseFetcher):
         url: str,
         since: Optional[datetime] = None,
         languages: Optional[List[str]] = None,
-        max_items: int = 5
+        max_items: int = 5,
+        **kwargs,
     ) -> List[Dict]:
         """
         Fetch transcript(s) from a YouTube video or channel.

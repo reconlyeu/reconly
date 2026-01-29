@@ -13,6 +13,7 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 
 import httpx
+from jinja2 import Template
 
 from sqlalchemy.orm import Session
 
@@ -113,6 +114,8 @@ def _build_prompts_from_template(
     """
     Build system and user prompts from a PromptTemplate and content data.
 
+    Uses Jinja2 templating for consistency with report templates.
+
     Args:
         template: PromptTemplate instance
         content_data: Dictionary with 'title', 'content', 'source_type', etc.
@@ -120,23 +123,14 @@ def _build_prompts_from_template(
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
-    # Get values from content_data
-    title = content_data.get('title', 'No title')
-    content = content_data.get('content', '')
-    source_type = content_data.get('source_type', 'content')
+    context = {
+        'title': content_data.get('title', 'No title'),
+        'content': content_data.get('content', ''),
+        'source_type': content_data.get('source_type', 'content'),
+        'target_length': template.target_length,
+    }
 
-    # Format user prompt template with placeholders
-    try:
-        user_prompt = template.user_prompt_template.format(
-            title=title,
-            content=content,
-            source_type=source_type,
-            target_length=template.target_length,
-        )
-    except KeyError:
-        # If template has extra placeholders we don't have, use as-is
-        user_prompt = template.user_prompt_template
-
+    user_prompt = Template(template.user_prompt_template).render(**context)
     return template.system_prompt, user_prompt
 
 
@@ -1693,13 +1687,15 @@ class FeedService:
             # Count unique sources
             unique_sources = set(a.get('source_name') for a in prompt_articles if a.get('source_name'))
 
-            # Format user prompt with consolidated variables
-            user_prompt = custom_template.user_prompt_template.format(
-                item_count=len(prompt_articles),
-                source_count=len(unique_sources) or 1,
-                articles=articles_text,
-                target_length=custom_template.target_length,
-            )
+            # Render user prompt with Jinja2
+            context = {
+                'item_count': len(prompt_articles),
+                'source_count': len(unique_sources) or 1,
+                'articles': articles_text,
+                'items': prompt_articles,  # For iteration in templates
+                'target_length': custom_template.target_length,
+            }
+            user_prompt = Template(custom_template.user_prompt_template).render(**context)
 
             prompts = {
                 'system': custom_template.system_prompt,
@@ -1730,13 +1726,15 @@ class FeedService:
                 # Count unique sources
                 unique_sources = set(a.get('source_name') for a in prompt_articles if a.get('source_name'))
 
-                # Format user prompt with consolidated variables
-                user_prompt = consolidated_template.user_prompt_template.format(
-                    item_count=len(prompt_articles),
-                    source_count=len(unique_sources) or 1,
-                    articles=articles_text,
-                    target_length=consolidated_template.target_length,
-                )
+                # Render user prompt with Jinja2
+                context = {
+                    'item_count': len(prompt_articles),
+                    'source_count': len(unique_sources) or 1,
+                    'articles': articles_text,
+                    'items': prompt_articles,  # For iteration in templates
+                    'target_length': consolidated_template.target_length,
+                }
+                user_prompt = Template(consolidated_template.user_prompt_template).render(**context)
 
                 prompts = {
                     'system': consolidated_template.system_prompt,
@@ -2055,84 +2053,96 @@ class FeedService:
                         print(f"      ⏸️ Skipped (circuit open): {source.health_status}")
                     continue
 
-                if source.type == "rss":
-                    from reconly_core.services.settings_service import SettingsService
+                # Generic fetcher invocation - works with all registered source types
+                from reconly_core.services.settings_service import SettingsService
 
-                    last_read = self.tracker.get_last_read(source.url)
-                    source_config = source.config or {}
-                    max_items = source_config.get('max_items')
+                fetcher = get_fetcher(source.type)
+                source_config = source.config or {}
 
-                    # Get fetch_full_content setting
-                    settings = SettingsService(session)
-                    fetch_full_content = settings.get("fetch.rss.fetch_full_content")
+                # Build fetch context with all possible parameters
+                # Each fetcher picks what it needs via **kwargs
+                last_read = self.tracker.get_last_read(source.url)
+                settings = SettingsService(session)
 
-                    fetcher = get_fetcher('rss')
-                    articles = fetcher.fetch(
-                        source.url,
-                        since=last_read,
-                        max_items=max_items,
-                        fetch_full_content=fetch_full_content,
+                fetch_kwargs = {
+                    'since': last_read,
+                    'max_items': source_config.get('max_items'),
+                    # RSS-specific
+                    'fetch_full_content': settings.get("fetch.rss.fetch_full_content"),
+                    # Agent-specific
+                    'db': session,
+                    'source_id': source.id,
+                    'config': source_config,
+                    'trace_id': feed_run.trace_id if feed_run else None,
+                }
+
+                # Show appropriate progress message
+                if options.show_progress and source.type == "agent":
+                    print(f"      🔬 Running AI research agent...")
+
+                articles = fetcher.fetch(source.url, **fetch_kwargs)
+
+                # Apply content filter if configured (works for all source types)
+                if articles and (source.include_keywords or source.exclude_keywords):
+                    content_filter = ContentFilter(
+                        include_keywords=source.include_keywords,
+                        exclude_keywords=source.exclude_keywords,
+                        filter_mode=source.filter_mode or "both",
+                        use_regex=source.use_regex or False,
                     )
-
-                    # Apply content filter if configured
-                    if articles and (source.include_keywords or source.exclude_keywords):
-                        content_filter = ContentFilter(
-                            include_keywords=source.include_keywords,
-                            exclude_keywords=source.exclude_keywords,
-                            filter_mode=source.filter_mode or "both",
-                            use_regex=source.use_regex or False,
+                    original_count = len(articles)
+                    articles = [
+                        a for a in articles
+                        if content_filter.matches(a.get("title", ""), a.get("content", ""))
+                    ]
+                    if original_count != len(articles):
+                        logger.info(
+                            "content_filter_applied",
+                            source_id=source.id,
+                            source_name=source.name,
+                            original_count=original_count,
+                            remaining_count=len(articles),
+                            filtered_out=original_count - len(articles),
                         )
-                        original_count = len(articles)
-                        articles = [
-                            a for a in articles
-                            if content_filter.matches(a.get("title", ""), a.get("content", ""))
-                        ]
-                        if original_count != len(articles):
-                            logger.info(
-                                "content_filter_applied",
-                                source_id=source.id,
-                                source_name=source.name,
-                                original_count=original_count,
-                                remaining_count=len(articles),
-                                filtered_out=original_count - len(articles),
-                            )
 
-                    if articles:
-                        for article in articles:
-                            all_articles.append(article)
-                            all_source_items.append({
-                                'url': article.get('url'),
-                                'title': article.get('title'),
-                                'published': article.get('published'),
-                                'content': article.get('content', ''),
-                                'full_content': article.get('full_content'),
-                                'source_id': source.id,
-                                'source_name': source.name,
-                            })
+                if articles:
+                    for article in articles:
+                        # Normalize article structure (some fetchers may have different field names)
+                        normalized = {
+                            'url': article.get('url', f'{source.type}://{source.id}'),
+                            'title': article.get('title', f'{source.type.title()}: {source.name}'),
+                            'content': article.get('content', ''),
+                            'published': article.get('published') or datetime.utcnow().isoformat(),
+                        }
+                        all_articles.append(normalized)
+                        all_source_items.append({
+                            'url': normalized['url'],
+                            'title': normalized['title'],
+                            'published': normalized['published'],
+                            'content': normalized['content'],
+                            'full_content': article.get('full_content'),
+                            'source_id': source.id,
+                            'source_name': source.name,
+                        })
 
-                        # Update tracking
-                        if not options.dry_run:
-                            latest = max(
-                                (datetime.fromisoformat(a['published']) for a in articles if a.get('published')),
-                                default=None
-                            )
-                            if latest:
-                                self.tracker.update_last_read(source.url, latest)
+                    # Update tracking for incremental fetching
+                    if not options.dry_run:
+                        latest = max(
+                            (datetime.fromisoformat(a['published']) for a in articles if a.get('published')),
+                            default=None
+                        )
+                        if latest:
+                            self.tracker.update_last_read(source.url, latest)
 
-                        if options.show_progress:
-                            print(f"      ✅ {len(articles)} item(s) collected")
-                    else:
-                        if options.show_progress:
-                            print("      ⏭️ No new items")
-
-                    # Record success with circuit breaker
-                    self.circuit_breaker.record_success(source, session)
-                    sources_processed += 1
-                else:
-                    # Non-RSS sources not supported in all_sources mode yet
                     if options.show_progress:
-                        print("      ⚠️ Skipping non-RSS source")
-                    sources_processed += 1
+                        print(f"      ✅ {len(articles)} item(s) collected")
+                else:
+                    if options.show_progress:
+                        print("      ⏭️ No new items")
+
+                # Record success with circuit breaker
+                self.circuit_breaker.record_success(source, session)
+                sources_processed += 1
 
             except Exception as e:
                 sources_failed += 1

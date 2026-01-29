@@ -140,7 +140,7 @@ class TestBundlePromptTemplate:
         template = BundlePromptTemplate(
             name="Summary Template",
             system_prompt="You are a helpful assistant.",
-            user_prompt_template="Summarize: {content}",
+            user_prompt_template="Summarize: {{ content }}",
             description="Creates brief summaries",
             language="en",
             target_length=200,
@@ -170,7 +170,7 @@ class TestBundleReportTemplate:
         template = BundleReportTemplate(
             name="Markdown Report",
             format="markdown",
-            template_content="# Report\n\n{content}",
+            template_content="# Report\n\n{{ content }}",
             description="Standard markdown format",
         )
         result = template.to_dict()
@@ -183,7 +183,7 @@ class TestBundleReportTemplate:
         data = {
             "name": "HTML Report",
             "format": "html",
-            "template_content": "<html>{content}</html>",
+            "template_content": "<html>{{ content }}</html>",
         }
         template = BundleReportTemplate.from_dict(data)
         assert template.name == "HTML Report"
@@ -237,13 +237,13 @@ class TestFeedBundle:
             prompt_template=BundlePromptTemplate(
                 name="AI Summary",
                 system_prompt="You are an AI news analyst.",
-                user_prompt_template="Summarize this AI news: {content}",
+                user_prompt_template="Summarize this AI news: {{ content }}",
                 target_length=200,
             ),
             report_template=BundleReportTemplate(
                 name="Daily Digest",
                 format="markdown",
-                template_content="# Daily AI News\n\n{content}",
+                template_content="# Daily AI News\n\n{{ content }}",
             ),
             schedule=BundleSchedule(cron="0 9 * * *", description="Daily at 9 AM"),
             output_config={"db": True, "email": {"enabled": True}},

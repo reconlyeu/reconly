@@ -43,7 +43,7 @@ class TestFeedBundleExporter:
         mock_prompt.name = "Test Prompt"
         mock_prompt.description = "A test prompt template"
         mock_prompt.system_prompt = "You are helpful."
-        mock_prompt.user_prompt_template = "Summarize: {content}"
+        mock_prompt.user_prompt_template = "Summarize: {{ content }}"
         mock_prompt.language = "en"
         mock_prompt.target_length = 150
 
@@ -52,7 +52,7 @@ class TestFeedBundleExporter:
         mock_report.name = "Test Report"
         mock_report.description = "A test report template"
         mock_report.format = "markdown"
-        mock_report.template_content = "# Report\n\n{content}"
+        mock_report.template_content = "# Report\n\n{{ content }}"
 
         # Create mock feed
         mock_feed = MagicMock()
@@ -106,7 +106,7 @@ class TestFeedBundleExporter:
         assert bundle.prompt_template is not None
         assert bundle.prompt_template.name == "Test Prompt"
         assert bundle.prompt_template.system_prompt == "You are helpful."
-        assert bundle.prompt_template.user_prompt_template == "Summarize: {content}"
+        assert bundle.prompt_template.user_prompt_template == "Summarize: {{ content }}"
         assert bundle.prompt_template.target_length == 150
 
     def test_export_feed_report_template(self, exporter, mock_feed):
@@ -116,7 +116,7 @@ class TestFeedBundleExporter:
         assert bundle.report_template is not None
         assert bundle.report_template.name == "Test Report"
         assert bundle.report_template.format == "markdown"
-        assert bundle.report_template.template_content == "# Report\n\n{content}"
+        assert bundle.report_template.template_content == "# Report\n\n{{ content }}"
 
     def test_export_feed_schedule(self, exporter, mock_feed):
         """Test that schedule is exported correctly."""

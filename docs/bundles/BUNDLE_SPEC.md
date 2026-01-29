@@ -102,8 +102,8 @@ Each source defines a content origin to fetch and summarize.
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Source display name (1-255 chars) |
-| `type` | string | One of: `rss`, `youtube`, `website`, `blog`, `podcast` |
-| `url` | string | Valid URL for the source |
+| `type` | string | One of: `rss`, `youtube`, `website`, `blog`, `podcast`, `imap`, `agent` |
+| `url` | string | Valid URL for the source (or research prompt for `agent` type) |
 
 ### Optional Fields
 
@@ -175,6 +175,49 @@ Blog with pagination support.
 }
 ```
 
+#### IMAP (`type: "imap"`)
+
+Email inbox monitoring via IMAP. Supports Gmail, Outlook, or generic IMAP servers.
+
+```json
+{
+  "name": "Newsletter Inbox",
+  "type": "imap",
+  "url": "imap://imap.gmail.com:993",
+  "config": {
+    "folders": ["INBOX"],
+    "from_filter": "newsletter@example.com"
+  }
+}
+```
+
+**Note:** Requires a Connection to be configured separately with credentials.
+
+#### Agent (`type: "agent"`)
+
+AI-powered research agent that autonomously searches the web and synthesizes findings.
+
+```json
+{
+  "name": "AI Research Agent",
+  "type": "agent",
+  "url": "Research the latest developments in enterprise AI adoption",
+  "config": {
+    "research_strategy": "comprehensive",
+    "max_iterations": 8,
+    "report_format": "APA"
+  }
+}
+```
+
+**Configuration options:**
+- `research_strategy`: `simple` (fast, 2 min), `comprehensive` (thorough, 5 min), or `deep` (most thorough, 10 min)
+- `max_iterations`: Maximum research iterations (default: 5)
+- `report_format`: Citation format for comprehensive/deep strategies (APA, MLA, CMS, Harvard, IEEE)
+- `max_subtopics`: Maximum subtopics for deep research (1-10)
+
+**Note:** The `url` field is repurposed as the research prompt/topic for agent sources.
+
 ---
 
 ## Prompt Template Object
@@ -190,16 +233,30 @@ Defines how content is summarized by the LLM.
 | `language` | string | No | `"en"` | Output language |
 | `target_length` | integer | No | `150` | Target word count (10-2000) |
 
-### Template Variables
+### Template Variables (Jinja2)
 
-Use these in `user_prompt_template`:
+Prompt templates use **Jinja2** syntax (same as report templates). Use `{{ variable }}` for values and `{% for %}` for loops.
+
+**For individual article summarization (`individual` mode):**
 
 | Variable | Description |
 |----------|-------------|
-| `{title}` | Content title |
-| `{content}` | Full content text |
-| `{source_type}` | Type of source (rss, youtube, etc.) |
-| `{target_length}` | Target word count |
+| `{{ title }}` | Content title |
+| `{{ content }}` | Full content text |
+| `{{ source_type }}` | Type of source (rss, youtube, etc.) |
+| `{{ target_length }}` | Target word count |
+
+**For consolidated digests (`all_sources` or `per_source` mode):**
+
+| Variable | Description |
+|----------|-------------|
+| `{{ item_count }}` | Number of articles |
+| `{{ source_count }}` | Number of unique sources |
+| `{{ articles }}` | Pre-formatted article text |
+| `{{ items }}` | List of article dicts (for iteration) |
+| `{{ target_length }}` | Target word count |
+
+Each item in `items` has: `title`, `content`, `source_name`, `url`, `published_at`
 
 ### Example Prompt Templates
 
@@ -208,7 +265,7 @@ Use these in `user_prompt_template`:
 {
   "name": "Quick Brief",
   "system_prompt": "You are a concise news summarizer. Focus on key facts only.",
-  "user_prompt_template": "Summarize in {target_length} words:\n\n{title}\n\n{content}",
+  "user_prompt_template": "Summarize in {{ target_length }} words:\n\n{{ title }}\n\n{{ content }}",
   "target_length": 50
 }
 ```
@@ -218,7 +275,7 @@ Use these in `user_prompt_template`:
 {
   "name": "Technical Deep Dive",
   "system_prompt": "You are a senior software engineer. Analyze technical content, highlight architecture decisions, trade-offs, and practical implications.",
-  "user_prompt_template": "Provide a technical analysis of this article:\n\nTitle: {title}\n\nContent:\n{content}\n\nInclude: key technical concepts, architecture decisions, and practical takeaways.",
+  "user_prompt_template": "Provide a technical analysis of this article:\n\nTitle: {{ title }}\n\nContent:\n{{ content }}\n\nInclude: key technical concepts, architecture decisions, and practical takeaways.",
   "target_length": 300
 }
 ```
@@ -228,7 +285,7 @@ Use these in `user_prompt_template`:
 {
   "name": "Executive Summary",
   "system_prompt": "You are a business analyst. Summarize for executives who need quick, actionable insights.",
-  "user_prompt_template": "Create an executive brief:\n\n{title}\n\n{content}\n\nFormat: Key point, business impact, recommended action.",
+  "user_prompt_template": "Create an executive brief:\n\n{{ title }}\n\n{{ content }}\n\nFormat: Key point, business impact, recommended action.",
   "target_length": 100
 }
 ```

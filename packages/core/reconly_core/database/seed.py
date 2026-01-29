@@ -21,14 +21,14 @@ DEFAULT_PROMPT_TEMPLATES = [
 Create concise, informative summaries in English.
 Focus on the most important information and key takeaways.
 IMPORTANT: If the original title is not in English, translate it to English.""",
-        "user_prompt_template": """Summarize the following content from a {source_type}.
+        "user_prompt_template": """Summarize the following content from a {{ source_type }}.
 
-Original Title: {title}
+Original Title: {{ title }}
 
 Content:
-{content}
+{{ content }}
 
-IMPORTANT: You MUST follow this exact output format with approximately {target_length} words:
+IMPORTANT: You MUST follow this exact output format with approximately {{ target_length }} words:
 
 **Title:** [Write the English title here - translate from original if not English]
 
@@ -51,12 +51,12 @@ CRITICAL: Start your response with "**Title:**" followed by the translated Engli
         "system_prompt": """You are a content summarizer for busy readers.
 Create extremely short, concise summaries in English.
 Translate title to English if needed.""",
-        "user_prompt_template": """Summarize the following content in at most {target_length} words.
+        "user_prompt_template": """Summarize the following content in at most {{ target_length }} words.
 
-Title: {title}
+Title: {{ title }}
 
 Content:
-{content}
+{{ content }}
 
 **Title:** [English title]
 Answer in 2-3 sentences: What is the key takeaway?""",

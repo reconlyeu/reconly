@@ -202,7 +202,7 @@ class TestCoreCRUDByEdition:
         response = client.post("/api/v1/templates/prompt", json={
             "name": f"Template ({edition})",
             "system_prompt": "You are helpful.",
-            "user_prompt_template": "Summarize: {content}",
+            "user_prompt_template": "Summarize: {{ content }}",
             "language": "en",
             "target_length": 100,
         })

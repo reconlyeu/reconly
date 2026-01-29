@@ -366,3 +366,64 @@ body {
 .running-button-glow {
   animation: runningButtonGlow 2s ease-in-out infinite;
 }
+
+/* Card border pulse animations - synced with button glow (2s timing) */
+@keyframes cardPulseSuccess {
+  0%, 100% {
+    border-color: rgba(24, 194, 73, 0.3);
+    box-shadow: 0 0 0 0 rgba(24, 194, 73, 0);
+  }
+  50% {
+    border-color: rgba(24, 194, 73, 0.6);
+    box-shadow: 0 0 8px 0 rgba(24, 194, 73, 0.15);
+  }
+}
+
+@keyframes cardPulsePrimary {
+  0%, 100% {
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+  50% {
+    border-color: rgba(99, 102, 241, 0.6);
+    box-shadow: 0 0 8px 0 rgba(99, 102, 241, 0.15);
+  }
+}
+
+@keyframes cardPulseWarning {
+  0%, 100% {
+    border-color: rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+  50% {
+    border-color: rgba(245, 158, 11, 0.6);
+    box-shadow: 0 0 8px 0 rgba(245, 158, 11, 0.15);
+  }
+}
+
+@keyframes cardPulseError {
+  0%, 100% {
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+  50% {
+    border-color: rgba(239, 68, 68, 0.6);
+    box-shadow: 0 0 8px 0 rgba(239, 68, 68, 0.15);
+  }
+}
+
+.card-pulse-success {
+  animation: cardPulseSuccess 2s ease-in-out infinite;
+}
+
+.card-pulse-primary {
+  animation: cardPulsePrimary 2s ease-in-out infinite;
+}
+
+.card-pulse-warning {
+  animation: cardPulseWarning 2s ease-in-out infinite;
+}
+
+.card-pulse-error {
+  animation: cardPulseError 2s ease-in-out infinite;
+}

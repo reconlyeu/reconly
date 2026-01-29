@@ -14,6 +14,10 @@ interface Props {
   static?: boolean;
   /** Add padding to the card */
   padded?: boolean;
+  /** Enable pulsing border animation (e.g., for running state) */
+  pulsing?: boolean;
+  /** Color for the pulsing border */
+  pulseColor?: 'primary' | 'success' | 'warning' | 'error';
 }
 
 interface Emits {
@@ -25,6 +29,8 @@ const props = withDefaults(defineProps<Props>(), {
   glowColor: 'primary',
   static: false,
   padded: true,
+  pulsing: false,
+  pulseColor: 'success',
 });
 
 defineEmits<Emits>();
@@ -38,6 +44,13 @@ const glowColors = {
   purple: 'bg-purple-400',
   orange: 'bg-orange-400',
 };
+
+const pulseClasses = {
+  primary: 'card-pulse-primary',
+  success: 'card-pulse-success',
+  warning: 'card-pulse-warning',
+  error: 'card-pulse-error',
+};
 </script>
 
 <template>
@@ -49,6 +62,7 @@ const glowColors = {
       clickable ? 'cursor-pointer' : '',
       !static ? 'hover:border-border-default hover:shadow-2xl hover:shadow-accent-primary/5' : '',
       clickable && !static ? 'hover:-translate-y-1' : '',
+      pulsing ? pulseClasses[pulseColor] : '',
     ]"
   >
     <!-- Hover glow effect -->

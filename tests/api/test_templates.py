@@ -24,7 +24,7 @@ class TestPromptTemplatesAPI:
         test_template = next((t for t in data if t["name"] == "Test Prompt Template"), None)
         assert test_template is not None
         assert test_template["system_prompt"] == "You are a helpful assistant."
-        assert test_template["user_prompt_template"] == "Summarize: {content}"
+        assert test_template["user_prompt_template"] == "Summarize: {{ content }}"
 
     def test_create_prompt_template(self, client):
         """Test creating a new prompt template."""
@@ -32,7 +32,7 @@ class TestPromptTemplatesAPI:
             "name": "New Summary Template",
             "description": "Creates brief summaries",
             "system_prompt": "You are an expert summarizer.",
-            "user_prompt_template": "Please summarize the following in {language}:\n\n{content}",
+            "user_prompt_template": "Please summarize the following in {{ language }}:\n\n{{ content }}",
             "language": "en",
             "target_length": 200
         }
@@ -41,7 +41,7 @@ class TestPromptTemplatesAPI:
         data = response.json()
         assert data["name"] == "New Summary Template"
         assert data["system_prompt"] == "You are an expert summarizer."
-        assert data["user_prompt_template"] == "Please summarize the following in {language}:\n\n{content}"
+        assert data["user_prompt_template"] == "Please summarize the following in {{ language }}:\n\n{{ content }}"
         assert data["target_length"] == 200
         assert data["id"] is not None
 

@@ -125,7 +125,7 @@ const lastRunConfig = computed(() => {
 </script>
 
 <template>
-  <BaseCard glow-color="primary">
+  <BaseCard glow-color="primary" :pulsing="isRunning" pulse-color="success">
       <template #header>
       <div class="flex items-start justify-between">
         <div class="flex-1">

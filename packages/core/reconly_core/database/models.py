@@ -21,6 +21,8 @@ Requires PostgreSQL with pgvector extension for vector storage.
 """
 from datetime import datetime
 from typing import Literal
+
+from jinja2 import Template
 from sqlalchemy import (
     Column, Integer, String, Text, Float, DateTime, Boolean, JSON,
     ForeignKey, Index
@@ -485,7 +487,7 @@ class PromptTemplate(Base):
 
     def render_prompts(self, content_data: dict) -> dict:
         """
-        Render the prompt templates with actual content.
+        Render the prompt templates with actual content using Jinja2.
 
         Args:
             content_data: Dict with keys: title, content, source_type
@@ -493,12 +495,13 @@ class PromptTemplate(Base):
         Returns:
             Dict with 'system' and 'user' prompt strings
         """
-        user_prompt = self.user_prompt_template.format(
-            title=content_data.get('title', ''),
-            content=content_data.get('content', ''),
-            source_type=content_data.get('source_type', 'unknown'),
-            target_length=self.target_length,
-        )
+        context = {
+            'title': content_data.get('title', ''),
+            'content': content_data.get('content', ''),
+            'source_type': content_data.get('source_type', 'unknown'),
+            'target_length': self.target_length,
+        }
+        user_prompt = Template(self.user_prompt_template).render(**context)
         return {
             'system': self.system_prompt,
             'user': user_prompt,
