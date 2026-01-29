@@ -164,6 +164,7 @@ class HuggingFaceProvider(BaseProvider):
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         timeout: Optional[int] = None,
+        max_content_chars: Optional[int] = None,
     ):
         """
         Initialize the HuggingFace summarizer.
@@ -173,6 +174,8 @@ class HuggingFaceProvider(BaseProvider):
             model: Model identifier - full HuggingFace path (e.g., 'meta-llama/Llama-3.3-70B-Instruct')
             timeout: Request timeout in seconds (default: 120s)
                      Can be configured via PROVIDER_TIMEOUT_HUGGINGFACE env var.
+            max_content_chars: Maximum content length for summarization.
+                     If None, uses global setting or 30K default. 0 means no limit.
         """
         super().__init__(api_key)
         self.api_key = api_key or os.getenv('HUGGINGFACE_API_KEY')
@@ -183,6 +186,7 @@ class HuggingFaceProvider(BaseProvider):
             )
 
         self.model_key, self.model = self.resolve_model(model or self.DEFAULT_MODEL)
+        self.max_content_chars = max_content_chars  # Used by _truncate_content()
 
         # Timeout priority: param > env var > default
         if timeout is not None:
@@ -498,6 +502,9 @@ class HuggingFaceProvider(BaseProvider):
         if not content:
             raise ValueError("No content to summarize")
 
+        # Truncate content if needed (preserves prompt structure)
+        content = self._truncate_content(content)
+
         # Use provided prompts or build fallback
         if system_prompt and user_prompt:
             sys_prompt = system_prompt
@@ -512,11 +519,6 @@ class HuggingFaceProvider(BaseProvider):
             else:
                 sys_prompt = "You are a professional content summarizer. Create concise, informative summaries in English."
                 usr_prompt = f"Summarize the following content from a {source_type}.\n\nTitle: {title}\n\nContent:\n{content}\n\nCreate a concise summary of approximately 150 words."
-
-        # Truncate user prompt if too long (to fit model context)
-        max_prompt_length = 3000
-        if len(usr_prompt) > max_prompt_length:
-            usr_prompt = usr_prompt[:max_prompt_length] + "...\n\nCreate a concise summary of approximately 150 words."
 
         try:
             # Query API using OpenAI-compatible chat completions format

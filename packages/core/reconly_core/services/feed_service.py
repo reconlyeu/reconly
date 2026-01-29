@@ -4,6 +4,7 @@ This service replaces YAML-based batch processing with database-driven
 Feed and Source entities, providing proper execution tracking and
 LLM usage logging.
 """
+import os
 import time
 import hmac
 import hashlib
@@ -119,6 +120,42 @@ def _format_article_for_consolidation(
     return "\n".join(parts)
 
 
+def _truncate_content_for_prompt(content: str) -> str:
+    """
+    Truncate content for prompt templates using global settings.
+
+    Resolution order:
+    1. SUMMARIZATION_MAX_CONTENT_CHARS env var
+    2. Default of 30000 chars
+
+    A value of 0 means no truncation.
+
+    Args:
+        content: The content to potentially truncate
+
+    Returns:
+        The content, truncated if necessary with a notice appended
+    """
+    env_value = os.getenv('SUMMARIZATION_MAX_CONTENT_CHARS')
+    if env_value is not None:
+        try:
+            max_chars = int(env_value)
+        except ValueError:
+            max_chars = 30000
+    else:
+        max_chars = 30000
+
+    # Value of 0 means no limit
+    if max_chars == 0:
+        return content
+
+    # Truncate if necessary
+    if len(content) > max_chars:
+        return content[:max_chars] + "\n\n[Content truncated due to length...]"
+
+    return content
+
+
 def _build_prompts_from_template(
     template: PromptTemplate,
     content_data: Dict[str, Any],
@@ -127,6 +164,7 @@ def _build_prompts_from_template(
     Build system and user prompts from a PromptTemplate and content data.
 
     Uses Jinja2 templating for consistency with report templates.
+    Content is truncated BEFORE embedding to preserve prompt structure.
 
     Args:
         template: PromptTemplate instance
@@ -135,9 +173,12 @@ def _build_prompts_from_template(
     Returns:
         Tuple of (system_prompt, user_prompt)
     """
+    # Truncate content BEFORE embedding in template to preserve format instructions
+    content = _truncate_content_for_prompt(content_data.get('content', ''))
+
     context = {
         'title': content_data.get('title', 'No title'),
-        'content': content_data.get('content', ''),
+        'content': content,
         'source_type': content_data.get('source_type', 'content'),
         'target_length': template.target_length,
     }

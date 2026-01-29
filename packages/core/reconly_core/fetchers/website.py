@@ -3,12 +3,33 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import html2text
 import requests
 from bs4 import BeautifulSoup
 
 from reconly_core.fetchers.base import BaseFetcher, ValidationResult
 from reconly_core.fetchers.metadata import FetcherMetadata
 from reconly_core.fetchers.registry import register_fetcher
+
+
+def _html_to_markdown(html_content: str) -> str:
+    """
+    Convert HTML to clean markdown.
+
+    Preserves structure (headings, lists, code blocks, links) while
+    producing clean, readable markdown.
+    """
+    h = html2text.HTML2Text()
+    h.body_width = 0  # Don't wrap lines
+    h.ignore_links = False
+    h.ignore_images = False
+    h.ignore_emphasis = False
+    h.skip_internal_links = True
+    h.inline_links = True
+    h.protect_links = True
+    h.ignore_tables = False
+    h.single_line_break = False  # Use proper paragraph breaks
+    return h.handle(html_content).strip()
 
 
 @register_fetcher('website')
@@ -94,7 +115,8 @@ class WebsiteFetcher(BaseFetcher):
             ]
 
             # Find the best content container (prefer ones with more text)
-            best_content = ""
+            best_text_len = 0
+            best_element = None
 
             for tag, attrs in content_selectors:
                 if 'attrs' in attrs:
@@ -103,21 +125,20 @@ class WebsiteFetcher(BaseFetcher):
                     element = soup.find(tag, **attrs) if attrs else soup.find(tag)
 
                 if element:
-                    text = element.get_text(separator='\n', strip=True)
+                    text = element.get_text(separator=' ', strip=True)
                     # Use this element if it has more content than what we found so far
                     # Minimum threshold of 100 chars to avoid picking up headers/navs
-                    if len(text) > len(best_content) and len(text) > 100:
-                        best_content = text
+                    if len(text) > best_text_len and len(text) > 100:
+                        best_text_len = len(text)
+                        best_element = element
 
             # Fall back to body if no good content found
-            if not best_content:
-                body = soup.find('body')
-                if body:
-                    best_content = body.get_text(separator='\n', strip=True)
+            if not best_element:
+                best_element = soup.find('body')
 
-            if best_content:
-                # Remove excessive newlines
-                content = '\n'.join(line.strip() for line in best_content.split('\n') if line.strip())
+            if best_element:
+                # Convert HTML to markdown to preserve structure (headings, lists, code, links)
+                content = _html_to_markdown(str(best_element))
 
             return [{
                 'url': url,
