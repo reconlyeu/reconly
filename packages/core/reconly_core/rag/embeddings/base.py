@@ -5,9 +5,12 @@ Follows the same pattern as summarizers for consistency.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from reconly_core.config_types import ProviderConfigSchema
+
+if TYPE_CHECKING:
+    from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
 
 
 @dataclass
@@ -191,3 +194,34 @@ class EmbeddingProvider(ABC):
             List of EmbeddingModelInfo objects for available models
         """
         return []
+
+    @classmethod
+    def get_metadata(cls) -> "EmbeddingProviderMetadata":
+        """
+        Get metadata for this embedding provider.
+
+        Returns metadata describing the provider's configuration requirements,
+        capabilities, and display information. Subclasses should override this
+        to provide accurate metadata.
+
+        Returns:
+            EmbeddingProviderMetadata instance describing this provider.
+
+        Example:
+            >>> OllamaEmbedding.get_metadata()
+            EmbeddingProviderMetadata(name='ollama', display_name='Ollama', ...)
+        """
+        # Import here to avoid circular imports
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        return EmbeddingProviderMetadata(
+            name="unknown",
+            display_name="Unknown Provider",
+            description="Base embedding provider",
+            icon=None,
+            requires_api_key=False,
+            supports_base_url=False,
+            model_param_name="model",
+            is_local=False,
+            default_model=None,
+        )

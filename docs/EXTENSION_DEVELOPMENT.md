@@ -166,7 +166,8 @@ Register your extension in the appropriate entry point group:
 |---------------|-------------------|
 | Exporter | `reconly.exporters` |
 | Fetcher | `reconly.fetchers` |
-| Provider | `reconly.providers` |
+| Provider (LLM) | `reconly.providers` |
+| Embedding Provider | `reconly.embedding_providers` |
 
 **Example for each type:**
 
@@ -179,9 +180,13 @@ notion = "reconly_ext_notion:NotionExporter"
 [project.entry-points."reconly.fetchers"]
 reddit = "reconly_ext_reddit:RedditFetcher"
 
-# Provider (coming soon)
+# LLM Provider
 [project.entry-points."reconly.providers"]
 groq = "reconly_ext_groq:GroqProvider"
+
+# Embedding Provider
+[project.entry-points."reconly.embedding_providers"]
+cohere = "reconly_ext_cohere:CohereEmbedding"
 ```
 
 ---
@@ -677,6 +682,267 @@ class RedditFetcher(BaseFetcher):
                 ),
             ],
         )
+```
+
+---
+
+## Creating an Embedding Provider Extension
+
+Embedding providers generate vector embeddings for RAG (Retrieval-Augmented Generation) and semantic search. Extensions can add support for new embedding services like Cohere, Voyage AI, or custom endpoints.
+
+### Package Structure
+
+```
+reconly-ext-cohere-embed/
+├── pyproject.toml
+├── src/
+│   └── reconly_ext_cohere_embed/
+│       ├── __init__.py
+│       └── provider.py
+└── tests/
+```
+
+### pyproject.toml
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "reconly-ext-cohere-embed"
+version = "1.0.0"
+description = "Cohere embedding provider for Reconly"
+requires-python = ">=3.11"
+
+[project.entry-points."reconly.embedding_providers"]
+cohere = "reconly_ext_cohere_embed:CohereEmbedding"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reconly_ext_cohere_embed"]
+```
+
+### Embedding Provider Implementation
+
+```python
+"""Cohere embedding provider for Reconly."""
+import os
+from typing import List, Optional
+
+from reconly_core.rag.embeddings.base import (
+    EmbeddingProvider,
+    EmbeddingProviderCapabilities,
+    EmbeddingModelInfo,
+)
+from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+from reconly_core.config_types import ConfigField, ProviderConfigSchema
+
+
+class CohereEmbedding(EmbeddingProvider):
+    """Generate embeddings using Cohere's embedding API."""
+
+    # Extension metadata - REQUIRED
+    __extension_name__ = "Cohere Embeddings"
+    __extension_version__ = "1.0.0"
+    __extension_author__ = "Your Name"
+    __extension_min_reconly__ = "1.0.0"
+    __extension_description__ = "Generate embeddings via Cohere API"
+    __extension_homepage__ = "https://github.com/you/reconly-ext-cohere-embed"
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+    ):
+        """Initialize the Cohere embedding provider."""
+        super().__init__(api_key)
+        self.api_key = api_key or os.getenv('COHERE_API_KEY')
+        self.model = model or 'embed-english-v3.0'
+        self._dimension = 1024  # Cohere embed-v3 dimension
+
+        if not self.api_key:
+            raise ValueError(
+                "Cohere API key required. Set COHERE_API_KEY environment variable."
+            )
+
+    @classmethod
+    def get_metadata(cls) -> EmbeddingProviderMetadata:
+        """Get provider metadata for registry and UI display."""
+        return EmbeddingProviderMetadata(
+            name='cohere',
+            display_name='Cohere',
+            description='Cohere embedding API (embed-v3)',
+            icon='simple-icons:cohere',
+            requires_api_key=True,
+            supports_base_url=False,
+            model_param_name='model',
+            is_local=False,
+            default_model='embed-english-v3.0',
+        )
+
+    async def embed(self, texts: List[str]) -> List[List[float]]:
+        """Generate embeddings for a list of texts."""
+        if not texts:
+            raise ValueError("Cannot embed empty list of texts")
+
+        # Your embedding implementation here
+        # Call Cohere API and return embeddings
+        import cohere
+        co = cohere.Client(self.api_key)
+        response = co.embed(
+            texts=texts,
+            model=self.model,
+            input_type="search_document"
+        )
+        return response.embeddings
+
+    def get_dimension(self) -> int:
+        """Get embedding vector dimension."""
+        return self._dimension
+
+    def get_provider_name(self) -> str:
+        """Get provider name."""
+        return 'cohere'
+
+    @classmethod
+    def get_capabilities(cls) -> EmbeddingProviderCapabilities:
+        """Get provider capabilities."""
+        return EmbeddingProviderCapabilities(
+            is_local=False,
+            requires_api_key=True,
+            supports_batch=True,
+            max_batch_size=96,
+            max_tokens_per_text=512,
+            dimension=1024,
+        )
+
+    def is_available(self) -> bool:
+        """Check if provider is available."""
+        return self.api_key is not None and len(self.api_key) > 0
+
+    def validate_config(self) -> List[str]:
+        """Validate provider configuration."""
+        errors = []
+        if not self.api_key:
+            errors.append("Cohere API key is required. Set COHERE_API_KEY.")
+        return errors
+
+    def get_config_schema(self) -> ProviderConfigSchema:
+        """Get configuration schema for settings UI."""
+        return ProviderConfigSchema(
+            fields=[
+                ConfigField(
+                    key="api_key",
+                    type="string",
+                    label="API Key",
+                    description="Cohere API key",
+                    env_var="COHERE_API_KEY",
+                    editable=False,
+                    secret=True,
+                    required=True,
+                ),
+                ConfigField(
+                    key="model",
+                    type="string",
+                    label="Model",
+                    description="Embedding model (e.g., embed-english-v3.0)",
+                    default="embed-english-v3.0",
+                    editable=True,
+                ),
+            ],
+            requires_api_key=True,
+        )
+
+    @classmethod
+    def list_models(cls, api_key: Optional[str] = None) -> List[EmbeddingModelInfo]:
+        """List available embedding models."""
+        return [
+            EmbeddingModelInfo(
+                id='embed-english-v3.0',
+                name='Embed English v3',
+                provider='cohere',
+                dimension=1024,
+                is_default=True,
+            ),
+            EmbeddingModelInfo(
+                id='embed-multilingual-v3.0',
+                name='Embed Multilingual v3',
+                provider='cohere',
+                dimension=1024,
+                is_default=False,
+            ),
+        ]
+```
+
+### EmbeddingProviderMetadata Fields
+
+The `get_metadata()` classmethod must return an `EmbeddingProviderMetadata` instance:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | str | Yes | Internal identifier (e.g., 'cohere', 'voyage') |
+| `display_name` | str | Yes | Human-readable name for UI |
+| `description` | str | Yes | Short description |
+| `icon` | str | No | Iconify icon identifier (e.g., 'simple-icons:cohere') |
+| `requires_api_key` | bool | No | Whether provider needs an API key (default: True) |
+| `supports_base_url` | bool | No | Whether provider supports custom base URL (default: False) |
+| `model_param_name` | str | No | Parameter name for model selection: 'model' or 'model_id' (default: 'model') |
+| `is_local` | bool | No | Whether provider runs locally (default: False) |
+| `default_model` | str | No | Default model identifier |
+
+### Required Methods
+
+Your embedding provider must implement these methods:
+
+| Method | Description |
+|--------|-------------|
+| `embed(texts: List[str]) -> List[List[float]]` | Generate embeddings (async) |
+| `get_dimension() -> int` | Return embedding vector dimension |
+| `get_provider_name() -> str` | Return provider identifier |
+| `get_capabilities() -> EmbeddingProviderCapabilities` | Return provider capabilities (classmethod) |
+| `get_metadata() -> EmbeddingProviderMetadata` | Return provider metadata (classmethod) |
+| `is_available() -> bool` | Check if provider is available |
+| `validate_config() -> List[str]` | Return list of config errors |
+
+### Testing Embedding Providers
+
+```python
+"""Tests for Cohere embedding provider."""
+import pytest
+from unittest.mock import patch, MagicMock
+
+from reconly_ext_cohere_embed import CohereEmbedding
+
+
+class TestCohereEmbedding:
+    """Tests for CohereEmbedding provider."""
+
+    def test_metadata(self):
+        """Test get_metadata returns correct values."""
+        metadata = CohereEmbedding.get_metadata()
+        assert metadata.name == 'cohere'
+        assert metadata.requires_api_key is True
+        assert metadata.is_local is False
+
+    def test_capabilities(self):
+        """Test get_capabilities returns valid capabilities."""
+        caps = CohereEmbedding.get_capabilities()
+        assert caps.requires_api_key is True
+        assert caps.supports_batch is True
+        assert caps.dimension > 0
+
+    @patch.dict('os.environ', {'COHERE_API_KEY': 'test-key'})
+    def test_initialization(self):
+        """Test provider initialization."""
+        provider = CohereEmbedding()
+        assert provider.api_key == 'test-key'
+        assert provider.get_provider_name() == 'cohere'
+
+    def test_list_models(self):
+        """Test list_models returns model info."""
+        models = CohereEmbedding.list_models()
+        assert len(models) > 0
+        assert all(m.provider == 'cohere' for m in models)
 ```
 
 ---

@@ -15,6 +15,7 @@ from reconly_core.rag.embeddings.base import (
     EmbeddingProviderCapabilities,
     EmbeddingModelInfo,
 )
+from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
 
 
 # Popular HuggingFace embedding models
@@ -130,6 +131,21 @@ class HuggingFaceEmbedding(EmbeddingProvider):
             max_batch_size=32,  # HuggingFace free tier limit
             max_tokens_per_text=512,
             dimension=1024,  # Default for bge-m3
+        )
+
+    @classmethod
+    def get_metadata(cls) -> EmbeddingProviderMetadata:
+        """Get provider metadata for registry and UI display."""
+        return EmbeddingProviderMetadata(
+            name='huggingface',
+            display_name='HuggingFace',
+            description='HuggingFace Inference API for embedding models',
+            icon='simple-icons:huggingface',
+            requires_api_key=True,
+            supports_base_url=False,
+            model_param_name='model_id',
+            is_local=False,
+            default_model='BAAI/bge-m3',
         )
 
     def is_available(self) -> bool:

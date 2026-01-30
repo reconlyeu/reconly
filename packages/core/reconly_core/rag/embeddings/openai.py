@@ -14,6 +14,7 @@ from reconly_core.rag.embeddings.base import (
     EmbeddingProviderCapabilities,
     EmbeddingModelInfo,
 )
+from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
 
 
 # OpenAI embedding model configurations
@@ -120,6 +121,21 @@ class OpenAIEmbedding(EmbeddingProvider):
             max_batch_size=2048,  # OpenAI supports large batches
             max_tokens_per_text=8191,
             dimension=1536,  # Default for text-embedding-3-small
+        )
+
+    @classmethod
+    def get_metadata(cls) -> EmbeddingProviderMetadata:
+        """Get provider metadata for registry and UI display."""
+        return EmbeddingProviderMetadata(
+            name='openai',
+            display_name='OpenAI',
+            description='OpenAI embedding API (text-embedding-3-small/large)',
+            icon='simple-icons:openai',
+            requires_api_key=True,
+            supports_base_url=True,
+            model_param_name='model',
+            is_local=False,
+            default_model='text-embedding-3-small',
         )
 
     def is_available(self) -> bool:
