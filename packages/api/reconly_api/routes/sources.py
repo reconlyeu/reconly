@@ -1,5 +1,4 @@
 """Source management API routes."""
-import os
 import time
 from typing import List, Optional
 
@@ -8,8 +7,11 @@ from sqlalchemy.orm import Session, joinedload
 
 from reconly_core.database.models import Connection, OAuthCredential, Source
 from reconly_core.email.oauth import create_oauth_state, get_redirect_uri
-from reconly_core.email.gmail import generate_gmail_auth_url
-from reconly_core.email.outlook import generate_outlook_auth_url
+from reconly_core.email.oauth_registry import get_oauth_provider, is_provider_configured
+
+# Import to trigger provider registration
+import reconly_core.email.gmail  # noqa: F401
+import reconly_core.email.outlook  # noqa: F401
 from reconly_core.logging import get_logger
 from reconly_core.fetchers import get_fetcher, detect_fetcher, is_fetcher_registered
 
@@ -102,11 +104,7 @@ def _get_base_url(request: Request) -> str:
 
 def _is_oauth_provider_configured(provider: str) -> bool:
     """Check if OAuth provider credentials are configured."""
-    if provider == "gmail":
-        return bool(os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"))
-    if provider == "outlook":
-        return bool(os.environ.get("MICROSOFT_CLIENT_ID") and os.environ.get("MICROSOFT_CLIENT_SECRET"))
-    return False
+    return is_provider_configured(provider)
 
 
 def _build_imap_source(
@@ -401,10 +399,10 @@ async def create_imap_source(
             base_url = _get_base_url(request)
             redirect_uri = get_redirect_uri(base_url)
 
-            if provider == "gmail":
-                auth_url = generate_gmail_auth_url(redirect_uri, state, code_challenge)
-            else:  # outlook
-                auth_url = generate_outlook_auth_url(redirect_uri, state, code_challenge)
+            provider_meta = get_oauth_provider(provider)
+            if not provider_meta:
+                raise HTTPException(status_code=400, detail=f"Unknown OAuth provider: {provider}")
+            auth_url = provider_meta.auth_url_generator(redirect_uri, state, code_challenge)
 
             logger.info(
                 "Created IMAP source with pending OAuth",
