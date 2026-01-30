@@ -15,6 +15,7 @@
 #   rm state/.seeded && docker compose down -v && docker compose up -d
 #
 # Environment variables (set in .env file or export):
+#   RECONLY_VERSION       - Docker image version (default: latest, e.g., 1.5.0, edge)
 #   LOAD_SAMPLE_DATA      - Load sample feeds/sources on first start (default: false)
 #   API_PORT              - API port (default: 8000)
 #   POSTGRES_PASSWORD     - PostgreSQL password (default: reconly)
@@ -46,9 +47,9 @@ services:
       retries: 5
 
   api:
-    build:
-      context: ../..
-      dockerfile: docker/oss/Dockerfile
+    image: ghcr.io/reconlyeu/reconly:${RECONLY_VERSION:-latest}
+    # For development/building from source, use docker-compose.dev.yml instead:
+    #   docker compose -f docker-compose.dev.yml up -d --build
     container_name: reconly-oss-api
     restart: unless-stopped
     depends_on:

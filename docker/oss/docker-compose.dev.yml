@@ -1,0 +1,68 @@
+# Reconly OSS - Development Docker Compose
+#
+# Use this file for building from source during development.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up -d --build   # Build and start
+#   docker compose -f docker-compose.dev.yml logs -f api     # View logs
+#   docker compose -f docker-compose.dev.yml down            # Stop all
+#
+# This file extends docker-compose.yml and overrides the api service
+# to build from source instead of using the pre-built image.
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: reconly-dev-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=reconly
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-reconly}
+      - POSTGRES_DB=reconly
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ../init-postgres.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reconly -d reconly"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../..
+      dockerfile: docker/oss/Dockerfile
+    container_name: reconly-dev-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Database (PostgreSQL required)
+      - DATABASE_URL=postgresql://reconly:${POSTGRES_PASSWORD:-reconly}@postgres:5432/reconly
+      # Sample data (loads on first start if database is empty)
+      - LOAD_SAMPLE_DATA=${LOAD_SAMPLE_DATA:-false}
+      # LLM Providers
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_BASE_URL=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-}
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-ollama}
+      # Edition & Auth
+      - RECONLY_EDITION=${RECONLY_EDITION:-oss}
+      - RECONLY_AUTH_PASSWORD=${RECONLY_AUTH_PASSWORD:-}
+      # Scheduler
+      - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
+    volumes:
+      - reconly_data_dev:/app/data
+      - ./state:/app/state
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  postgres_data_dev:
+  reconly_data_dev:

@@ -18,6 +18,7 @@ import {
 import { strings } from '@/i18n/en';
 import { useAuthStore } from '@/stores/auth';
 import { useDemoStore } from '@/stores/demo';
+import { healthApi } from '@/services/api';
 
 interface NavItem {
   name: string;
@@ -33,6 +34,7 @@ const props = defineProps<{
 const authStore = shallowRef<ReturnType<typeof useAuthStore> | null>(null);
 const demoStore = shallowRef<ReturnType<typeof useDemoStore> | null>(null);
 const showLogout = ref(false);
+const appVersion = ref<string | null>(null);
 
 // Check auth config and demo mode on mount
 onMounted(async () => {
@@ -42,6 +44,14 @@ onMounted(async () => {
   await authStore.value.checkAuthConfig();
   await demoStore.value.fetchDemoMode();
   showLogout.value = authStore.value.authRequired;
+
+  // Fetch app version (non-blocking)
+  try {
+    const health = await healthApi.detailed();
+    appVersion.value = health.version;
+  } catch {
+    // Version fetch is non-critical, ignore errors
+  }
 });
 
 const handleLogout = async () => {
@@ -126,6 +136,11 @@ const isActive = (href: string) => {
 
       <div class="text-xs text-text-muted">
         {{ strings.app.tagline }}
+      </div>
+
+      <!-- Version -->
+      <div v-if="appVersion" class="text-xs text-text-muted">
+        v{{ appVersion }}
       </div>
     </div>
   </aside>

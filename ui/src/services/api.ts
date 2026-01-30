@@ -139,10 +139,30 @@ export interface HealthResponse {
   demo_mode: boolean;
 }
 
+export interface DetailedHealthResponse {
+  status: string;
+  version: string;
+  environment: string;
+  database: string;
+  uptime_seconds: number;
+  timestamp: string;
+  components: Record<string, { status: string; error?: string }>;
+  demo_mode: boolean;
+}
+
 export const healthApi = {
   check: async (): Promise<HealthResponse> => {
     // Health endpoint is at root level, not under /api/v1
     const { data } = await axios.get<HealthResponse>('/health', { timeout: 5000 });
+    return data;
+  },
+
+  detailed: async (): Promise<DetailedHealthResponse> => {
+    // Detailed health endpoint is at root level, not under /api/v1
+    const { data } = await axios.get<DetailedHealthResponse>('/health/detailed', {
+      timeout: 5000,
+      withCredentials: true,
+    });
     return data;
   },
 };

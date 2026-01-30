@@ -350,6 +350,88 @@ isort packages/
 mypy packages/core --ignore-missing-imports
 ```
 
+## 🚀 Release Process (Maintainers)
+
+This section documents how releases are created. Contributors don't need to follow this—it's for maintainers only.
+
+### Version Numbering
+
+We follow [Semantic Versioning](https://semver.org/):
+- **MAJOR** (1.x.x): Breaking changes
+- **MINOR** (x.1.x): New features, backwards compatible
+- **PATCH** (x.x.1): Bug fixes, backwards compatible
+
+### Creating a Release
+
+1. **Update version** in `packages/api/pyproject.toml` and `packages/core/pyproject.toml`
+2. **Update CHANGELOG.md** with release notes
+3. **Create and push a tag**:
+   ```bash
+   git tag v1.5.0
+   git push origin v1.5.0
+   ```
+4. **GitHub Actions will automatically**:
+   - Build multi-platform Docker images (amd64, arm64)
+   - Push to GHCR with tags: `1.5.0`, `1.5`, `latest`
+   - Create a GitHub Release with auto-generated notes
+
+### Docker Image Tags
+
+| Tag | Description |
+|-----|-------------|
+| `latest` | Latest stable release |
+| `1.5.0` | Specific version |
+| `1.5` | Latest 1.5.x patch |
+| `edge` | Latest main branch (unstable) |
+
+### Changelog Format
+
+We follow [Keep a Changelog](https://keepachangelog.com/). Categories:
+- **Added** - New features
+- **Changed** - Changes to existing functionality
+- **Deprecated** - Features to be removed
+- **Removed** - Removed features
+- **Fixed** - Bug fixes
+- **Security** - Security fixes
+
+## 📦 Upgrading (Users)
+
+### Version Pinning
+
+Pin to a specific version in your `.env` or `docker-compose.yml`:
+
+```bash
+# .env file
+RECONLY_VERSION=1.5.0
+```
+
+Or in docker-compose.yml:
+```yaml
+services:
+  api:
+    image: ghcr.io/reconlyeu/reconly:1.5.0
+```
+
+### Upgrade Process
+
+1. **Check release notes** in [CHANGELOG.md](CHANGELOG.md)
+2. **Check migration guides** in [docs/migrations/](docs/migrations/) for breaking changes
+3. **Pull new image:**
+   ```bash
+   docker compose pull
+   docker compose up -d
+   ```
+4. **Verify:** Check `/health/detailed` for the new version
+
+### Rollback
+
+If issues occur after upgrading:
+
+```bash
+# Use previous version
+RECONLY_VERSION=1.4.0 docker compose up -d
+```
+
 ## 🌱 First-Time Contributors
 
 New to open source or Reconly? Welcome! Here's how to get started:

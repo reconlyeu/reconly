@@ -38,6 +38,7 @@ Fixes #
 - [ ] I have updated documentation (if needed)
 - [ ] My changes generate no new warnings
 - [ ] Any dependent changes have been merged and published
+- [ ] I have updated CHANGELOG.md (for user-facing changes)
 
 ## Additional Notes
 
