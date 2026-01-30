@@ -113,6 +113,47 @@ class FetcherMetadataResponse(ComponentMetadataResponse):
     )
 
 
+class EmbeddingProviderMetadataResponse(ComponentMetadataResponse):
+    """Embedding provider metadata in API response.
+
+    Extends ComponentMetadataResponse with embedding provider-specific fields
+    for API key requirements, base URL support, and model configuration.
+    """
+
+    requires_api_key: bool = Field(
+        default=True, description="Whether provider requires an API key"
+    )
+    supports_base_url: bool = Field(
+        default=False, description="Whether provider supports custom base URL"
+    )
+    model_param_name: str = Field(
+        default="model", description="Parameter name for model selection"
+    )
+    is_local: bool = Field(
+        default=False, description="Whether provider runs locally"
+    )
+    default_model: Optional[str] = Field(
+        default=None, description="Default model for the provider"
+    )
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "name": "ollama",
+                "display_name": "Ollama",
+                "description": "Local embedding via Ollama server",
+                "icon": "simple-icons:ollama",
+                "requires_api_key": False,
+                "supports_base_url": True,
+                "model_param_name": "model",
+                "is_local": True,
+                "default_model": "bge-m3",
+            }
+        },
+    )
+
+
 class ExporterMetadataResponse(ComponentMetadataResponse):
     """Exporter metadata in API response.
 

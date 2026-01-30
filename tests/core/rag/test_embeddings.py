@@ -317,3 +317,230 @@ class TestEmbeddingProviderBase:
         assert caps.max_batch_size == 32
         assert caps.max_tokens_per_text == 512
         assert caps.dimension == 1024
+
+
+class TestEmbeddingProviderRegistry:
+    """Tests for embedding provider registry and metadata."""
+
+    def test_get_metadata_ollama(self):
+        """Test metadata retrieval for Ollama provider."""
+        from reconly_core.rag.embeddings import OllamaEmbedding
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        metadata = OllamaEmbedding.get_metadata()
+
+        assert isinstance(metadata, EmbeddingProviderMetadata)
+        assert metadata.name == 'ollama'
+        assert metadata.display_name == 'Ollama'
+        assert metadata.is_local is True
+        assert metadata.requires_api_key is False
+        assert metadata.supports_base_url is True
+        assert metadata.model_param_name == 'model'
+        assert metadata.default_model == 'bge-m3'
+
+    def test_get_metadata_openai(self):
+        """Test metadata retrieval for OpenAI provider."""
+        from reconly_core.rag.embeddings import OpenAIEmbedding
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        metadata = OpenAIEmbedding.get_metadata()
+
+        assert isinstance(metadata, EmbeddingProviderMetadata)
+        assert metadata.name == 'openai'
+        assert metadata.display_name == 'OpenAI'
+        assert metadata.is_local is False
+        assert metadata.requires_api_key is True
+        assert metadata.supports_base_url is True
+        assert metadata.model_param_name == 'model'
+        assert metadata.default_model == 'text-embedding-3-small'
+
+    def test_get_metadata_huggingface(self):
+        """Test metadata retrieval for HuggingFace provider."""
+        from reconly_core.rag.embeddings import HuggingFaceEmbedding
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        metadata = HuggingFaceEmbedding.get_metadata()
+
+        assert isinstance(metadata, EmbeddingProviderMetadata)
+        assert metadata.name == 'huggingface'
+        assert metadata.display_name == 'HuggingFace'
+        assert metadata.is_local is False
+        assert metadata.requires_api_key is True
+        assert metadata.supports_base_url is False
+        assert metadata.model_param_name == 'model_id'
+        assert metadata.default_model == 'BAAI/bge-m3'
+
+    def test_get_metadata_lmstudio(self):
+        """Test metadata retrieval for LMStudio provider."""
+        from reconly_core.rag.embeddings import LMStudioEmbedding
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        metadata = LMStudioEmbedding.get_metadata()
+
+        assert isinstance(metadata, EmbeddingProviderMetadata)
+        assert metadata.name == 'lmstudio'
+        assert metadata.display_name == 'LM Studio'
+        assert metadata.is_local is True
+        assert metadata.requires_api_key is False
+        assert metadata.supports_base_url is True
+        assert metadata.model_param_name == 'model'
+        assert metadata.default_model == 'nomic-embed-text'
+
+    def test_list_embedding_provider_metadata(self):
+        """Test listing metadata for all providers."""
+        from reconly_core.rag.embeddings import list_embedding_provider_metadata
+
+        metadata_list = list_embedding_provider_metadata()
+
+        assert isinstance(metadata_list, list)
+        assert len(metadata_list) >= 4  # At least 4 core providers
+
+        # Check all metadata are dicts
+        for metadata in metadata_list:
+            assert isinstance(metadata, dict)
+            assert 'name' in metadata
+            assert 'display_name' in metadata
+            assert 'description' in metadata
+            assert 'is_local' in metadata
+            assert 'requires_api_key' in metadata
+
+        # Verify core providers are present
+        names = [m['name'] for m in metadata_list]
+        assert 'ollama' in names
+        assert 'openai' in names
+        assert 'huggingface' in names
+        assert 'lmstudio' in names
+
+    def test_get_embedding_provider_class(self):
+        """Test retrieving provider classes by name."""
+        from reconly_core.rag.embeddings import (
+            get_embedding_provider_class,
+            OllamaEmbedding,
+            OpenAIEmbedding,
+            HuggingFaceEmbedding,
+            LMStudioEmbedding,
+        )
+
+        # Test retrieval of each core provider
+        assert get_embedding_provider_class('ollama') is OllamaEmbedding
+        assert get_embedding_provider_class('openai') is OpenAIEmbedding
+        assert get_embedding_provider_class('huggingface') is HuggingFaceEmbedding
+        assert get_embedding_provider_class('lmstudio') is LMStudioEmbedding
+
+        # Test non-existent provider
+        assert get_embedding_provider_class('nonexistent') is None
+
+    def test_register_embedding_provider_decorator(self):
+        """Test the register_embedding_provider decorator."""
+        from reconly_core.rag.embeddings import (
+            register_embedding_provider,
+            get_embedding_provider_class,
+            list_embedding_providers,
+        )
+        from reconly_core.rag.embeddings.base import EmbeddingProvider
+        from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
+
+        # Create a test provider class
+        @register_embedding_provider('test_provider')
+        class TestEmbeddingProvider(EmbeddingProvider):
+            @classmethod
+            def get_metadata(cls):
+                return EmbeddingProviderMetadata(
+                    name='test_provider',
+                    display_name='Test Provider',
+                    description='A test provider',
+                )
+
+            @classmethod
+            def get_capabilities(cls):
+                from reconly_core.rag.embeddings.base import EmbeddingProviderCapabilities
+                return EmbeddingProviderCapabilities(
+                    is_local=True,
+                    requires_api_key=False,
+                    supports_batch=False,
+                )
+
+            @classmethod
+            def list_models(cls):
+                from reconly_core.rag.embeddings.base import EmbeddingModelInfo
+                return [
+                    EmbeddingModelInfo(
+                        id='test-model',
+                        name='Test Model',
+                        provider='test_provider',
+                        dimension=768,
+                    )
+                ]
+
+            def get_provider_name(self):
+                return 'test_provider'
+
+            def get_dimension(self):
+                return 768
+
+            def get_model_info(self):
+                return {
+                    'provider': 'test_provider',
+                    'model': 'test-model',
+                    'dimension': 768,
+                    'local': True,
+                }
+
+            def is_available(self):
+                return True
+
+            def validate_config(self):
+                return []
+
+            async def embed(self, texts):
+                return [[0.1] * 768 for _ in texts]
+
+        # Verify registration
+        assert 'test_provider' in list_embedding_providers()
+        assert get_embedding_provider_class('test_provider') is TestEmbeddingProvider
+
+    def test_dynamic_initialization_via_get_embedding_provider(self):
+        """Test dynamic provider instantiation via get_embedding_provider."""
+        from reconly_core.rag.embeddings import get_embedding_provider
+
+        # Test Ollama provider
+        with patch('requests.get') as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = {'models': []}
+
+            provider = get_embedding_provider('ollama', model='bge-m3')
+            assert provider.get_provider_name() == 'ollama'
+            assert provider.model == 'bge-m3'
+
+        # Test OpenAI provider
+        provider = get_embedding_provider('openai', model='text-embedding-3-small', api_key='test-key')
+        assert provider.get_provider_name() == 'openai'
+        assert provider.model == 'text-embedding-3-small'
+
+        # Test HuggingFace provider
+        provider = get_embedding_provider('huggingface', model='BAAI/bge-m3', api_key='test-key')
+        assert provider.get_provider_name() == 'huggingface'
+        assert provider.model_id == 'BAAI/bge-m3'
+
+        # Test LMStudio provider
+        provider = get_embedding_provider('lmstudio', model='nomic-embed-text')
+        assert provider.get_provider_name() == 'lmstudio'
+        assert provider.model == 'nomic-embed-text'
+
+    def test_metadata_to_dict_conversion(self):
+        """Test EmbeddingProviderMetadata to_dict conversion."""
+        from reconly_core.rag.embeddings import OllamaEmbedding
+
+        metadata = OllamaEmbedding.get_metadata()
+        metadata_dict = metadata.to_dict()
+
+        assert isinstance(metadata_dict, dict)
+        assert metadata_dict['name'] == 'ollama'
+        assert metadata_dict['display_name'] == 'Ollama'
+        assert metadata_dict['is_local'] is True
+        assert metadata_dict['requires_api_key'] is False
+        assert metadata_dict['supports_base_url'] is True
+        assert metadata_dict['model_param_name'] == 'model'
+        assert metadata_dict['default_model'] == 'bge-m3'
+        assert 'description' in metadata_dict
+        assert 'icon' in metadata_dict

@@ -15,6 +15,7 @@ from reconly_core.rag.embeddings.base import (
     EmbeddingProviderCapabilities,
     EmbeddingModelInfo,
 )
+from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
 
 
 # Model configurations with their dimensions
@@ -125,6 +126,21 @@ class LMStudioEmbedding(EmbeddingProvider):
             max_batch_size=32,
             max_tokens_per_text=8192,
             dimension=1024,  # Default dimension
+        )
+
+    @classmethod
+    def get_metadata(cls) -> EmbeddingProviderMetadata:
+        """Get provider metadata for registry and UI display."""
+        return EmbeddingProviderMetadata(
+            name='lmstudio',
+            display_name='LM Studio',
+            description='Local embedding via LM Studio server',
+            icon='mdi:server',
+            requires_api_key=False,
+            supports_base_url=True,
+            model_param_name='model',
+            is_local=True,
+            default_model='nomic-embed-text',
         )
 
     def is_available(self) -> bool:

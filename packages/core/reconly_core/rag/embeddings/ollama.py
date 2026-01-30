@@ -14,6 +14,7 @@ from reconly_core.rag.embeddings.base import (
     EmbeddingProviderCapabilities,
     EmbeddingModelInfo,
 )
+from reconly_core.rag.embeddings.metadata import EmbeddingProviderMetadata
 
 
 # Model configurations with their dimensions
@@ -114,6 +115,21 @@ class OllamaEmbedding(EmbeddingProvider):
             max_batch_size=32,
             max_tokens_per_text=8192,
             dimension=1024,  # Default for bge-m3
+        )
+
+    @classmethod
+    def get_metadata(cls) -> EmbeddingProviderMetadata:
+        """Get provider metadata for registry and UI display."""
+        return EmbeddingProviderMetadata(
+            name='ollama',
+            display_name='Ollama',
+            description='Local embedding via Ollama server',
+            icon='simple-icons:ollama',
+            requires_api_key=False,
+            supports_base_url=True,
+            model_param_name='model',
+            is_local=True,
+            default_model='bge-m3',
         )
 
     def is_available(self) -> bool:
