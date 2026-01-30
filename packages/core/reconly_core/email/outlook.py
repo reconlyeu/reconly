@@ -9,7 +9,7 @@ import logging
 import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import requests
@@ -21,6 +21,7 @@ from reconly_core.email.errors import (
     IMAPConnectionError,
     IMAPFetchError,
 )
+from reconly_core.email.oauth_registry import OAuthProviderMetadata, register_oauth_provider
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +273,7 @@ class OutlookProvider(EmailProvider):
         folders: Optional[List[str]] = None,
         from_filter: Optional[str] = None,
         subject_filter: Optional[str] = None,
-        on_token_refresh: Optional[callable] = None,
+        on_token_refresh: Optional[Callable[[OutlookTokens], None]] = None,
     ):
         """Initialize the Outlook provider.
 
@@ -627,3 +628,18 @@ class OutlookProvider(EmailProvider):
             folder=folder,
             metadata={"outlook_id": msg_data.get("id")},
         )
+
+
+# Register Outlook OAuth provider
+register_oauth_provider(OAuthProviderMetadata(
+    name="outlook",
+    display_name="Outlook / Microsoft 365",
+    description="Microsoft Outlook via OAuth2",
+    icon="mdi:microsoft",
+    client_id_env_var="MICROSOFT_CLIENT_ID",
+    client_secret_env_var="MICROSOFT_CLIENT_SECRET",
+    scopes=OUTLOOK_SCOPES,
+    auth_url_generator=generate_outlook_auth_url,
+    token_exchanger=exchange_outlook_code,
+    token_revoker=revoke_outlook_token,
+))

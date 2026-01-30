@@ -3,9 +3,8 @@
 This module handles OAuth2 flows for Gmail and Outlook email sources,
 including authorization URL generation, callback handling, and token revocation.
 """
-import os
 from datetime import datetime, timedelta
-from typing import Literal, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
@@ -27,27 +26,24 @@ from reconly_core.email.crypto import (
     encrypt_token,
     encrypt_token_optional,
 )
-from reconly_core.email.gmail import (
-    GMAIL_SCOPES,
-    GmailOAuthError,
-    exchange_gmail_code,
-    generate_gmail_auth_url,
-    revoke_gmail_token,
-)
+from reconly_core.email.gmail import GmailOAuthError
 from reconly_core.email.oauth import (
     OAuthStateError,
     create_oauth_state,
     get_redirect_uri,
     validate_oauth_state,
 )
-from reconly_core.email.outlook import (
-    OUTLOOK_SCOPES,
-    OutlookOAuthError,
-    exchange_outlook_code,
-    generate_outlook_auth_url,
-    revoke_outlook_token,
+from reconly_core.email.oauth_registry import (
+    get_oauth_provider,
+    is_provider_configured,
+    list_oauth_providers as list_registered_providers,
 )
+from reconly_core.email.outlook import OutlookOAuthError
 from reconly_core.logging import get_logger
+
+# Import to trigger provider registration
+import reconly_core.email.gmail  # noqa: F401
+import reconly_core.email.outlook  # noqa: F401
 
 logger = get_logger(__name__)
 
@@ -68,11 +64,7 @@ def _get_base_url(request: Request) -> str:
 
 def _is_provider_configured(provider: str) -> bool:
     """Check if OAuth provider credentials are configured."""
-    if provider == "gmail":
-        return bool(os.environ.get("GOOGLE_CLIENT_ID") and os.environ.get("GOOGLE_CLIENT_SECRET"))
-    elif provider == "outlook":
-        return bool(os.environ.get("MICROSOFT_CLIENT_ID") and os.environ.get("MICROSOFT_CLIENT_SECRET"))
-    return False
+    return is_provider_configured(provider)
 
 
 @router.get("/oauth/providers", response_model=OAuthProvidersResponse)
@@ -86,17 +78,12 @@ async def list_oauth_providers():
     """
     providers = [
         OAuthProviderInfo(
-            provider="gmail",
-            display_name="Gmail",
-            scopes=GMAIL_SCOPES,
-            configured=_is_provider_configured("gmail"),
-        ),
-        OAuthProviderInfo(
-            provider="outlook",
-            display_name="Outlook / Microsoft 365",
-            scopes=OUTLOOK_SCOPES,
-            configured=_is_provider_configured("outlook"),
-        ),
+            provider=meta.name,
+            display_name=meta.display_name,
+            scopes=meta.scopes,
+            configured=meta.is_configured(),
+        )
+        for meta in list_registered_providers()
     ]
 
     return OAuthProvidersResponse(providers=providers)
@@ -104,7 +91,7 @@ async def list_oauth_providers():
 
 @router.get("/oauth/{provider}/authorize", response_model=OAuthAuthorizeResponse)
 async def get_authorization_url(
-    provider: Literal["gmail", "outlook"],
+    provider: str,
     source_id: int = Query(..., description="Source ID to associate with OAuth"),
     request: Request = None,
     db: Session = Depends(get_db),
@@ -123,6 +110,11 @@ async def get_authorization_url(
     Returns:
         Authorization URL to redirect user to
     """
+    # Get provider from registry
+    provider_meta = get_oauth_provider(provider)
+    if not provider_meta:
+        raise HTTPException(status_code=400, detail=f"Unknown OAuth provider: {provider}")
+
     # Verify source exists and is an email type
     source = db.query(Source).filter(Source.id == source_id).first()
     if not source:
@@ -137,19 +129,18 @@ async def get_authorization_url(
     # Check provider config from source
     source_config = source.config or {}
     expected_provider = source_config.get("provider", provider)
-    if expected_provider not in ["gmail", "outlook"]:
+    if expected_provider != provider:
         raise HTTPException(
             status_code=400,
             detail=f"Source is configured for provider '{expected_provider}', not '{provider}'"
         )
 
     # Check if provider is configured
-    if not _is_provider_configured(provider):
+    if not provider_meta.is_configured():
         raise HTTPException(
             status_code=503,
-            detail=f"{provider.title()} OAuth is not configured. "
-                   f"Set {'GOOGLE' if provider == 'gmail' else 'MICROSOFT'}_CLIENT_ID and "
-                   f"{'GOOGLE' if provider == 'gmail' else 'MICROSOFT'}_CLIENT_SECRET."
+            detail=f"{provider_meta.display_name} OAuth is not configured. "
+                   f"Set {provider_meta.client_id_env_var} and {provider_meta.client_secret_env_var}."
         )
 
     try:
@@ -160,11 +151,8 @@ async def get_authorization_url(
         base_url = _get_base_url(request)
         redirect_uri = get_redirect_uri(base_url)
 
-        # Generate authorization URL
-        if provider == "gmail":
-            auth_url = generate_gmail_auth_url(redirect_uri, state, code_challenge)
-        else:  # outlook
-            auth_url = generate_outlook_auth_url(redirect_uri, state, code_challenge)
+        # Generate authorization URL using registry
+        auth_url = provider_meta.auth_url_generator(redirect_uri, state, code_challenge)
 
         logger.info(
             "Generated OAuth authorization URL",
@@ -238,6 +226,15 @@ async def oauth_callback(
             source_id=source_id,
         )
 
+        # Get provider from registry
+        provider_meta = get_oauth_provider(provider)
+        if not provider_meta:
+            # This shouldn't happen if state was valid, but handle gracefully
+            return RedirectResponse(
+                url="/sources?oauth_error=invalid_provider&oauth_error_description=Unknown+provider",
+                status_code=302,
+            )
+
         # Verify source still exists
         source = db.query(Source).filter(Source.id == source_id).first()
         if not source:
@@ -251,11 +248,8 @@ async def oauth_callback(
         base_url = _get_base_url(request)
         redirect_uri = get_redirect_uri(base_url)
 
-        # Exchange code for tokens
-        if provider == "gmail":
-            tokens = exchange_gmail_code(code, redirect_uri, code_verifier)
-        else:  # outlook
-            tokens = exchange_outlook_code(code, redirect_uri, code_verifier)
+        # Exchange code for tokens using registry
+        tokens = provider_meta.token_exchanger(code, redirect_uri, code_verifier)
 
         # Encrypt tokens for storage
         access_token_encrypted = encrypt_token(tokens.access_token)
@@ -404,10 +398,12 @@ async def revoke_oauth(
         # Try to decrypt and revoke the token
         access_token = decrypt_token(cred.access_token_encrypted)
 
-        if provider == "gmail":
-            revocation_success = revoke_gmail_token(access_token)
-        else:  # outlook
-            revocation_success = revoke_outlook_token(access_token)
+        # Get provider from registry
+        provider_meta = get_oauth_provider(provider)
+        if provider_meta and provider_meta.token_revoker:
+            revocation_success = provider_meta.token_revoker(access_token)
+        else:
+            revocation_success = False
 
     except TokenEncryptionError as e:
         logger.warning(f"Could not decrypt token for revocation: {e}")

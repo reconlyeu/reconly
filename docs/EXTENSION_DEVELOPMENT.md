@@ -947,6 +947,203 @@ class TestCohereEmbedding:
 
 ---
 
+## Creating an OAuth Provider Extension
+
+OAuth providers handle authentication flows for email sources. They integrate with the OAuth provider registry to enable secure email access.
+
+### Package Structure
+
+```
+reconly-ext-custom-oauth/
+├── reconly_ext_custom_oauth/
+│   ├── __init__.py
+│   └── provider.py
+├── tests/
+│   └── test_provider.py
+├── pyproject.toml
+└── README.md
+```
+
+### pyproject.toml Entry Point
+
+```toml
+[project.entry-points."reconly.oauth_providers"]
+custom = "reconly_ext_custom_oauth:custom_oauth_metadata"
+```
+
+### Implementation Example
+
+```python
+"""Custom OAuth provider for Reconly."""
+from typing import Any
+from reconly_core.email.oauth_registry import (
+    OAuthProviderMetadata,
+    AuthUrlGenerator,
+    TokenExchanger,
+    TokenRevoker,
+    register_oauth_provider,
+)
+import requests
+import os
+from urllib.parse import urlencode
+
+# OAuth configuration
+AUTH_URL = "https://oauth.provider.com/authorize"
+TOKEN_URL = "https://oauth.provider.com/token"
+REVOKE_URL = "https://oauth.provider.com/revoke"
+SCOPES = ["email.read"]
+
+
+def generate_auth_url(redirect_uri: str, state: str, code_challenge: str) -> str:
+    """Generate the authorization URL for the OAuth flow.
+
+    Args:
+        redirect_uri: The OAuth callback URL
+        state: Encrypted state parameter for CSRF protection
+        code_challenge: PKCE code challenge
+
+    Returns:
+        The authorization URL to redirect the user to
+    """
+    client_id = os.environ.get("CUSTOM_CLIENT_ID", "")
+
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": " ".join(SCOPES),
+        "state": state,
+        "code_challenge": code_challenge,
+        "code_challenge_method": "S256",
+    }
+
+    return f"{AUTH_URL}?{urlencode(params)}"
+
+
+def exchange_code(code: str, redirect_uri: str, code_verifier: str) -> Any:
+    """Exchange authorization code for access and refresh tokens.
+
+    Args:
+        code: The authorization code from OAuth callback
+        redirect_uri: The OAuth callback URL (must match authorize request)
+        code_verifier: PKCE code verifier
+
+    Returns:
+        Token response object (structure depends on provider)
+
+    Raises:
+        Exception: If token exchange fails
+    """
+    client_id = os.environ.get("CUSTOM_CLIENT_ID", "")
+    client_secret = os.environ.get("CUSTOM_CLIENT_SECRET", "")
+
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "code_verifier": code_verifier,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri,
+    }
+
+    response = requests.post(TOKEN_URL, data=data, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def revoke_token(token: str) -> bool:
+    """Revoke an OAuth token.
+
+    Args:
+        token: The access or refresh token to revoke
+
+    Returns:
+        True if revocation succeeded, False otherwise
+    """
+    try:
+        response = requests.post(
+            REVOKE_URL,
+            data={"token": token},
+            timeout=30,
+        )
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+# Create metadata instance
+custom_oauth_metadata = OAuthProviderMetadata(
+    name="custom",
+    display_name="Custom Email Provider",
+    description="Custom email provider via OAuth2",
+    icon="mdi:email",
+    client_id_env_var="CUSTOM_CLIENT_ID",
+    client_secret_env_var="CUSTOM_CLIENT_SECRET",
+    scopes=SCOPES,
+    auth_url_generator=generate_auth_url,
+    token_exchanger=exchange_code,
+    token_revoker=revoke_token,
+)
+
+# Register provider when module is imported
+register_oauth_provider(custom_oauth_metadata)
+```
+
+### OAuthProviderMetadata Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | str | Yes | Internal identifier (lowercase, no spaces) |
+| `display_name` | str | Yes | Human-readable name for UI |
+| `description` | str | Yes | Short description of the provider |
+| `icon` | str | Yes | Icon identifier for UI (e.g., 'mdi:google') |
+| `client_id_env_var` | str | Yes | Environment variable name for OAuth client ID |
+| `client_secret_env_var` | str | Yes | Environment variable name for OAuth client secret |
+| `scopes` | list[str] | Yes | List of OAuth scopes required |
+| `auth_url_generator` | AuthUrlGenerator | Yes | Function to generate authorization URL |
+| `token_exchanger` | TokenExchanger | Yes | Function to exchange code for tokens |
+| `token_revoker` | TokenRevoker | Yes | Function to revoke OAuth tokens |
+
+### Testing OAuth Providers
+
+```python
+"""Tests for custom OAuth provider."""
+import pytest
+from unittest.mock import patch
+from reconly_ext_custom_oauth import custom_oauth_metadata
+
+
+class TestCustomOAuth:
+    """Tests for custom OAuth provider."""
+
+    def test_metadata(self):
+        """Test provider metadata."""
+        assert custom_oauth_metadata.name == "custom"
+        assert custom_oauth_metadata.display_name == "Custom Email Provider"
+        assert len(custom_oauth_metadata.scopes) > 0
+
+    @patch.dict('os.environ', {
+        'CUSTOM_CLIENT_ID': 'test-id',
+        'CUSTOM_CLIENT_SECRET': 'test-secret'
+    })
+    def test_is_configured(self):
+        """Test is_configured checks environment variables."""
+        assert custom_oauth_metadata.is_configured() is True
+
+    def test_auth_url_generation(self):
+        """Test auth URL generation."""
+        with patch.dict('os.environ', {'CUSTOM_CLIENT_ID': 'test-id'}):
+            url = custom_oauth_metadata.auth_url_generator(
+                redirect_uri="http://localhost/callback",
+                state="test-state",
+                code_challenge="test-challenge",
+            )
+            assert "oauth.provider.com" in url
+            assert "client_id=test-id" in url
+```
+
+---
+
 ## Naming Convention
 
 **Package Name:** `reconly-ext-{name}`

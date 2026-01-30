@@ -11,7 +11,7 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 from urllib.parse import urlencode
 
 import requests
@@ -23,6 +23,7 @@ from reconly_core.email.errors import (
     IMAPConnectionError,
     IMAPFetchError,
 )
+from reconly_core.email.oauth_registry import OAuthProviderMetadata, register_oauth_provider
 
 logger = logging.getLogger(__name__)
 
@@ -277,7 +278,7 @@ class GmailProvider(EmailProvider):
         folders: Optional[List[str]] = None,
         from_filter: Optional[str] = None,
         subject_filter: Optional[str] = None,
-        on_token_refresh: Optional[callable] = None,
+        on_token_refresh: Optional[Callable[[GmailTokens], None]] = None,
     ):
         """Initialize the Gmail provider.
 
@@ -668,3 +669,18 @@ class GmailProvider(EmailProvider):
                 html_content = base64.urlsafe_b64decode(body_data).decode("utf-8", errors="replace")
 
         return text_content, html_content
+
+
+# Register Gmail OAuth provider
+register_oauth_provider(OAuthProviderMetadata(
+    name="gmail",
+    display_name="Gmail",
+    description="Google Gmail via OAuth2",
+    icon="mdi:google",
+    client_id_env_var="GOOGLE_CLIENT_ID",
+    client_secret_env_var="GOOGLE_CLIENT_SECRET",
+    scopes=GMAIL_SCOPES,
+    auth_url_generator=generate_gmail_auth_url,
+    token_exchanger=exchange_gmail_code,
+    token_revoker=revoke_gmail_token,
+))
