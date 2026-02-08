@@ -129,8 +129,9 @@ class TestFeedsAPI:
         response = client.post(f"/api/v1/feeds/{sample_feed.id}/run")
         assert response.status_code == 200
         data = response.json()
-        assert "message" in data
         assert data["feed_id"] == sample_feed.id
+        assert data["status"] == "pending"
+        assert "id" in data
 
     def test_run_feed_not_found(self, client):
         """Test running non-existent feed."""
@@ -141,8 +142,10 @@ class TestFeedsAPI:
         """Test getting feed run history."""
         response = client.get(f"/api/v1/feeds/{sample_feed.id}/runs")
         assert response.status_code == 200
-        # Initially should be empty
-        assert response.json() == []
+        data = response.json()
+        # Initially should be empty (paginated response)
+        assert data["items"] == []
+        assert data["total"] == 0
 
     def test_get_feed_runs_not_found(self, client):
         """Test getting runs for non-existent feed."""

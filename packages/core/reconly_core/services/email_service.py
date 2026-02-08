@@ -282,7 +282,7 @@ class EmailService:
                 {% if digest.tags %}<span><strong>{{ tags_label }}:</strong> {{ digest.tags|join(', ') }}</span>{% endif %}
             </div>
             <div class="summary">{{ digest.summary_html|safe }}</div>
-            {% if not digest.consolidated_count or digest.consolidated_count <= 1 %}
+            {% if (not digest.consolidated_count or digest.consolidated_count <= 1) and digest.source_type not in ['imap', 'agent'] %}
             <a href="{{ digest.url }}" class="read-more">→ {{ read_more }}</a>
             {% endif %}
         </div>
@@ -312,7 +312,7 @@ class EmailService:
 
 {{ digest.summary_text }}
 
-{% if not digest.consolidated_count or digest.consolidated_count <= 1 %}
+{% if (not digest.consolidated_count or digest.consolidated_count <= 1) and digest.source_type not in ['imap', 'agent'] %}
 → {{ digest.url }}
 {% endif %}
 

@@ -1,12 +1,15 @@
 """Tests for IMAP Source API routes.
 
 Tests the IMAP-specific source creation endpoints and OAuth flow integration.
+Uses the Connection-based approach where credentials are stored in a Connection entity
+and referenced by connection_id when creating IMAP sources.
 """
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
-from reconly_core.database.models import OAuthCredential, Source
+from reconly_core.database.models import Connection, OAuthCredential, Source
+from reconly_core.services.connection_service import create_connection
 
 
 @pytest.fixture(autouse=True)
@@ -15,20 +18,41 @@ def set_secret_key(monkeypatch):
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-imap-tests-minimum-32-chars")
 
 
+@pytest.fixture
+def imap_connection(test_db) -> Connection:
+    """Create a sample IMAP connection for testing."""
+    connection = create_connection(
+        db=test_db,
+        name="Test IMAP Connection",
+        connection_type="email_imap",
+        config={
+            "host": "mail.example.com",
+            "port": 993,
+            "username": "test@example.com",
+            "password": "secret123",
+            "use_ssl": True,
+        },
+        provider="generic",
+    )
+    test_db.commit()
+    test_db.refresh(connection)
+    return connection
+
+
 @pytest.mark.api
 class TestIMAPSourceCreation:
-    """Test suite for IMAP source creation via POST /api/v1/sources/imap."""
+    """Test suite for IMAP source creation via POST /api/v1/sources/imap.
 
-    def test_create_generic_imap_source(self, client, test_db):
-        """Test creating a generic IMAP source with password encryption."""
+    Generic IMAP sources require a connection_id referencing an email_imap Connection
+    that stores the encrypted credentials.
+    """
+
+    def test_create_generic_imap_source(self, client, test_db, imap_connection):
+        """Test creating a generic IMAP source with a Connection reference."""
         source_data = {
             "name": "Generic IMAP",
             "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_port": 993,
-            "imap_username": "test@example.com",
-            "imap_password": "secret123",
-            "imap_use_ssl": True,
+            "connection_id": imap_connection.id,
             "folders": ["INBOX", "Archive"],
         }
 
@@ -43,37 +67,26 @@ class TestIMAPSourceCreation:
         source = data["source"]
         assert source["name"] == "Generic IMAP"
         assert source["type"] == "imap"
-        assert source["url"] == "imap://mail.example.com:993"
         assert source["auth_status"] == "active"
         assert source["enabled"] is True
+        assert source["connection_id"] == imap_connection.id
 
-        # Verify config has provider and folders
+        # Verify config has provider and folders (credentials are in Connection, not config)
         config = source["config"]
         assert config["provider"] == "generic"
         assert config["folders"] == ["INBOX", "Archive"]
-        assert config["imap_host"] == "mail.example.com"
-        assert config["imap_port"] == 993
-        assert config["imap_username"] == "test@example.com"
-        assert config["imap_use_ssl"] is True
 
-        # Verify password is NOT in response
-        assert "imap_password" not in config
+        # Verify password/credentials are NOT in the source config
         assert "password" not in config
+        assert "imap_password" not in config
+        assert "imap_password_encrypted" not in config
 
-        # Verify password is encrypted in database
-        db_source = test_db.query(Source).filter(Source.id == source["id"]).first()
-        assert "imap_password_encrypted" in db_source.config
-        assert db_source.config["imap_password_encrypted"] != "secret123"
-
-    def test_create_generic_imap_with_default_folder(self, client, test_db):
+    def test_create_generic_imap_with_default_folder(self, client, test_db, imap_connection):
         """Test creating generic IMAP source without specifying folders (defaults to INBOX)."""
         source_data = {
             "name": "Default Folder IMAP",
             "provider": "generic",
-            "imap_host": "imap.example.com",
-            "imap_port": 993,
-            "imap_username": "user@example.com",
-            "imap_password": "pass123",
+            "connection_id": imap_connection.id,
         }
 
         response = client.post("/api/v1/sources/imap", json=source_data)
@@ -83,15 +96,12 @@ class TestIMAPSourceCreation:
         source = data["source"]
         assert source["config"]["folders"] == ["INBOX"]
 
-    def test_create_generic_imap_with_filters(self, client, test_db):
+    def test_create_generic_imap_with_filters(self, client, test_db, imap_connection):
         """Test creating generic IMAP with email filters (from, subject)."""
         source_data = {
             "name": "Filtered IMAP",
             "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_port": 993,
-            "imap_username": "test@example.com",
-            "imap_password": "secret123",
+            "connection_id": imap_connection.id,
             "from_filter": "newsletter@example.com",
             "subject_filter": "Weekly Update",
         }
@@ -104,15 +114,12 @@ class TestIMAPSourceCreation:
         assert config["from_filter"] == "newsletter@example.com"
         assert config["subject_filter"] == "Weekly Update"
 
-    def test_create_generic_imap_with_content_filters(self, client, test_db):
+    def test_create_generic_imap_with_content_filters(self, client, test_db, imap_connection):
         """Test creating generic IMAP with content filtering keywords."""
         source_data = {
             "name": "Content Filtered IMAP",
             "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_port": 993,
-            "imap_username": "test@example.com",
-            "imap_password": "secret123",
+            "connection_id": imap_connection.id,
             "include_keywords": ["python", "ai"],
             "exclude_keywords": ["spam"],
             "filter_mode": "content",
@@ -130,54 +137,32 @@ class TestIMAPSourceCreation:
         assert source["use_regex"] is False
 
     def test_create_generic_imap_missing_required_fields(self, client):
-        """Test that creating generic IMAP without required fields fails."""
-        # Missing imap_host
+        """Test that creating generic IMAP without connection_id fails."""
+        # Missing connection_id for generic provider
         response = client.post("/api/v1/sources/imap", json={
             "name": "Incomplete IMAP",
             "provider": "generic",
-            "imap_username": "test@example.com",
-            "imap_password": "secret123",
         })
         assert response.status_code == 422
-        assert "imap_host is required" in response.text
+        assert "connection_id" in response.text
 
-        # Missing imap_username
-        response = client.post("/api/v1/sources/imap", json={
-            "name": "Incomplete IMAP",
-            "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_password": "secret123",
-        })
-        assert response.status_code == 422
-        assert "imap_username is required" in response.text
+    def test_create_generic_imap_without_secret_key(self, client, test_db, imap_connection):
+        """Test that IMAP creation with a valid connection_id succeeds even without SECRET_KEY.
 
-        # Missing imap_password
-        response = client.post("/api/v1/sources/imap", json={
-            "name": "Incomplete IMAP",
-            "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_username": "test@example.com",
-        })
-        assert response.status_code == 422
-        assert "imap_password is required" in response.text
-
-    def test_create_generic_imap_without_secret_key(self, client, monkeypatch):
-        """Test that IMAP creation fails gracefully if SECRET_KEY is not set."""
-        # Clear SECRET_KEY
-        monkeypatch.delenv("SECRET_KEY", raising=False)
-
+        SECRET_KEY is only needed when creating/decrypting Connections, not when
+        creating IMAP sources that reference existing Connections.
+        The connection was already created with encryption, so the source
+        creation itself does not need SECRET_KEY.
+        """
         source_data = {
             "name": "Generic IMAP",
             "provider": "generic",
-            "imap_host": "mail.example.com",
-            "imap_port": 993,
-            "imap_username": "test@example.com",
-            "imap_password": "secret123",
+            "connection_id": imap_connection.id,
         }
 
+        # Source creation references an existing connection - no encryption needed
         response = client.post("/api/v1/sources/imap", json=source_data)
-        assert response.status_code == 500
-        assert "Failed to encrypt credentials" in response.text
+        assert response.status_code == 201
 
 
 @pytest.mark.api
@@ -185,12 +170,12 @@ class TestIMAPSourceOAuth:
     """Test suite for OAuth-based IMAP sources (Gmail, Outlook)."""
 
     @patch("reconly_api.routes.sources._is_oauth_provider_configured")
-    @patch("reconly_api.routes.sources.generate_gmail_auth_url")
+    @patch("reconly_api.routes.sources.get_oauth_provider")
     @patch("reconly_api.routes.sources.create_oauth_state")
     def test_create_gmail_source_returns_oauth_url(
         self,
         mock_create_state,
-        mock_generate_url,
+        mock_get_provider,
         mock_is_configured,
         client,
         test_db,
@@ -199,7 +184,11 @@ class TestIMAPSourceOAuth:
         # Mock OAuth configuration
         mock_is_configured.return_value = True
         mock_create_state.return_value = ("state123", "verifier", "challenge")
-        mock_generate_url.return_value = "https://accounts.google.com/oauth?state=state123"
+
+        # Mock the OAuth provider registry
+        mock_provider_meta = MagicMock()
+        mock_provider_meta.auth_url_generator.return_value = "https://accounts.google.com/oauth?state=state123"
+        mock_get_provider.return_value = mock_provider_meta
 
         source_data = {
             "name": "My Gmail",
@@ -211,7 +200,7 @@ class TestIMAPSourceOAuth:
 
         data = response.json()
         assert data["oauth_url"] == "https://accounts.google.com/oauth?state=state123"
-        assert "Complete OAuth authentication" in data["message"]
+        assert "OAuth" in data["message"] or "oauth" in data["message"].lower()
 
         # Verify source data
         source = data["source"]
@@ -236,12 +225,12 @@ class TestIMAPSourceOAuth:
         assert call_args[1] == "gmail"  # provider
 
     @patch("reconly_api.routes.sources._is_oauth_provider_configured")
-    @patch("reconly_api.routes.sources.generate_outlook_auth_url")
+    @patch("reconly_api.routes.sources.get_oauth_provider")
     @patch("reconly_api.routes.sources.create_oauth_state")
     def test_create_outlook_source_returns_oauth_url(
         self,
         mock_create_state,
-        mock_generate_url,
+        mock_get_provider,
         mock_is_configured,
         client,
         test_db,
@@ -250,7 +239,11 @@ class TestIMAPSourceOAuth:
         # Mock OAuth configuration
         mock_is_configured.return_value = True
         mock_create_state.return_value = ("state456", "verifier", "challenge")
-        mock_generate_url.return_value = "https://login.microsoftonline.com/oauth?state=state456"
+
+        # Mock the OAuth provider registry
+        mock_provider_meta = MagicMock()
+        mock_provider_meta.auth_url_generator.return_value = "https://login.microsoftonline.com/oauth?state=state456"
+        mock_get_provider.return_value = mock_provider_meta
 
         source_data = {
             "name": "My Outlook",

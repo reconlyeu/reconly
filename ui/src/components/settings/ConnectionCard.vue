@@ -153,16 +153,18 @@ onUnmounted(() => {
   <div
     class="group relative rounded-2xl border border-border-subtle bg-gradient-to-br from-bg-elevated to-bg-surface p-5 transition-all duration-300 hover:border-border-default hover:shadow-xl hover:shadow-black/5"
   >
-    <!-- Hover glow effect -->
-    <div
-      class="absolute inset-0 bg-gradient-to-br from-accent-primary/[0.02] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-    />
-
-    <!-- Decorative corner orb -->
-    <div
-      class="absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-0 blur-3xl transition-all duration-700 group-hover:opacity-20"
-      :class="providerColor.glow"
-    />
+    <!-- Decorative effects (clipped to card bounds) -->
+    <div class="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+      <!-- Hover glow effect -->
+      <div
+        class="absolute inset-0 bg-gradient-to-br from-accent-primary/[0.02] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+      />
+      <!-- Corner orb -->
+      <div
+        class="absolute -right-12 -top-12 h-32 w-32 rounded-full opacity-0 blur-3xl transition-all duration-700 group-hover:opacity-20"
+        :class="providerColor.glow"
+      />
+    </div>
 
     <!-- Health indicator (top-right) -->
     <div class="absolute right-12 top-4 flex items-center gap-2">
@@ -174,10 +176,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Actions menu (top-right) -->
-    <div ref="menuRef" class="absolute right-3 top-3">
+    <div ref="menuRef" class="absolute right-2 top-2 z-10">
       <button
         type="button"
-        class="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
         @click="toggleMenu"
       >
         <MoreVertical :size="16" />

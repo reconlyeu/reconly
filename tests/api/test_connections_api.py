@@ -408,6 +408,9 @@ class TestUpdateConnection:
         response = client.patch(f"/api/v1/connections/{connection.id}", json=update_data)
         assert response.status_code == 200
 
+        # Expire cached objects so we re-read from DB (the API route used a different session)
+        test_db.expire_all()
+
         # Verify config was updated by decrypting it from DB
         decrypted = get_connection_decrypted(test_db, connection.id)
         assert decrypted["host"] == "imap.new.com"
