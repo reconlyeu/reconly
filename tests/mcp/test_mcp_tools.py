@@ -66,7 +66,7 @@ class TestToolContext:
     def test_get_rag_service(self, context):
         """Test getting RAG service."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.get_summarizer') as mock_sum:
 
             mock_provider = Mock()
             mock_emb.return_value = mock_provider
@@ -83,7 +83,7 @@ class TestToolContext:
     def test_get_rag_service_summarizer_failure(self, context):
         """Test getting RAG service when summarizer fails."""
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.get_summarizer') as mock_sum:
 
             mock_provider = Mock()
             mock_emb.return_value = mock_provider
@@ -480,7 +480,7 @@ class TestMCPToolIntegration:
         ctx, digest = full_context
 
         with patch('reconly_core.rag.get_embedding_provider') as mock_emb, \
-             patch('reconly_core.summarizers.get_summarizer') as mock_sum:
+             patch('reconly_core.providers.get_summarizer') as mock_sum:
 
             # Setup mocks
             provider = Mock()
