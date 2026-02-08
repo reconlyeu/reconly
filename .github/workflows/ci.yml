@@ -47,7 +47,8 @@ jobs:
           pip install --upgrade pip
           pip install ./packages/core
           pip install ./packages/api
-          pip install pytest pytest-asyncio pytest-cov httpx email-validator
+          pip install ./packages/mcp
+          pip install pytest pytest-asyncio pytest-cov httpx email-validator responses freezegun
 
       - name: Run tests
         run: |
