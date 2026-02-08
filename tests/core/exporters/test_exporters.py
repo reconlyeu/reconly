@@ -460,7 +460,7 @@ class TestObsidianExporterConfigSchema:
 
         vault_field = next(f for f in schema.fields if f.key == "vault_path")
         assert vault_field.type == "path"
-        assert vault_field.required is True
+        assert vault_field.required is False
         assert vault_field.label == "Vault Path"
 
     def test_subfolder_field_default(self):

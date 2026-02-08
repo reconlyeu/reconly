@@ -257,6 +257,7 @@ class TestIMAPFetcherIntegration:
         mock_email1.sender = "sender@example.com"
         mock_email1.sender_name = "Sender"
         mock_email1.content = "Content 1"
+        mock_email1.html_content = None
         mock_email1.date = None
         mock_email1.folder = "INBOX"
         mock_email1.recipients = []
@@ -267,6 +268,7 @@ class TestIMAPFetcherIntegration:
         mock_email2.sender = "sender@example.com"
         mock_email2.sender_name = "Sender"
         mock_email2.content = "Content 2"
+        mock_email2.html_content = None
         mock_email2.date = None
         mock_email2.folder = "INBOX"
         mock_email2.recipients = []
@@ -281,9 +283,9 @@ class TestIMAPFetcherIntegration:
         fetcher = IMAPFetcher()
         items = fetcher.fetch(
             url="imap://test.example.com",
-            imap_username="user@example.com",
-            imap_password="password",
-            imap_host="test.example.com",
+            _connection_username="user@example.com",
+            _connection_password="password",
+            _connection_host="test.example.com",
             processed_message_ids=["msg1"],  # msg1 already processed
         )
 
@@ -303,6 +305,7 @@ class TestIMAPFetcherIntegration:
         mock_email.sender = "sender@example.com"
         mock_email.sender_name = "Sender"
         mock_email.content = "Content"
+        mock_email.html_content = None
         mock_email.date = None
         mock_email.folder = "INBOX"
         mock_email.recipients = []
@@ -316,9 +319,9 @@ class TestIMAPFetcherIntegration:
         fetcher = IMAPFetcher()
         items = fetcher.fetch(
             url="imap://test.example.com",
-            imap_username="user@example.com",
-            imap_password="password",
-            imap_host="test.example.com",
+            _connection_username="user@example.com",
+            _connection_password="password",
+            _connection_host="test.example.com",
             processed_message_ids=["old_msg"],
         )
 
@@ -339,6 +342,7 @@ class TestIMAPFetcherIntegration:
         mock_email.sender = "sender@example.com"
         mock_email.sender_name = "Sender"
         mock_email.content = "Content"
+        mock_email.html_content = None
         mock_email.date = None
         mock_email.folder = "INBOX"
         mock_email.recipients = []
@@ -352,9 +356,9 @@ class TestIMAPFetcherIntegration:
         fetcher = IMAPFetcher()
         items = fetcher.fetch(
             url="imap://test.example.com",
-            imap_username="user@example.com",
-            imap_password="password",
-            imap_host="test.example.com",
+            _connection_username="user@example.com",
+            _connection_password="password",
+            _connection_host="test.example.com",
             processed_message_ids=["msg1"],  # Already processed, will filter out
         )
 
@@ -379,9 +383,9 @@ class TestIMAPFetcherIntegration:
         fetcher = IMAPFetcher()
         items = fetcher.fetch(
             url="imap://test.example.com",
-            imap_username="user@example.com",
-            imap_password="password",
-            imap_host="test.example.com",
+            _connection_username="user@example.com",
+            _connection_password="password",
+            _connection_host="test.example.com",
             # No processed_message_ids provided
         )
 

@@ -28,34 +28,22 @@ Access the UI at `http://localhost:8085` (or your configured port).
 
 ### Docker Compose Configuration
 
-The provided `docker/oss/docker-compose.yml` builds a multi-stage image:
+The provided `docker/oss/docker-compose.yml` pulls a pre-built image from the container registry. The Dockerfile uses a multi-stage build:
 1. **Stage 1**: Builds the Vue/Astro UI with Node.js
 2. **Stage 2**: Creates the Python API image with bundled UI
 
-```yaml
-# docker/oss/docker-compose.yml
-services:
-  api:
-    build:
-      context: ../..
-      dockerfile: docker/oss/Dockerfile
-    container_name: reconly-oss-api
-    restart: unless-stopped
-    ports:
-      - "${API_PORT:-8000}:8000"
-    environment:
-      - DATABASE_URL=postgresql://reconly:reconly@postgres:5432/reconly
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
-      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-ollama}
-      - RECONLY_EDITION=${RECONLY_EDITION:-oss}
-      - RECONLY_AUTH_PASSWORD=${RECONLY_AUTH_PASSWORD:-}
-    volumes:
-      - reconly_data:/app/data
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+See [`docker/oss/docker-compose.yml`](../docker/oss/docker-compose.yml) for the full configuration. Key settings:
 
-volumes:
-  reconly_data:
+- **`RECONLY_VERSION`** — Docker image tag (default: `latest`)
+- **`API_PORT`** — Host port (default: `8000`)
+- **`POSTGRES_PASSWORD`** — Database password (default: `reconly`)
+- **`DEFAULT_PROVIDER`** — LLM provider: `ollama`, `openai`, `anthropic`, `huggingface`
+- **`RECONLY_AUTH_PASSWORD`** — Optional password protection for the UI
+- **`LOAD_SAMPLE_DATA`** — Load demo feeds on first start (default: `false`)
+
+For building from source instead, use the dev compose file:
+```bash
+docker compose -f docker-compose.dev.yml up -d --build
 ```
 
 ### Rebuilding After Changes

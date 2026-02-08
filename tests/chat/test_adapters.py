@@ -575,11 +575,16 @@ class TestAdapterRegistry:
 
     def test_list_adapter_aliases(self):
         """Test listing adapter aliases."""
+        from reconly_core.chat.adapters import get_adapter
         from reconly_core.chat.adapters.registry import list_adapter_aliases
+
+        # Trigger lazy registration of lmstudio alias by requesting the adapter
+        adapter = get_adapter("lmstudio")
+        assert adapter.provider_name == "openai"
 
         aliases = list_adapter_aliases()
 
-        # Should contain lmstudio -> openai alias
+        # Should contain lmstudio -> openai alias (lazily registered)
         assert "lmstudio" in aliases
         assert aliases["lmstudio"] == "openai"
 

@@ -228,7 +228,7 @@ class TestHuggingFaceProvider(BaseProviderTestSuite):
     def test_summarize_truncates_long_content(self, mock_post):
         """WHEN content exceeds maximum length
         THEN content is truncated before sending to API."""
-        long_content = 'x' * 5000  # Exceeds 3000 char limit
+        long_content = 'x' * 35000  # Exceeds 30000 char default limit
         long_data = {
             'title': 'Long Article',
             'content': long_content,
@@ -252,6 +252,6 @@ class TestHuggingFaceProvider(BaseProviderTestSuite):
 
         # Should have messages array (OpenAI-compatible format)
         assert 'messages' in sent_payload
-        # User message should contain truncated content with '...'
+        # User message should contain truncated content with truncation notice
         user_message = sent_payload['messages'][1]['content']  # [0] is system, [1] is user
-        assert '...' in user_message
+        assert '[Content truncated due to length...]' in user_message

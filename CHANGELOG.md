@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-01-XX
+## [0.1.0] - 2026-02-08
 
 Initial public release.
 
@@ -26,8 +26,8 @@ Initial public release.
 
 #### LLM Support
 - **Ollama** - Local LLM inference (default, privacy-first)
-- **OpenAI** - GPT-4, GPT-4o, GPT-4o-mini
-- **Anthropic** - Claude 3.5 Sonnet, Claude 3 Haiku
+- **OpenAI** - OpenAI-compatible API
+- **Anthropic** - Claude API
 - **HuggingFace** - Open-weight models via Inference API
 
 #### Search Providers
@@ -43,7 +43,7 @@ Initial public release.
 
 #### Deployment
 - **Docker support** - Single command setup with docker-compose
-- **SQLite or PostgreSQL** - Flexible database options
+- **PostgreSQL** - Production-ready database with pgvector for semantic search
 - **Optional authentication** - Password protection for public deployments
 
 ### Infrastructure

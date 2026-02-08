@@ -469,7 +469,7 @@ class TestLMStudioProvider(BaseProviderTestSuite):
             schema = summarizer.get_config_schema()
 
             assert schema.requires_api_key is False
-            assert len(schema.fields) == 2
+            assert len(schema.fields) == 3
 
             # Check base_url field
             base_url_field = next(f for f in schema.fields if f.key == 'base_url')
@@ -481,6 +481,11 @@ class TestLMStudioProvider(BaseProviderTestSuite):
             model_field = next(f for f in schema.fields if f.key == 'model')
             assert model_field.type == 'select'
             assert model_field.options_from == 'models'
+
+            # Check max_content_chars field
+            max_chars_field = next(f for f in schema.fields if f.key == 'max_content_chars')
+            assert max_chars_field.type == 'integer'
+            assert max_chars_field.env_var == 'LMSTUDIO_MAX_CONTENT_CHARS'
 
     def test_default_timeout(self):
         """Test default timeout is set correctly."""

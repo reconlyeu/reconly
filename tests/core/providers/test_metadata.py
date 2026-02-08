@@ -349,6 +349,8 @@ class TestProviderMetadataToDict:
             "timeout_env_var": "PROVIDER_TIMEOUT_OPENAI",
             "timeout_default": 120,
             "availability_endpoint": None,
+            "chat_adapter_format": None,
+            "chat_api_base_url": None,
         }
 
     def test_to_dict_local_provider(self):
