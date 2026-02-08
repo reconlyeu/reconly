@@ -2132,7 +2132,7 @@ class FeedService:
 
                 # Show appropriate progress message
                 if options.show_progress and source.type == "agent":
-                    print(f"      🔬 Running AI research agent...")
+                    print("      🔬 Running AI research agent...")
 
                 articles = fetcher.fetch(source.url, **fetch_kwargs)
 

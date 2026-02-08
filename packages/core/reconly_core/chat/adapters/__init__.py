@@ -49,6 +49,7 @@ from reconly_core.chat.adapters.ollama_adapter import OllamaAdapter
 __all__ = [
     # Registry functions
     "get_adapter",
+    "is_adapter_registered",
     "list_adapters",
     "register_adapter",
     "register_adapter_alias",

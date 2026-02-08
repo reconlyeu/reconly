@@ -1,6 +1,6 @@
 """FastAPI main application."""
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime
 from contextlib import asynccontextmanager
 
 # Load .env file before any other imports that use environment variables

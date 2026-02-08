@@ -10,6 +10,9 @@
 # With sample data (recommended for first-time users):
 #   LOAD_SAMPLE_DATA=true docker compose up -d
 #
+# With GPT Researcher (adds SearXNG search engine):
+#   docker compose --profile research up -d
+#
 # Note: Sample data only loads once. A .seeded marker file in ./state/ prevents
 # re-loading on subsequent starts. To fully reset with fresh sample data:
 #   rm state/.seeded && docker compose down -v && docker compose up -d
@@ -27,6 +30,7 @@
 #   RECONLY_EDITION       - Edition (oss/enterprise, default: oss)
 #   RECONLY_AUTH_PASSWORD - Optional password protection
 #   SCHEDULER_TIMEZONE    - Timezone for cron schedules (default: local)
+#   SEARXNG_PORT          - SearXNG port (default: 8888, research profile only)
 
 services:
   postgres:
@@ -75,12 +79,63 @@ services:
       - RECONLY_AUTH_PASSWORD=${RECONLY_AUTH_PASSWORD:-}
       # Scheduler
       - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
+      # Research (SearXNG - only useful with --profile research)
+      - SEARXNG_URL=${SEARXNG_URL:-}
     volumes:
       - reconly_data:/app/data
       - ./state:/app/state
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # --- Research profile (opt-in) ---
+  # Start with: docker compose --profile research up -d
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: reconly-oss-valkey
+    restart: unless-stopped
+    profiles: ["research"]
+    command: valkey-server --save 30 1 --loglevel warning
+    volumes:
+      - valkey_data:/data
+    cap_drop:
+      - ALL
+    cap_add:
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: reconly-oss-searxng
+    restart: unless-stopped
+    profiles: ["research"]
+    depends_on:
+      - valkey
+    ports:
+      - "${SEARXNG_PORT:-8888}:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:${SEARXNG_PORT:-8888}/
+    volumes:
+      - ../searxng:/etc/searxng:rw
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+
 volumes:
   postgres_data:
   reconly_data:
+  valkey_data:

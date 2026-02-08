@@ -1,7 +1,8 @@
 """Integration tests for IMAP fetcher with Connection system.
 
 Tests that the IMAP fetcher correctly uses Connection-provided credentials
-and that feed_service properly resolves and injects connection credentials.
+and that feed_service's _process_imap_source correctly resolves and
+injects connection credentials.
 """
 from datetime import datetime
 from unittest.mock import MagicMock, patch
@@ -9,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy.orm import Session
 
-from reconly_core.database.models import Connection, Feed, FeedSource, Source
+from reconly_core.database.models import Connection, Feed, FeedRun, FeedSource, Source
 from reconly_core.fetchers.imap import IMAPFetcher
 from reconly_core.email import IMAPError
 
@@ -52,8 +53,8 @@ def imap_source_with_connection(test_db: Session, imap_connection: Connection) -
         url="imap://imap.example.com",
         connection_id=imap_connection.id,
         config={
-            "imap_provider": "generic",
-            "imap_folders": ["INBOX"],
+            "provider": "generic",
+            "folders": ["INBOX"],
         },
         enabled=True,
     )
@@ -224,14 +225,19 @@ class TestIMAPFetcherWithConnectionCredentials:
 
 
 class TestFeedServiceConnectionIntegration:
-    """Test that feed_service correctly resolves Connection and injects credentials."""
+    """Test that feed_service correctly resolves Connection and injects credentials.
+
+    Tests _process_imap_source directly since it's the internal method that handles
+    connection credential injection. FeedService is instantiated without a database_url
+    and the session is passed directly to _process_imap_source.
+    """
 
     @patch("reconly_core.fetchers.imap.GenericIMAPProvider")
     def test_feed_service_injects_connection_credentials(
         self, mock_provider_class, test_db: Session, imap_connection: Connection, imap_source_with_connection: Source
     ):
-        """Test that feed_service resolves connection and injects credentials."""
-        from reconly_core.services.feed_service import FeedService
+        """Test that _process_imap_source resolves connection and injects credentials."""
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
         # Mock the IMAP provider
         mock_provider = MagicMock()
@@ -240,27 +246,25 @@ class TestFeedServiceConnectionIntegration:
         mock_provider.fetch_emails.return_value = []
         mock_provider_class.return_value = mock_provider
 
-        # Create a feed with the source
-        feed = Feed(
-            name="Test Feed",
-            description="Test feed with IMAP source",
-        )
-        test_db.add(feed)
-        test_db.commit()
-        test_db.refresh(feed)
+        # Create feed service and call _process_imap_source directly
+        feed_service = FeedService()
 
-        feed_source = FeedSource(
-            feed_id=feed.id,
-            source_id=imap_source_with_connection.id,
-            priority=0,
-            enabled=True,
-        )
-        test_db.add(feed_source)
-        test_db.commit()
+        # Create minimal required mock objects
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
 
-        # Fetch from source using feed_service
-        feed_service = FeedService(test_db)
-        items = feed_service.fetch_from_source(imap_source_with_connection, max_items=10)
+        result = feed_service._process_imap_source(
+            source=imap_source_with_connection,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
 
         # Verify credentials were injected and used
         mock_provider_class.assert_called_once()
@@ -273,8 +277,8 @@ class TestFeedServiceConnectionIntegration:
     def test_feed_service_updates_connection_health_on_success(
         self, mock_provider_class, test_db: Session, imap_connection: Connection, imap_source_with_connection: Source
     ):
-        """Test that feed_service updates connection health after successful fetch."""
-        from reconly_core.services.feed_service import FeedService
+        """Test that _process_imap_source updates connection health after successful fetch."""
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
         # Mock successful fetch
         mock_provider = MagicMock()
@@ -286,9 +290,22 @@ class TestFeedServiceConnectionIntegration:
         # Initially, health timestamps should be None
         assert imap_connection.last_success_at is None
 
-        # Fetch from source
-        feed_service = FeedService(test_db)
-        items = feed_service.fetch_from_source(imap_source_with_connection, max_items=10)
+        feed_service = FeedService()
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
+
+        result = feed_service._process_imap_source(
+            source=imap_source_with_connection,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
 
         # Verify connection health was updated
         test_db.refresh(imap_connection)
@@ -300,22 +317,39 @@ class TestFeedServiceConnectionIntegration:
     def test_feed_service_updates_connection_health_on_failure(
         self, mock_provider_class, test_db: Session, imap_connection: Connection, imap_source_with_connection: Source
     ):
-        """Test that feed_service updates connection health after failed fetch."""
-        from reconly_core.services.feed_service import FeedService
+        """Test that _process_imap_source updates connection health after failed fetch."""
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
-        # Mock failed fetch
+        # Mock failed fetch - the fetcher.fetch() raises IMAPError
         mock_provider = MagicMock()
-        mock_provider.__enter__ = MagicMock(side_effect=IMAPError("Authentication failed"))
+        mock_provider.__enter__ = MagicMock(return_value=mock_provider)
         mock_provider.__exit__ = MagicMock(return_value=False)
         mock_provider_class.return_value = mock_provider
 
         # Initially, health timestamps should be None
         assert imap_connection.last_failure_at is None
 
-        # Fetch from source (should fail)
-        feed_service = FeedService(test_db)
-        with pytest.raises(Exception):  # Feed service will raise exception on fetch failure
-            feed_service.fetch_from_source(imap_source_with_connection, max_items=10)
+        feed_service = FeedService()
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
+
+        # Patch the fetcher.fetch to raise an error
+        with patch("reconly_core.fetchers.imap.IMAPFetcher.fetch", side_effect=IMAPError("Authentication failed")):
+            result = feed_service._process_imap_source(
+                source=imap_source_with_connection,
+                feed=mock_feed,
+                feed_run=mock_feed_run,
+                summarizer=mock_summarizer,
+                language="en",
+                options=options,
+                session=test_db,
+            )
+
+        # _process_imap_source catches exceptions and returns error dict
+        assert result["success"] is False
 
         # Verify connection health was updated with failure
         test_db.refresh(imap_connection)
@@ -326,10 +360,9 @@ class TestFeedServiceConnectionIntegration:
 class TestSourceWithoutConnection:
     """Test that sources without connection are handled gracefully."""
 
-    @patch("reconly_core.fetchers.imap.GenericIMAPProvider")
-    def test_source_without_connection_fails(self, mock_provider_class, test_db: Session):
+    def test_source_without_connection_fails(self, test_db: Session):
         """Test that IMAP source without connection fails with clear error."""
-        from reconly_core.services.feed_service import FeedService
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
         # Create source without connection (legacy source)
         source = Source(
@@ -338,9 +371,8 @@ class TestSourceWithoutConnection:
             url="imap://imap.example.com",
             connection_id=None,  # No connection
             config={
-                "imap_provider": "generic",
-                "imap_folders": ["INBOX"],
-                # Missing credentials - should fail
+                "provider": "generic",
+                "folders": ["INBOX"],
             },
             enabled=True,
         )
@@ -348,43 +380,55 @@ class TestSourceWithoutConnection:
         test_db.commit()
         test_db.refresh(source)
 
-        # Try to fetch (should fail with clear error)
-        feed_service = FeedService(test_db)
-        with pytest.raises(Exception) as exc_info:
-            feed_service.fetch_from_source(source, max_items=10)
+        feed_service = FeedService()
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
 
-        # Verify error message mentions missing connection/credentials
-        error_message = str(exc_info.value).lower()
-        assert "connection" in error_message or "credentials" in error_message or "host" in error_message
+        # _process_imap_source returns an error dict instead of raising
+        result = feed_service._process_imap_source(
+            source=source,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
+
+        # Verify error message mentions missing connection
+        assert result["success"] is False
+        error_message = result["error"].lower()
+        assert "connection" in error_message
 
 
 class TestConnectionCredentialInjection:
     """Test the _connection_* credential injection pattern."""
 
-    def test_connection_credentials_prefixed_correctly(self, imap_connection: Connection):
-        """Test that connection credentials should be injected with _connection_ prefix."""
+    def test_connection_credentials_prefixed_correctly(self, test_db: Session, imap_connection: Connection):
+        """Test that connection credentials can be decrypted with expected fields."""
         from reconly_core.services.connection_service import get_connection_decrypted
-        from reconly_core.database.session import get_session
 
-        with get_session() as db:
-            # Get decrypted config
-            config = get_connection_decrypted(db, imap_connection.id)
+        # Get decrypted config
+        config = get_connection_decrypted(test_db, imap_connection.id)
 
-            # Verify config has expected fields
-            assert "host" in config
-            assert "username" in config
-            assert "password" in config
+        # Verify config has expected fields
+        assert "host" in config
+        assert "username" in config
+        assert "password" in config
 
-            # When injected by feed_service, these become:
-            # _connection_host, _connection_username, _connection_password
-            # This is the pattern the IMAP fetcher expects
+        # When injected by feed_service, these become:
+        # _connection_host, _connection_username, _connection_password
+        # This is the pattern the IMAP fetcher expects
 
     @patch("reconly_core.fetchers.imap.GenericIMAPProvider")
     def test_feed_service_prefixes_connection_credentials(
         self, mock_provider_class, test_db: Session, imap_connection: Connection, imap_source_with_connection: Source
     ):
-        """Test that feed_service prefixes connection config keys with _connection_."""
-        from reconly_core.services.feed_service import FeedService
+        """Test that _process_imap_source prefixes connection config keys with _connection_."""
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
         # Mock the IMAP provider
         mock_provider = MagicMock()
@@ -393,9 +437,23 @@ class TestConnectionCredentialInjection:
         mock_provider.fetch_emails.return_value = []
         mock_provider_class.return_value = mock_provider
 
+        feed_service = FeedService()
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
+
         # Fetch from source
-        feed_service = FeedService(test_db)
-        feed_service.fetch_from_source(imap_source_with_connection, max_items=10)
+        feed_service._process_imap_source(
+            source=imap_source_with_connection,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
 
         # Verify IMAPConfig was created with connection credentials
         mock_provider_class.assert_called_once()
@@ -416,7 +474,7 @@ class TestMultipleSourcesUsingOneConnection:
         self, mock_provider_class, test_db: Session, imap_connection: Connection
     ):
         """Test that multiple sources can use the same connection with different configs."""
-        from reconly_core.services.feed_service import FeedService
+        from reconly_core.services.feed_service import FeedService, FeedRunOptions
 
         # Mock the IMAP provider
         mock_provider = MagicMock()
@@ -426,14 +484,15 @@ class TestMultipleSourcesUsingOneConnection:
         mock_provider_class.return_value = mock_provider
 
         # Create two sources using the same connection but different folders
+        # Note: _process_imap_source reads source.config.get('folders', ['INBOX'])
         source1 = Source(
             name="IMAP Source - INBOX",
             type="imap",
             url="imap://imap.example.com",
             connection_id=imap_connection.id,
             config={
-                "imap_provider": "generic",
-                "imap_folders": ["INBOX"],
+                "provider": "generic",
+                "folders": ["INBOX"],
             },
             enabled=True,
         )
@@ -443,8 +502,8 @@ class TestMultipleSourcesUsingOneConnection:
             url="imap://imap.example.com",
             connection_id=imap_connection.id,
             config={
-                "imap_provider": "generic",
-                "imap_folders": ["Sent"],
+                "provider": "generic",
+                "folders": ["Sent"],
             },
             enabled=True,
         )
@@ -453,10 +512,23 @@ class TestMultipleSourcesUsingOneConnection:
         test_db.refresh(source1)
         test_db.refresh(source2)
 
-        feed_service = FeedService(test_db)
+        feed_service = FeedService()
+        mock_feed = MagicMock(spec=Feed)
+        mock_feed.default_language = "en"
+        mock_feed_run = MagicMock(spec=FeedRun)
+        mock_summarizer = MagicMock()
+        options = FeedRunOptions()
 
         # Fetch from first source (INBOX)
-        feed_service.fetch_from_source(source1, max_items=10)
+        feed_service._process_imap_source(
+            source=source1,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
         config1 = mock_provider_class.call_args[0][0]
         assert config1.folders == ["INBOX"]
 
@@ -464,7 +536,15 @@ class TestMultipleSourcesUsingOneConnection:
         mock_provider_class.reset_mock()
 
         # Fetch from second source (Sent)
-        feed_service.fetch_from_source(source2, max_items=10)
+        feed_service._process_imap_source(
+            source=source2,
+            feed=mock_feed,
+            feed_run=mock_feed_run,
+            summarizer=mock_summarizer,
+            language="en",
+            options=options,
+            session=test_db,
+        )
         config2 = mock_provider_class.call_args[0][0]
         assert config2.folders == ["Sent"]
 

@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from sqlalchemy.orm import Session
 
-from reconly_core.database.models import Connection, Source
+from reconly_core.database.models import Connection, Source, User
 from reconly_core.services.connection_service import (
     ConnectionEncryptionError,
     ConnectionInUseError,
@@ -28,6 +28,26 @@ from reconly_core.services.connection_service import (
 def set_secret_key(monkeypatch):
     """Set SECRET_KEY for all tests in this module."""
     monkeypatch.setenv("SECRET_KEY", "test-secret-key-for-connection-tests-minimum-32-chars")
+
+
+@pytest.fixture
+def test_users(test_db: Session) -> list[User]:
+    """Create test users for user_id-related tests."""
+    user1 = User(
+        email="user1@example.com",
+        name="User 1",
+        hashed_password="fakehash1",
+    )
+    user2 = User(
+        email="user2@example.com",
+        name="User 2",
+        hashed_password="fakehash2",
+    )
+    test_db.add_all([user1, user2])
+    test_db.commit()
+    test_db.refresh(user1)
+    test_db.refresh(user2)
+    return [user1, user2]
 
 
 @pytest.fixture
@@ -100,7 +120,7 @@ class TestCreateConnection:
         assert connection.id is not None
         assert connection.provider is None
 
-    def test_create_connection_with_user_id(self, test_db: Session):
+    def test_create_connection_with_user_id(self, test_db: Session, test_users):
         """Test creating a connection associated with a user."""
         config = {"host": "imap.test.com", "port": 993, "username": "test", "password": "pass"}
 
@@ -109,11 +129,11 @@ class TestCreateConnection:
             name="User Connection",
             connection_type="email_imap",
             config=config,
-            user_id=1,
+            user_id=test_users[0].id,
         )
         test_db.commit()
 
-        assert connection.user_id == 1
+        assert connection.user_id == test_users[0].id
 
     def test_create_connection_without_secret_key(self, test_db: Session, monkeypatch):
         """Test that connection creation fails if SECRET_KEY is not set."""
@@ -149,35 +169,38 @@ class TestGetConnection:
         connection = get_connection(test_db, 99999)
         assert connection is None
 
-    def test_get_connection_with_user_filter(self, test_db: Session):
+    def test_get_connection_with_user_filter(self, test_db: Session, test_users):
         """Test retrieving connection filtered by user_id."""
-        # Create connection with user_id=1
+        user1_id = test_users[0].id
+        user2_id = test_users[1].id
+
+        # Create connection with user_id=user1
         connection1 = create_connection(
             db=test_db,
             name="User 1 Connection",
             connection_type="email_imap",
             config={"host": "imap.test.com", "username": "user1", "password": "pass1"},
-            user_id=1,
+            user_id=user1_id,
         )
         test_db.commit()
 
-        # Create connection with user_id=2
+        # Create connection with user_id=user2
         connection2 = create_connection(
             db=test_db,
             name="User 2 Connection",
             connection_type="email_imap",
             config={"host": "imap.test.com", "username": "user2", "password": "pass2"},
-            user_id=2,
+            user_id=user2_id,
         )
         test_db.commit()
 
         # Get connection1 with user_id filter
-        result = get_connection(test_db, connection1.id, user_id=1)
+        result = get_connection(test_db, connection1.id, user_id=user1_id)
         assert result is not None
         assert result.id == connection1.id
 
         # Try to get connection1 with wrong user_id
-        result = get_connection(test_db, connection1.id, user_id=2)
+        result = get_connection(test_db, connection1.id, user_id=user2_id)
         assert result is None
 
     def test_get_connection_decrypted(self, test_db: Session, sample_connection: Connection):
@@ -299,33 +322,36 @@ class TestListConnections:
         assert len(outlook_connections) == 1
         assert outlook_connections[0].provider == "outlook"
 
-    def test_list_connections_filter_by_user_id(self, test_db: Session):
+    def test_list_connections_filter_by_user_id(self, test_db: Session, test_users):
         """Test filtering connections by user_id."""
+        user1_id = test_users[0].id
+        user2_id = test_users[1].id
+
         create_connection(
             db=test_db,
             name="User 1 Connection",
             connection_type="email_imap",
             config={"host": "imap.test.com", "username": "user1", "password": "pass1"},
-            user_id=1,
+            user_id=user1_id,
         )
         create_connection(
             db=test_db,
             name="User 2 Connection",
             connection_type="email_imap",
             config={"host": "imap.test.com", "username": "user2", "password": "pass2"},
-            user_id=2,
+            user_id=user2_id,
         )
         test_db.commit()
 
-        # Filter by user_id=1
-        user1_connections = list_connections(test_db, user_id=1)
+        # Filter by user1
+        user1_connections = list_connections(test_db, user_id=user1_id)
         assert len(user1_connections) == 1
-        assert user1_connections[0].user_id == 1
+        assert user1_connections[0].user_id == user1_id
 
-        # Filter by user_id=2
-        user2_connections = list_connections(test_db, user_id=2)
+        # Filter by user2
+        user2_connections = list_connections(test_db, user_id=user2_id)
         assert len(user2_connections) == 1
-        assert user2_connections[0].user_id == 2
+        assert user2_connections[0].user_id == user2_id
 
 
 class TestUpdateConnection:

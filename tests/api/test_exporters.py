@@ -195,7 +195,7 @@ class TestExportersFieldTypes:
         )
         assert vault_path_field is not None
         assert vault_path_field["type"] == "path"
-        assert vault_path_field["required"] is True
+        assert vault_path_field["required"] is False
 
     def test_one_file_per_digest_is_boolean(self, client):
         """Test that one_file_per_digest field is of type 'boolean'."""

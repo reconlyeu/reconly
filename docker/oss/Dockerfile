@@ -35,7 +35,7 @@ COPY packages/api /app/packages/api
 
 # Install Python dependencies
 RUN pip install --no-cache-dir \
-    /app/packages/core \
+    /app/packages/core[research] \
     /app/packages/api
 
 # Copy built UI from builder stage
