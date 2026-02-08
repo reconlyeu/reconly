@@ -25,6 +25,11 @@ else:
     exit(1)
 "
 
+# Run database migrations
+echo "Running database migrations..."
+cd /app/packages/api && alembic upgrade head
+cd /app
+
 # Check if we should load seed data
 # We do the actual check and loading AFTER the API starts and creates tables
 # The .seeded marker file prevents re-seeding on subsequent starts (even after down -v)

@@ -173,8 +173,9 @@ async def lifespan(app: FastAPI):
     # This tests DB connection, checks LLM keys, validates CORS - warns but doesn't abort
     validate_configuration(settings, db_session_factory=SessionLocal)
 
-    # Create database tables if they don't exist
-    logger.info("Initializing database tables")
+    # Database schema is managed by Alembic migrations (run via entrypoint.sh in Docker,
+    # or manually with `alembic upgrade head` in development).
+    # Keeping create_all as a fallback for development convenience.
     Base.metadata.create_all(bind=engine)
 
     # Startup: Ensure default templates exist (essential for app to function)
