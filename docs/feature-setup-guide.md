@@ -94,32 +94,44 @@ Enable autonomous web research on topics you define.
 - Search provider (SearXNG recommended)
 - LLM with good reasoning (qwen2.5:7b minimum, larger models better)
 
-### Step 1: Install GPT Researcher
+### Docker Setup (Recommended)
 
-GPT Researcher powers the multi-agent research architecture. Without it, research results are limited.
+If you're running Reconly with Docker Compose, GPT Researcher is already included in the image. Just start with the `research` profile to add SearXNG:
 
 ```bash
-# Option A: Install directly
-pip install gpt-researcher>=0.9.0
-
-# Option B: Install with research extras
-pip install -e "packages/core[research]"
+cd docker/oss
+docker compose --profile research up -d
 ```
 
-Verify installation:
+This starts SearXNG + Valkey alongside Reconly. SearXNG is available at `http://localhost:8888`.
+
+Add to your `.env` to connect the API to SearXNG:
+```bash
+SEARXNG_URL=http://searxng:8080
+```
+
+Verify GPT Researcher is available:
 ```bash
 curl http://localhost:8000/api/v1/agent-runs/capabilities
 # Should show "comprehensive": {"available": true}
 ```
 
-### Step 2: Configure Search Provider
+### Manual Setup (without Docker Compose)
+
+If you're running Reconly directly (not via Docker), install GPT Researcher and a search provider separately.
+
+**Install GPT Researcher:**
+```bash
+pip install -e "packages/core[research]"
+```
+
+**Configure a search provider:**
 
 #### Option A: SearXNG (Recommended)
 
 Self-hosted, unlimited searches, privacy-respecting.
 
 ```bash
-# Start SearXNG
 docker run -d --name searxng \
   -p 8888:8080 \
   -e SEARXNG_BASE_URL=http://localhost:8888 \
