@@ -151,7 +151,7 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="group relative overflow-hidden rounded-2xl border border-border-subtle bg-gradient-to-br from-bg-elevated to-bg-surface p-5 transition-all duration-300 hover:border-border-default hover:shadow-xl hover:shadow-black/5"
+    class="group relative rounded-2xl border border-border-subtle bg-gradient-to-br from-bg-elevated to-bg-surface p-5 transition-all duration-300 hover:border-border-default hover:shadow-xl hover:shadow-black/5"
   >
     <!-- Hover glow effect -->
     <div

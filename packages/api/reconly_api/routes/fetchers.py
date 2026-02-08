@@ -71,12 +71,17 @@ def _build_fetcher_response(
     fetcher = get_fetcher(name)
     schema = fetcher.get_config_schema()
 
-    is_configured = is_component_configured(
-        COMPONENT_TYPE, name, schema, settings_service
-    )
-
-    # Get metadata to extract oauth_providers dynamically from registry
+    # Get metadata first - needed for both is_configured check and response
     metadata_response = _fetcher_metadata_to_response(fetcher)
+
+    # Connection-based fetchers are always "configured" - their credentials
+    # come from Connection entities, not global settings
+    if metadata_response and metadata_response.requires_connection:
+        is_configured = True
+    else:
+        is_configured = is_component_configured(
+            COMPONENT_TYPE, name, schema, settings_service
+        )
     oauth_providers = None
     if metadata_response and metadata_response.oauth_providers:
         oauth_providers = metadata_response.oauth_providers
