@@ -16,16 +16,16 @@ Example:
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from reconly_core.chat.tools import ToolDefinition, tool_registry
+from reconly_core.logging import get_logger
 
 if TYPE_CHECKING:
     from sqlalchemy.orm import Session
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # =============================================================================

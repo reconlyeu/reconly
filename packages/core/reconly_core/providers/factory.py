@@ -301,7 +301,7 @@ def _instantiate_provider(
         if metadata:
             api_key = metadata.get_api_key()
         else:
-            api_key = _get_api_key_for_provider(provider_name)
+            api_key = get_api_key_for_provider(provider_name)
 
     # Build initialization kwargs based on metadata
     init_kwargs: Dict[str, Any] = {}
@@ -405,43 +405,9 @@ def _instantiate_provider(
 
 
 def get_api_key_for_provider(provider_name: str) -> Optional[str]:
-    """
-    Get API key for a provider using provider metadata.
-
-    Uses the provider's metadata.get_api_key() method which reads from the
-    configured environment variable (metadata.api_key_env_var).
-
-    Falls back to a hardcoded map for providers without metadata.
-
-    Args:
-        provider_name: Name of the provider (e.g., 'openai', 'anthropic', 'huggingface')
-
-    Returns:
-        API key if found, None otherwise
-    """
-    # Try to get API key from provider metadata
-    if is_provider_registered(provider_name):
-        try:
-            provider_class = get_provider(provider_name)
-            metadata = provider_class.get_metadata()
-            return metadata.get_api_key()
-        except (AttributeError, NotImplementedError):
-            pass
-
-    # Fallback: hardcoded map for providers without metadata
-    env_var_map = {
-        'anthropic': 'ANTHROPIC_API_KEY',
-        'openai': 'OPENAI_API_KEY',
-        'huggingface': 'HUGGINGFACE_API_KEY',
-    }
-    env_var = env_var_map.get(provider_name)
-    if env_var:
-        return os.getenv(env_var)
-    return None
-
-
-# Internal alias for backwards compatibility within this module
-_get_api_key_for_provider = get_api_key_for_provider
+    """Get API key for a provider. Delegates to ApiKeyManager."""
+    from reconly_core.providers.api_keys import ApiKeyManager
+    return ApiKeyManager.get_api_key(provider_name)
 
 
 def _get_setting_with_db_fallback(

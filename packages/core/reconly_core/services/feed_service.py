@@ -19,7 +19,7 @@ from jinja2 import Environment, BaseLoader
 from sqlalchemy.orm import Session
 
 # Cache for compiled Jinja2 templates (keyed by template string hash)
-_template_cache: dict[int, any] = {}
+_template_cache: dict[int, Any] = {}
 _jinja_env = Environment(loader=BaseLoader(), autoescape=False)
 
 
@@ -224,6 +224,20 @@ class ItemBatch:
     source_id: Optional[int]  # Source ID (None for all_sources mode)
     source_name: Optional[str]  # Source name for prompts
     mode: str  # 'individual', 'per_source', or 'all_sources'
+
+
+@dataclass
+class _RunMetrics:
+    """Accumulated metrics during a feed run."""
+    sources_processed: int = 0
+    sources_failed: int = 0
+    sources_skipped: int = 0
+    items_processed: int = 0
+    total_tokens_in: int = 0
+    total_tokens_out: int = 0
+    total_cost: float = 0.0
+    errors: list = field(default_factory=list)
+    structured_errors: list = field(default_factory=list)
 
 
 def _batch_items_by_mode(
@@ -483,15 +497,7 @@ class FeedService:
         session.commit()
 
         # Track metrics
-        sources_processed = 0
-        sources_failed = 0
-        sources_skipped = 0  # Skipped due to circuit breaker
-        items_processed = 0
-        total_tokens_in = 0
-        total_tokens_out = 0
-        total_cost = 0.0
-        errors = []  # Legacy text errors
-        structured_errors = []  # Structured error details
+        metrics = _RunMetrics()
 
         # For all_sources mode, collect items from all sources first
         if feed.digest_mode == 'all_sources':
@@ -503,15 +509,15 @@ class FeedService:
                 options=options,
                 session=session,
             )
-            sources_processed = all_items_result.get("sources_processed", 0)
-            sources_failed = all_items_result.get("sources_failed", 0)
-            sources_skipped = all_items_result.get("sources_skipped", 0)
-            items_processed = all_items_result.get("items_count", 0)
-            total_tokens_in = all_items_result.get("tokens_in", 0)
-            total_tokens_out = all_items_result.get("tokens_out", 0)
-            total_cost = all_items_result.get("cost", 0.0)
-            errors = all_items_result.get("errors", [])
-            structured_errors = all_items_result.get("structured_errors", [])
+            metrics.sources_processed = all_items_result.get("sources_processed", 0)
+            metrics.sources_failed = all_items_result.get("sources_failed", 0)
+            metrics.sources_skipped = all_items_result.get("sources_skipped", 0)
+            metrics.items_processed = all_items_result.get("items_count", 0)
+            metrics.total_tokens_in = all_items_result.get("tokens_in", 0)
+            metrics.total_tokens_out = all_items_result.get("tokens_out", 0)
+            metrics.total_cost = all_items_result.get("cost", 0.0)
+            metrics.errors = all_items_result.get("errors", [])
+            metrics.structured_errors = all_items_result.get("structured_errors", [])
         else:
             # Process each source (individual or per_source mode)
             for idx, source in enumerate(sources, 1):
@@ -522,7 +528,7 @@ class FeedService:
                     # Check circuit breaker before processing
                     should_skip, skip_reason = self.circuit_breaker.should_skip(source)
                     if should_skip:
-                        sources_skipped += 1
+                        metrics.sources_skipped += 1
                         logger.info(
                             "Source skipped due to circuit breaker",
                             source_id=source.id,
@@ -530,7 +536,7 @@ class FeedService:
                             reason=skip_reason,
                             health_status=source.health_status,
                         )
-                        structured_errors.append({
+                        metrics.structured_errors.append({
                             "source_id": source.id,
                             "source_name": source.name,
                             "error_type": ERROR_TYPE_CIRCUIT_OPEN,
@@ -552,11 +558,11 @@ class FeedService:
                     )
 
                     if result["success"]:
-                        sources_processed += 1
-                        items_processed += result.get("items_count", 1)
-                        total_tokens_in += result.get("tokens_in", 0)
-                        total_tokens_out += result.get("tokens_out", 0)
-                        total_cost += result.get("cost", 0.0)
+                        metrics.sources_processed += 1
+                        metrics.items_processed += result.get("items_count", 1)
+                        metrics.total_tokens_in += result.get("tokens_in", 0)
+                        metrics.total_tokens_out += result.get("tokens_out", 0)
+                        metrics.total_cost += result.get("cost", 0.0)
 
                         # Record success with circuit breaker
                         self.circuit_breaker.record_success(source, session)
@@ -571,111 +577,134 @@ class FeedService:
                         if options.show_progress:
                             print(f"   ✅ {result.get('items_count', 1)} item(s) processed")
                     else:
-                        sources_failed += 1
+                        metrics.sources_failed += 1
                         error_msg = result.get('error', 'Unknown error')
                         error_type = result.get('error_type', ERROR_TYPE_FETCH)
-                        errors.append(f"{source.name}: {error_msg}")
-                        structured_errors.append({
-                            "source_id": source.id,
-                            "source_name": source.name,
-                            "error_type": error_type,
-                            "message": error_msg,
-                            "timestamp": datetime.utcnow().isoformat(),
-                        })
-
-                        # Record failure with circuit breaker
-                        self.circuit_breaker.record_failure(source, session, Exception(error_msg))
-
-                        logger.error(
-                            "Source processing failed",
-                            source_id=source.id,
-                            source_name=source.name,
-                            error_type=error_type,
-                            error=error_msg,
+                        self._handle_source_error(
+                            source, error_msg, error_type,
+                            metrics.errors, metrics.structured_errors,
+                            session, options,
                         )
-
-                        if options.show_progress:
-                            print(f"   ❌ {error_msg}")
 
                     # Delay between sources
                     if idx < len(sources) and options.delay_between > 0:
                         time.sleep(options.delay_between)
 
                 except Exception as e:
-                    sources_failed += 1
+                    metrics.sources_failed += 1
                     error_msg = str(e)
                     error_type = _detect_error_type(error_msg, ERROR_TYPE_FETCH)
-                    errors.append(f"{source.name}: {error_msg}")
-                    structured_errors.append({
-                        "source_id": source.id,
-                        "source_name": source.name,
-                        "error_type": error_type,
-                        "message": error_msg,
-                        "timestamp": datetime.utcnow().isoformat(),
-                    })
-
-                    # Record failure with circuit breaker
-                    self.circuit_breaker.record_failure(source, session, e)
-
-                    logger.exception(
-                        "Unexpected error processing source",
-                        source_id=source.id,
-                        source_name=source.name,
-                        error=error_msg,
+                    self._handle_source_error(
+                        source, error_msg, error_type,
+                        metrics.errors, metrics.structured_errors,
+                        session, options,
+                        exception=e,
                     )
 
-                    if options.show_progress:
-                        print(f"   ❌ Error: {e}")
+        return self._update_metrics(
+            feed_run, feed, metrics, len(sources), session, options,
+        )
 
-        # Update FeedRun with results
-        # Check if any errors were timeouts - these should mark the run as failed
+    def _handle_source_error(
+        self,
+        source,
+        error_msg: str,
+        error_type: str,
+        errors: list,
+        structured_errors: list,
+        session,
+        options: FeedRunOptions,
+        exception: Optional[Exception] = None,
+    ) -> None:
+        """Handle source processing failure -- logging, circuit breaker, error tracking."""
+        errors.append(f"{source.name}: {error_msg}")
+        structured_errors.append({
+            "source_id": source.id,
+            "source_name": source.name,
+            "error_type": error_type,
+            "message": error_msg,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+
+        # Record failure with circuit breaker
+        self.circuit_breaker.record_failure(
+            source, session, exception or Exception(error_msg)
+        )
+
+        if exception:
+            logger.exception(
+                "Unexpected error processing source",
+                source_id=source.id,
+                source_name=source.name,
+                error=error_msg,
+            )
+        else:
+            logger.error(
+                "Source processing failed",
+                source_id=source.id,
+                source_name=source.name,
+                error_type=error_type,
+                error=error_msg,
+            )
+
+        if options.show_progress:
+            print(f"   ❌ {error_msg}")
+
+    def _update_metrics(
+        self,
+        feed_run,
+        feed,
+        metrics: _RunMetrics,
+        sources_total: int,
+        session,
+        options: FeedRunOptions,
+    ) -> FeedRunResult:
+        """Update FeedRun record with results, send notifications, process RAG."""
+        # Determine status
         has_timeout = any(
             err.get("error_type") == ERROR_TYPE_TIMEOUT
-            for err in structured_errors
+            for err in metrics.structured_errors
         )
-        if sources_failed == 0:
+        if metrics.sources_failed == 0:
             feed_run.status = "completed"
         elif has_timeout:
-            feed_run.status = "failed"  # Timeout errors are critical failures
+            feed_run.status = "failed"
         else:
             feed_run.status = "partial"
+
         feed_run.completed_at = datetime.utcnow()
-        feed_run.sources_processed = sources_processed
-        feed_run.sources_failed = sources_failed
-        feed_run.items_processed = items_processed
-        feed_run.total_tokens_in = total_tokens_in
-        feed_run.total_tokens_out = total_tokens_out
-        feed_run.total_cost = total_cost
+        feed_run.sources_processed = metrics.sources_processed
+        feed_run.sources_failed = metrics.sources_failed
+        feed_run.items_processed = metrics.items_processed
+        feed_run.total_tokens_in = metrics.total_tokens_in
+        feed_run.total_tokens_out = metrics.total_tokens_out
+        feed_run.total_cost = metrics.total_cost
 
-        if errors:
-            feed_run.error_log = "\n".join(errors)
+        if metrics.errors:
+            feed_run.error_log = "\n".join(metrics.errors)
 
-        # Store structured error details
-        if structured_errors:
+        if metrics.structured_errors:
             feed_run.error_details = {
-                "errors": structured_errors,
-                "summary": f"{len(structured_errors)} source(s) failed during processing",
+                "errors": metrics.structured_errors,
+                "summary": f"{len(metrics.structured_errors)} source(s) failed during processing",
             }
 
         logger.info(
             "Feed run completed",
-            feed_id=feed_id,
+            feed_id=feed.id,
             feed_name=feed.name,
             status=feed_run.status,
-            sources_processed=sources_processed,
-            sources_failed=sources_failed,
-            sources_skipped=sources_skipped,
-            items_processed=items_processed,
-            total_cost=total_cost,
+            sources_processed=metrics.sources_processed,
+            sources_failed=metrics.sources_failed,
+            sources_skipped=metrics.sources_skipped,
+            items_processed=metrics.items_processed,
+            total_cost=metrics.total_cost,
             duration_seconds=feed_run.duration_seconds,
         )
 
-        # Clear trace ID after run completes
         clear_trace_id()
 
-        # Update feed last_run_at
         feed.last_run_at = datetime.utcnow()
-
         session.commit()
 
         # Send email if configured
@@ -684,20 +713,17 @@ class FeedService:
         # Send webhook if configured
         self._send_webhook_if_configured(feed, feed_run, session)
 
-        # Export to configured destinations if items were processed
+        # Export to configured destinations
         export_errors = []
-        if items_processed > 0:
+        if metrics.items_processed > 0:
             export_errors = self._export_if_configured(feed, feed_run, session)
 
-            # If export errors occurred, update error_details and status
             if export_errors:
-                # Add export errors to error_details
                 current_details = feed_run.error_details or {}
                 current_errors = current_details.get("errors", [])
                 current_errors.extend(export_errors)
                 current_details["errors"] = current_errors
 
-                # Update summary to include export errors
                 source_error_count = len([e for e in current_errors if e.get("error_type") != ERROR_TYPE_EXPORT])
                 export_error_count = len(export_errors)
                 current_details["summary"] = (
@@ -708,7 +734,6 @@ class FeedService:
 
                 feed_run.error_details = current_details
 
-                # Update status to completed_with_warnings if was completed
                 if feed_run.status == "completed":
                     feed_run.status = "completed_with_warnings"
 
@@ -717,36 +742,36 @@ class FeedService:
                 if options.show_progress:
                     print(f"   Export errors: {len(export_errors)}")
 
-        # Process RAG embeddings and relationships for new digests
-        if items_processed > 0 and not options.dry_run:
+        # Process RAG embeddings
+        if metrics.items_processed > 0 and not options.dry_run:
             self._process_rag_for_feed_run(feed_run, session, options.show_progress)
 
         if options.show_progress:
             print(f"\n{'='*80}")
             print("✅ Feed run complete")
-            print(f"   Sources: {sources_processed}/{len(sources)} successful")
-            if sources_skipped > 0:
-                print(f"   Skipped: {sources_skipped} (circuit breaker)")
-            if sources_failed > 0:
-                print(f"   Failed: {sources_failed}")
+            print(f"   Sources: {metrics.sources_processed}/{sources_total} successful")
+            if metrics.sources_skipped > 0:
+                print(f"   Skipped: {metrics.sources_skipped} (circuit breaker)")
+            if metrics.sources_failed > 0:
+                print(f"   Failed: {metrics.sources_failed}")
             if export_errors:
                 print(f"   Export errors: {len(export_errors)}")
-            print(f"   Items: {items_processed} processed")
-            print(f"   Cost: ${total_cost:.4f}")
+            print(f"   Items: {metrics.items_processed} processed")
+            print(f"   Cost: ${metrics.total_cost:.4f}")
             print(f"{'='*80}")
 
         return FeedRunResult(
             feed_run_id=feed_run.id,
-            feed_id=feed_id,
+            feed_id=feed.id,
             feed_name=feed.name,
             status=feed_run.status,
-            sources_total=len(sources),
-            sources_processed=sources_processed,
-            sources_failed=sources_failed,
-            items_processed=items_processed,
-            total_cost=total_cost,
+            sources_total=sources_total,
+            sources_processed=metrics.sources_processed,
+            sources_failed=metrics.sources_failed,
+            items_processed=metrics.items_processed,
+            total_cost=metrics.total_cost,
             duration_seconds=feed_run.duration_seconds,
-            errors=errors,
+            errors=metrics.errors,
         )
 
     def _get_summarizer(self, feed: Feed, options: FeedRunOptions) -> BaseProvider:

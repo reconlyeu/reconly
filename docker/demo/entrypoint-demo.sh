@@ -64,7 +64,7 @@ main() {
     echo ""
 
     # Start the API server
-    exec uvicorn reconly_api.main:app --host 0.0.0.0 --port 8000
+    exec uvicorn reconly_api.main:app --host 0.0.0.0 --port ${API_PORT:-8002}
 }
 
 main "$@"

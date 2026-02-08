@@ -19,6 +19,7 @@ import {
 } from 'lucide-vue-next';
 import BaseCard from '@/components/common/BaseCard.vue';
 import { strings } from '@/i18n/en';
+import { formatDuration, formatTokensTotal } from '@/utils/formatters';
 
 interface Props {
   run: AgentRun;
@@ -35,23 +36,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   return date.toLocaleString();
-};
-
-// Format duration
-const formatDuration = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined) return '-';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}m ${secs}s`;
-};
-
-// Format tokens
-const formatTokens = (tokensIn: number, tokensOut: number): string => {
-  const total = tokensIn + tokensOut;
-  if (total >= 1000000) return `${(total / 1000000).toFixed(1)}M`;
-  if (total >= 1000) return `${(total / 1000).toFixed(1)}K`;
-  return total.toString();
 };
 
 // Get status icon component
@@ -241,7 +225,7 @@ const getStrategyLabel = (strategy: string | null | undefined): string => {
             <span class="text-xs">{{ strings.agentRuns.stats.tokens }}</span>
           </div>
           <p class="text-sm font-medium text-text-primary">
-            {{ formatTokens(run.tokens_in, run.tokens_out) }}
+            {{ formatTokensTotal(run.tokens_in, run.tokens_out) }}
           </p>
         </div>
 

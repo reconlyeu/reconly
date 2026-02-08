@@ -10,6 +10,7 @@ import BaseCard from '@/components/common/BaseCard.vue';
 import ExportDropdown from '@/components/common/ExportDropdown.vue';
 import { AgentPlaceholder, ArticlePlaceholder, EmailPlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
 import { strings } from '@/i18n/en';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/utils/mediaUtils';
 
 // Configure marked
 marked.setOptions({ breaks: false, gfm: true });
@@ -76,20 +77,6 @@ const isYouTube = computed(() => {
   return props.digest.source_type?.toLowerCase() === 'youtube';
 });
 
-// Extract YouTube video ID from URL
-const extractYouTubeVideoId = (url: string): string | null => {
-  if (!url) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-};
-
 // Get preview image: prefer explicit image_url, then YouTube thumbnail, fall back to extracting from content
 const previewImageUrl = computed(() => {
   if (props.digest.image_url) return props.digest.image_url;
@@ -98,7 +85,7 @@ const previewImageUrl = computed(() => {
   if (isYouTube.value && props.digest.url) {
     const videoId = extractYouTubeVideoId(props.digest.url);
     if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      return getYouTubeThumbnailUrl(videoId);
     }
   }
 

@@ -40,8 +40,9 @@ export const useDemoStore = defineStore('demo', () => {
     try {
       const health = await healthApi.check();
       isDemoMode.value = health.demo_mode;
-    } catch (err: any) {
-      error.value = err.detail || 'Failed to fetch demo mode status';
+    } catch (err: unknown) {
+      const apiError = err as { detail?: string };
+      error.value = apiError.detail || 'Failed to fetch demo mode status';
       // Default to false on error
       isDemoMode.value = false;
     } finally {

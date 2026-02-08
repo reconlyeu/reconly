@@ -11,8 +11,8 @@ from reconly_core.database.models import Base, Digest, Tag, DigestTag
 
 logger = logging.getLogger(__name__)
 
-# Default database URL - consistent with FastAPI config
-DEFAULT_DATABASE_URL = 'postgresql://reconly:reconly@localhost:5432/reconly'
+# Default database URL - use DATABASE_URL env var in production
+DEFAULT_DATABASE_URL = os.getenv('DATABASE_URL', 'postgresql://localhost:5432/reconly')
 
 
 class DigestDB:

@@ -8,6 +8,7 @@ import { FileText, Calendar, Tag, ChevronRight } from 'lucide-vue-next';
 import { marked } from 'marked';
 import { dashboardApi } from '@/services/api';
 import { strings } from '@/i18n/en';
+import { extractYouTubeVideoId, getYouTubeThumbnailUrl } from '@/utils/mediaUtils';
 import { extractPreviewImage } from '@/utils/imageUtils';
 import { ArticlePlaceholder, YoutubePlaceholder } from '@/components/common/placeholders';
 import BaseCard from '@/components/common/BaseCard.vue';
@@ -56,20 +57,6 @@ function isYouTube(sourceType: string | null): boolean {
   return sourceType?.toLowerCase() === 'youtube';
 }
 
-// Extract YouTube video ID from URL
-function extractYouTubeVideoId(url: string): string | null {
-  if (!url) return null;
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
 // Get preview image URL
 function getPreviewImageUrl(digest: { image_url?: string | null; url: string; source_type?: string | null; content?: string | null }): string | null {
   if (digest.image_url) return digest.image_url;
@@ -77,7 +64,7 @@ function getPreviewImageUrl(digest: { image_url?: string | null; url: string; so
   if (isYouTube(digest.source_type) && digest.url) {
     const videoId = extractYouTubeVideoId(digest.url);
     if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+      return getYouTubeThumbnailUrl(videoId);
     }
   }
 

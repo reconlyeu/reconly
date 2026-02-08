@@ -34,6 +34,7 @@ import {
   ClipboardList,
 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
+import { formatDuration, formatTokens } from '@/utils/formatters';
 
 interface Props {
   isOpen: boolean;
@@ -81,22 +82,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   return date.toLocaleString();
-};
-
-// Format duration
-const formatDuration = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined) return '-';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}m ${secs}s`;
-};
-
-// Format tokens
-const formatTokens = (count: number): string => {
-  if (count >= 1000000) return `${(count / 1000000).toFixed(2)}M`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-  return count.toLocaleString();
 };
 
 // Format cost

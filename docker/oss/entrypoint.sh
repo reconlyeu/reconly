@@ -78,10 +78,13 @@ except Exception as e:
 
     if grep -q "NEEDS_SEED" /tmp/seed_check.txt; then
         echo "Loading sample data..."
-        python /app/scripts/load_demo_seed.py
-        # Create marker file to prevent re-seeding on future starts
-        touch "$SEEDED_MARKER"
-        echo "Sample data loaded successfully! (marker created: $SEEDED_MARKER)"
+        if python /app/scripts/load_demo_seed.py; then
+            # Create marker file to prevent re-seeding on future starts
+            touch "$SEEDED_MARKER"
+            echo "Sample data loaded successfully! (marker created: $SEEDED_MARKER)"
+        else
+            echo "Warning: Failed to load sample data. Will retry on next start."
+        fi
     else
         cat /tmp/seed_check.txt
     fi

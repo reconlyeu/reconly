@@ -153,7 +153,7 @@ class RSSFetcher(BaseFetcher):
             return articles
 
         except Exception as e:
-            raise Exception(f"Failed to fetch RSS feed: {str(e)}")
+            raise Exception(f"Failed to fetch RSS feed: {str(e)}") from e
 
     def _extract_date(self, entry) -> Optional[datetime]:
         """Extract and parse publication date from entry."""
@@ -166,7 +166,7 @@ class RSSFetcher(BaseFetcher):
                 if time_struct:
                     try:
                         return datetime(*time_struct[:6])
-                    except:
+                    except (ValueError, TypeError, OverflowError):
                         pass
 
         # Try string fields as fallback
@@ -177,7 +177,7 @@ class RSSFetcher(BaseFetcher):
                 if date_str:
                     try:
                         return date_parser.parse(date_str)
-                    except:
+                    except (ValueError, TypeError):
                         pass
 
         return None

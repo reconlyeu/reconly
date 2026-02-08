@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useForm } from 'vee-validate';
 import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/vue-query';
 import { sourcesApi } from '@/services/api';
-import type { Source, FilterMode, SourceConfig, IMAPProvider, IMAPSourceCreate } from '@/types/entities';
-import { X, Loader2, Filter, Plus, AlertCircle, ExternalLink } from 'lucide-vue-next';
+import type { Source, SourceCreate, FilterMode, SourceConfig, IMAPProvider, IMAPSourceCreate } from '@/types/entities';
+import { X, Loader2, ExternalLink } from 'lucide-vue-next';
 import AgentSourceForm from './AgentSourceForm.vue';
 import ImapSourceForm from './ImapSourceForm.vue';
+import SourceFilterConfig from './SourceFilterConfig.vue';
 import { strings } from '@/i18n/en';
 import { useFetcherTypes, hasCustomForm } from '@/composables/useFetcherTypes';
 
@@ -93,15 +94,14 @@ const [url, urlAttrs] = defineField('url');
 const [enabled, enabledAttrs] = defineField('enabled');
 
 // Filter fields (outside vee-validate for simplicity)
-const showFilters = ref(false);
 const maxItems = ref<number | null>(null);
 const includeKeywords = ref<string[]>([]);
 const excludeKeywords = ref<string[]>([]);
 const filterMode = ref<FilterMode>('both');
 const useRegex = ref(false);
-const includeInput = ref('');
-const excludeInput = ref('');
-const regexError = ref<string | null>(null);
+
+// Filter sub-component ref
+const filterConfigRef = ref();
 
 // Agent-specific fields
 const agentConfig = ref<SourceConfig>({});
@@ -116,53 +116,6 @@ const imapSubjectFilter = ref('');
 const imapConfig = ref<SourceConfig>({});
 const oauthUrl = ref<string | null>(null);
 
-// Validate regex pattern
-const validateRegex = (pattern: string): boolean => {
-  if (!useRegex.value) return true;
-  try {
-    new RegExp(pattern);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-// Add keyword chip
-const addIncludeKeyword = () => {
-  const keyword = includeInput.value.trim();
-  if (keyword && !includeKeywords.value.includes(keyword)) {
-    if (useRegex.value && !validateRegex(keyword)) {
-      regexError.value = `Invalid regex: ${keyword}`;
-      return;
-    }
-    includeKeywords.value.push(keyword);
-    regexError.value = null;
-  }
-  includeInput.value = '';
-};
-
-const addExcludeKeyword = () => {
-  const keyword = excludeInput.value.trim();
-  if (keyword && !excludeKeywords.value.includes(keyword)) {
-    if (useRegex.value && !validateRegex(keyword)) {
-      regexError.value = `Invalid regex: ${keyword}`;
-      return;
-    }
-    excludeKeywords.value.push(keyword);
-    regexError.value = null;
-  }
-  excludeInput.value = '';
-};
-
-// Remove keyword chip
-const removeIncludeKeyword = (index: number) => {
-  includeKeywords.value.splice(index, 1);
-};
-
-const removeExcludeKeyword = (index: number) => {
-  excludeKeywords.value.splice(index, 1);
-};
-
 // Reset filter fields
 const resetFilterFields = () => {
   maxItems.value = null;
@@ -170,10 +123,7 @@ const resetFilterFields = () => {
   excludeKeywords.value = [];
   filterMode.value = 'both';
   useRegex.value = false;
-  includeInput.value = '';
-  excludeInput.value = '';
-  regexError.value = null;
-  showFilters.value = false;
+  filterConfigRef.value?.reset();
   // Reset agent fields
   agentConfig.value = {};
   agentPrompt.value = '';
@@ -207,7 +157,9 @@ watch(
       filterMode.value = newSource.filter_mode || 'both';
       useRegex.value = newSource.use_regex || false;
       // Show filters section if any filters are configured
-      showFilters.value = !!(maxItems.value || newSource.include_keywords?.length || newSource.exclude_keywords?.length);
+      nextTick(() => {
+        filterConfigRef.value?.initFilters(!!(maxItems.value || newSource.include_keywords?.length || newSource.exclude_keywords?.length));
+      });
       // Restore agent fields
       if (newSource.type === 'agent') {
         agentConfig.value = {
@@ -250,7 +202,7 @@ const isEditMode = computed(() => !!props.source);
 
 // Create/Update mutation
 const saveMutation = useMutation({
-  mutationFn: async (data: any) => {
+  mutationFn: async (data: SourceCreate) => {
     // Handle IMAP sources separately
     if (data.type === 'imap' && !isEditMode.value) {
       // Build IMAP-specific request
@@ -325,7 +277,7 @@ const saveMutation = useMutation({
     resetForm();
     resetFilterFields();
   },
-  onError: (error: any) => {
+  onError: (error: Error) => {
     console.error('Failed to save source:', error);
     // Mutation state will automatically reset to idle
   },
@@ -362,18 +314,6 @@ const handleClose = () => {
     resetFilterFields();
   }
 };
-
-// Computed to check if filters are configured
-const hasFilters = computed(() => {
-  return maxItems.value !== null || includeKeywords.value.length > 0 || excludeKeywords.value.length > 0;
-});
-
-// Count active filters for badge
-const activeFilterCount = computed(() => {
-  let count = includeKeywords.value.length + excludeKeywords.value.length;
-  if (maxItems.value !== null) count++;
-  return count;
-});
 
 // Dynamic URL placeholder based on type (using composable)
 const urlPlaceholder = computed(() => getUrlPlaceholder(type.value));
@@ -533,169 +473,15 @@ const urlPlaceholder = computed(() => getUrlPlaceholder(type.value));
             </div>
 
             <!-- Filters Section (hidden for agent type only) -->
-            <div v-if="type !== 'agent'" class="rounded-lg border border-border-subtle bg-bg-surface">
-              <!-- Toggle Header -->
-              <button
-                type="button"
-                @click="showFilters = !showFilters"
-                class="flex w-full items-center justify-between p-4 text-left transition-colors hover:bg-bg-hover"
-              >
-                <div class="flex items-center gap-2">
-                  <Filter :size="18" class="text-text-muted" />
-                  <span class="text-sm font-medium text-text-primary">{{ strings.sources.form.filters }}</span>
-                  <span v-if="hasFilters" class="rounded-full bg-accent-primary/20 px-2 py-0.5 text-xs text-accent-primary">
-                    {{ activeFilterCount }} {{ strings.sources.form.active }}
-                  </span>
-                </div>
-                <span class="text-xs text-text-muted">{{ showFilters ? strings.sources.form.hide : strings.sources.form.show }}</span>
-              </button>
-
-              <!-- Filter Content -->
-              <Transition name="slide">
-                <div v-if="showFilters" class="border-t border-border-subtle p-4 space-y-4">
-                  <!-- Max Items -->
-                  <div>
-                    <label class="mb-2 block text-sm font-medium text-text-primary">
-                      {{ strings.sources.fields.maxItemsPerRun }}
-                    </label>
-                    <p class="mb-2 text-xs text-text-muted">
-                      {{ strings.sources.filterHints.maxItems }}
-                    </p>
-                    <input
-                      v-model.number="maxItems"
-                      type="number"
-                      min="1"
-                      max="100"
-                      :placeholder="strings.sources.placeholders.noLimit"
-                      class="w-32 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                    />
-                  </div>
-
-                  <!-- Regex Error -->
-                  <div v-if="regexError" class="flex items-center gap-2 rounded-lg bg-status-failed/10 p-3 text-sm text-status-failed">
-                    <AlertCircle :size="16" />
-                    {{ regexError }}
-                  </div>
-
-                  <!-- Include Keywords -->
-                  <div>
-                    <label class="mb-2 block text-sm font-medium text-text-primary">
-                      {{ strings.sources.fields.includeKeywords }}
-                    </label>
-                    <p class="mb-2 text-xs text-text-muted">
-                      {{ strings.sources.filterHints.includeKeywords }}
-                    </p>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="includeInput"
-                        type="text"
-                        :placeholder="strings.sources.placeholders.addKeyword"
-                        @keydown.enter.prevent="addIncludeKeyword"
-                        class="flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                      />
-                      <button
-                        type="button"
-                        @click="addIncludeKeyword"
-                        class="rounded-lg border border-border-subtle bg-bg-base p-2 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
-                      >
-                        <Plus :size="18" />
-                      </button>
-                    </div>
-                    <div v-if="includeKeywords.length" class="mt-2 flex flex-wrap gap-2">
-                      <span
-                        v-for="(keyword, index) in includeKeywords"
-                        :key="index"
-                        class="flex items-center gap-1 rounded-full bg-status-success/20 px-2.5 py-1 text-xs text-status-success"
-                      >
-                        {{ keyword }}
-                        <button
-                          type="button"
-                          @click="removeIncludeKeyword(index)"
-                          class="ml-1 rounded-full p-0.5 transition-colors hover:bg-status-success/30"
-                        >
-                          <X :size="12" />
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Exclude Keywords -->
-                  <div>
-                    <label class="mb-2 block text-sm font-medium text-text-primary">
-                      {{ strings.sources.fields.excludeKeywords }}
-                    </label>
-                    <p class="mb-2 text-xs text-text-muted">
-                      {{ strings.sources.filterHints.excludeKeywords }}
-                    </p>
-                    <div class="flex gap-2">
-                      <input
-                        v-model="excludeInput"
-                        type="text"
-                        :placeholder="strings.sources.placeholders.addKeyword"
-                        @keydown.enter.prevent="addExcludeKeyword"
-                        class="flex-1 rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                      />
-                      <button
-                        type="button"
-                        @click="addExcludeKeyword"
-                        class="rounded-lg border border-border-subtle bg-bg-base p-2 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
-                      >
-                        <Plus :size="18" />
-                      </button>
-                    </div>
-                    <div v-if="excludeKeywords.length" class="mt-2 flex flex-wrap gap-2">
-                      <span
-                        v-for="(keyword, index) in excludeKeywords"
-                        :key="index"
-                        class="flex items-center gap-1 rounded-full bg-status-failed/20 px-2.5 py-1 text-xs text-status-failed"
-                      >
-                        {{ keyword }}
-                        <button
-                          type="button"
-                          @click="removeExcludeKeyword(index)"
-                          class="ml-1 rounded-full p-0.5 transition-colors hover:bg-status-failed/30"
-                        >
-                          <X :size="12" />
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-
-                  <!-- Filter Mode & Regex Toggle -->
-                  <div class="flex gap-4">
-                    <!-- Filter Mode -->
-                    <div class="flex-1">
-                      <label class="mb-2 block text-sm font-medium text-text-primary">
-                        {{ strings.sources.fields.searchIn }}
-                      </label>
-                      <select
-                        v-model="filterMode"
-                        class="w-full rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-primary focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                      >
-                        <option value="both">{{ strings.sources.filterModes.both }}</option>
-                        <option value="title_only">{{ strings.sources.filterModes.titleOnly }}</option>
-                        <option value="content">{{ strings.sources.filterModes.content }}</option>
-                      </select>
-                    </div>
-
-                    <!-- Use Regex Toggle -->
-                    <div class="flex items-end">
-                      <button
-                        type="button"
-                        @click="useRegex = !useRegex"
-                        class="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors"
-                        :class="useRegex
-                          ? 'border-accent-primary bg-accent-primary/10 text-accent-primary'
-                          : 'border-border-subtle bg-bg-base text-text-muted hover:bg-bg-hover hover:text-text-primary'"
-                      >
-                        <span class="font-mono text-xs">.*</span>
-                        {{ strings.sources.form.regex }}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </Transition>
-            </div>
+            <SourceFilterConfig
+              v-if="type !== 'agent'"
+              ref="filterConfigRef"
+              v-model:max-items="maxItems"
+              v-model:include-keywords="includeKeywords"
+              v-model:exclude-keywords="excludeKeywords"
+              v-model:filter-mode="filterMode"
+              v-model:use-regex="useRegex"
+            />
 
             <!-- Enabled Toggle -->
             <div class="flex items-center justify-between rounded-lg border border-border-subtle bg-bg-surface p-4">
@@ -789,24 +575,4 @@ const urlPlaceholder = computed(() => getUrlPlaceholder(type.value));
   transform: translateY(-4px);
 }
 
-/* Slide transitions for filter section */
-.slide-enter-active,
-.slide-leave-active {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.slide-enter-from,
-.slide-leave-to {
-  opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-.slide-enter-to,
-.slide-leave-from {
-  opacity: 1;
-  max-height: 500px;
-}
 </style>

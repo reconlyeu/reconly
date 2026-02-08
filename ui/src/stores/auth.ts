@@ -32,13 +32,14 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Use the authenticated field from the backend
       isAuthenticated.value = authConfig.value.authenticated;
-    } catch (err: any) {
+    } catch (err: unknown) {
       // If we get a 401, auth is required and we're not authenticated
-      if (err.status_code === 401) {
+      const apiError = err as { status_code?: number; detail?: string };
+      if (apiError.status_code === 401) {
         authConfig.value = { auth_required: true, authenticated: false, edition: 'oss' };
         isAuthenticated.value = false;
       } else {
-        error.value = err.detail || 'Failed to check authentication status';
+        error.value = apiError.detail || 'Failed to check authentication status';
         // Assume auth is not required on error (graceful degradation)
         isAuthenticated.value = true;
       }
@@ -58,8 +59,9 @@ export const useAuthStore = defineStore('auth', () => {
         return true;
       }
       return false;
-    } catch (err: any) {
-      error.value = err.detail || 'Login failed';
+    } catch (err: unknown) {
+      const apiError = err as { detail?: string };
+      error.value = apiError.detail || 'Login failed';
       return false;
     }
   }

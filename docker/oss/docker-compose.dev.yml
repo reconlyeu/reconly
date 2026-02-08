@@ -3,6 +3,7 @@
 # Use this file for building from source during development.
 #
 # Usage:
+#   cp .env.example .env                                      # Create config from template (edit as needed)
 #   docker compose -f docker-compose.dev.yml up -d --build   # Build and start
 #   docker compose -f docker-compose.dev.yml logs -f api     # View logs
 #   docker compose -f docker-compose.dev.yml down            # Stop all

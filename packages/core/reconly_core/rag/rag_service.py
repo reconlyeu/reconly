@@ -3,13 +3,13 @@
 This module provides the main RAG service that retrieves relevant
 chunks using hybrid search and generates answers with citations.
 """
-import logging
 import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from reconly_core.rag.search.hybrid import HybridSearchService, SearchMode
 from reconly_core.rag.search.vector import ChunkSource
+from reconly_core.logging import get_logger
 from reconly_core.rag.citations import (
     Citation,
     CitationContext,
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from reconly_core.rag.embeddings.base import EmbeddingProvider
     from reconly_core.providers.base import BaseProvider
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # RAG System Prompt

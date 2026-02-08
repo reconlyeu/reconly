@@ -5,11 +5,13 @@ import { toTypedSchema } from '@vee-validate/zod';
 import * as z from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { feedsApi, sourcesApi, promptTemplatesApi, reportTemplatesApi, settingsApi } from '@/services/api';
-import type { Feed, Exporter } from '@/types/entities';
-import { X, Loader2, Search, Calendar, Mail, Webhook, FileStack, Download, AlertTriangle, HelpCircle } from 'lucide-vue-next';
+import type { Feed, FeedCreate, FeedUpdate } from '@/types/entities';
+import { X, Loader2, Calendar, FileStack, HelpCircle } from 'lucide-vue-next';
 import { useDirectExportCapableExporters, useEnabledDirectExportExporters } from '@/composables/useExporters';
 import cronstrue from 'cronstrue';
 import { strings } from '@/i18n/en';
+import FeedFormSources from './FeedFormSources.vue';
+import FeedFormOutput from './FeedFormOutput.vue';
 
 interface Props {
   isOpen: boolean;
@@ -61,24 +63,6 @@ const { data: exportSettings } = useQuery({
   enabled: computed(() => props.isOpen),
 });
 
-// Helper to get the global path for an exporter
-const getGlobalExportPath = (exporterName: string): string | null => {
-  if (!exportSettings.value?.categories?.export) return null;
-
-  // Use path_setting_key from exporter metadata for the correct setting key
-  // Settings are stored with exporter prefix: obsidian.vault_path, json.export_path, etc.
-  const exporter = allDirectExportExporters.value?.find(e => e.name === exporterName);
-  const pathKey = exporter?.metadata?.path_setting_key || 'export_path';
-  return exportSettings.value.categories.export[`${exporterName}.${pathKey}`]?.value as string || null;
-};
-
-// Check if an exporter has a path configured (either global or local override)
-const hasPathConfigured = (exporterName: string): boolean => {
-  const localPath = autoExportConfig.value[exporterName]?.path;
-  if (localPath) return true;
-  return !!getGlobalExportPath(exporterName);
-};
-
 // Auto-export configuration state (not part of vee-validate form)
 const autoExportConfig = ref<Record<string, { enabled: boolean; path: string }>>({});
 
@@ -103,56 +87,6 @@ const disabledConfiguredExporters = computed(() => {
     // Exporter is disabled and was configured for auto-export on this feed
     return !exporter.enabled && feedExports[exporter.name]?.enabled;
   });
-});
-
-// Source search and ordering
-const sourceSearch = ref('');
-// Capture initial selection when modal opens (for stable sorting during editing)
-const initialSelectedIds = ref<Set<number>>(new Set());
-
-const filteredSources = computed(() => {
-  if (!sources.value) return [];
-
-  let result = [...sources.value];
-
-  // Filter by search term if provided
-  if (sourceSearch.value) {
-    const search = sourceSearch.value.toLowerCase();
-    result = result.filter(s =>
-      s.name.toLowerCase().includes(search) ||
-      s.url.toLowerCase().includes(search)
-    );
-  }
-
-  // Sort: selected sources first (alphabetical), then unselected (alphabetical)
-  // For editing: use initial selection for stable sorting (sources don't jump around)
-  // For creating: use current selection so newly checked sources appear at top
-  result.sort((a, b) => {
-    const useInitial = initialSelectedIds.value.size > 0;
-    const aSelected = useInitial
-      ? initialSelectedIds.value.has(a.id)
-      : source_ids.value.includes(a.id);
-    const bSelected = useInitial
-      ? initialSelectedIds.value.has(b.id)
-      : source_ids.value.includes(b.id);
-
-    // Selected sources come first
-    if (aSelected && !bSelected) return -1;
-    if (!aSelected && bSelected) return 1;
-
-    // Within same group, sort alphabetically by name
-    return a.name.localeCompare(b.name);
-  });
-
-  return result;
-});
-
-// Track selected disabled sources to show warning
-const selectedDisabledSources = computed(() => {
-  if (!sources.value) return [];
-  return sources.value.filter(s =>
-    source_ids.value.includes(s.id) && s.enabled === false
-  );
 });
 
 // Digest mode options - use computed for i18n
@@ -258,23 +192,12 @@ watch(
 
 const isEditMode = computed(() => !!props.feed);
 
-// Toggle source selection
-const toggleSource = (sourceId: number) => {
-  const index = source_ids.value.indexOf(sourceId);
-  if (index === -1) {
-    source_ids.value.push(sourceId);
-  } else {
-    source_ids.value.splice(index, 1);
-  }
-};
-
-const isSourceSelected = (sourceId: number) => {
-  return source_ids.value.includes(sourceId);
-};
+// Ref for source sub-component
+const sourcesRef = ref();
 
 // Create/Update mutation
 const saveMutation = useMutation({
-  mutationFn: async (data: any) => {
+  mutationFn: async (data: FeedCreate | FeedUpdate) => {
     if (isEditMode.value && props.feed) {
       return await feedsApi.update(props.feed.id, data);
     } else {
@@ -287,7 +210,7 @@ const saveMutation = useMutation({
     emit('close');
     resetForm();
   },
-  onError: (error: any) => {
+  onError: (error: Error) => {
     console.error('Failed to save feed:', error);
   },
 });
@@ -300,11 +223,7 @@ watch(
     if (isOpen && !wasOpen) {
       // Modal just opened
       saveMutation.reset();
-      sourceSearch.value = '';
-
-      // Capture initial selection for stable sorting (selected sources stay on top during editing)
-      const currentIds = feed?.feed_sources?.map(fs => fs.source_id) || [];
-      initialSelectedIds.value = new Set(currentIds);
+      sourcesRef.value?.resetSearch();
 
       // Force form reset when opening in create mode (feed is null)
       // This ensures fresh fields even if modal was previously used for editing
@@ -350,7 +269,7 @@ const handleClose = () => {
   if (!isSaving.value) {
     emit('close');
     resetForm();
-    sourceSearch.value = '';
+    sourcesRef.value?.resetSearch();
   }
 };
 </script>
@@ -482,86 +401,12 @@ const handleClose = () => {
             <div class="border-t border-border-subtle" />
 
             <!-- Section 2: Sources -->
-            <div class="space-y-4">
-              <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.selectSources }}</h3>
-                <span class="text-sm text-text-secondary">
-                  {{ source_ids.length }} {{ strings.feeds.sourceSelection.selected.replace('{count}', '') }}
-                </span>
-              </div>
-
-              <!-- Search -->
-              <div class="relative">
-                <Search class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
-                <input
-                  v-model="sourceSearch"
-                  type="search"
-                  :placeholder="strings.feeds.placeholders.searchSources"
-                  class="w-full rounded-lg border border-border-subtle bg-bg-surface pl-10 pr-4 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-                />
-              </div>
-
-              <!-- Source Checkboxes -->
-              <div class="max-h-60 overflow-y-auto space-y-2 rounded-lg border border-border-subtle bg-bg-surface p-4">
-                <label
-                  v-for="source in filteredSources"
-                  :key="source.id"
-                  class="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-bg-hover cursor-pointer"
-                  :class="{ 'opacity-60': source.enabled === false }"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="isSourceSelected(source.id)"
-                    @change="toggleSource(source.id)"
-                    class="h-4 w-4 rounded border-border-default bg-bg-elevated text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-                  />
-                  <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span class="text-sm font-medium text-text-primary">{{ source.name }}</span>
-                      <span
-                        v-if="source.enabled === false"
-                        class="text-xs font-medium px-1.5 py-0.5 rounded bg-text-muted/20 text-text-muted"
-                      >
-                        {{ strings.feeds.sourceSelection.disabled }}
-                      </span>
-                    </div>
-                    <div class="text-xs text-text-muted truncate">{{ source.url }}</div>
-                  </div>
-                  <span
-                    class="text-xs font-medium px-2 py-1 rounded-full"
-                    :class="{
-                      'bg-orange-400/10 text-orange-400': source.type === 'rss',
-                      'bg-red-500/10 text-red-500': source.type === 'youtube',
-                      'bg-blue-400/10 text-blue-400': source.type === 'website',
-                      'bg-green-400/10 text-green-400': source.type === 'blog',
-                    }"
-                  >
-                    {{ source.type }}
-                  </span>
-                </label>
-
-                <div v-if="filteredSources?.length === 0" class="py-8 text-center text-sm text-text-muted">
-                  {{ strings.feeds.sourceSelection.noSourcesFound }}
-                </div>
-              </div>
-
-              <!-- Warning for disabled sources selected -->
-              <Transition name="error">
-                <div
-                  v-if="selectedDisabledSources.length > 0"
-                  class="mt-2 flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3"
-                >
-                  <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p class="text-xs text-amber-200">
-                    {{ strings.feeds.sourceSelection.disabledSourcesWarning.replace('{count}', String(selectedDisabledSources.length)) }}
-                  </p>
-                </div>
-              </Transition>
-
-              <Transition name="error">
-                <p v-if="errors.source_ids" class="mt-2 text-sm text-status-failed">{{ errors.source_ids }}</p>
-              </Transition>
-            </div>
+            <FeedFormSources
+              :sources="sources || []"
+              v-model:source-ids="source_ids"
+              :errors="errors"
+              ref="sourcesRef"
+            />
 
             <!-- Divider -->
             <div class="border-t border-border-subtle" />
@@ -692,156 +537,16 @@ const handleClose = () => {
             <!-- Divider -->
             <div class="border-t border-border-subtle" />
 
-            <!-- Section 5: Output Configuration -->
-            <div class="space-y-4">
-              <div class="flex items-center gap-2">
-                <Mail :size="16" class="text-text-muted" />
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.outputConfiguration }}</h3>
-              </div>
-
-              <!-- Email Recipients -->
-              <div>
-                <label for="email_recipients" class="mb-2 block text-sm font-medium text-text-primary">
-                  {{ strings.feeds.fields.emailRecipients }} <span class="text-text-muted">({{ strings.common.optional }})</span>
-                </label>
-                <input
-                  id="email_recipients"
-                  v-model="output_config.email_recipients"
-                  type="text"
-                  :placeholder="strings.feeds.placeholders.emailRecipients"
-                  class="w-full rounded-lg border border-border-subtle bg-bg-surface px-4 py-3 text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-                />
-                <p class="mt-2 text-xs text-text-muted">{{ strings.feeds.hints.commaSeparatedEmails }}</p>
-              </div>
-
-              <!-- Webhook URL -->
-              <div>
-                <label for="webhook_url" class="mb-2 block text-sm font-medium text-text-primary">
-                  {{ strings.feeds.fields.webhookUrl }} <span class="text-text-muted">({{ strings.common.optional }})</span>
-                </label>
-                <div class="relative">
-                  <Webhook class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" :size="18" />
-                  <input
-                    id="webhook_url"
-                    v-model="output_config.webhook_url"
-                    type="url"
-                    :placeholder="strings.feeds.placeholders.webhookUrl"
-                    class="w-full rounded-lg border bg-bg-surface pl-10 pr-4 py-3 text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-bg-base transition-all"
-                    :class="
-                      errors['output_config.webhook_url']
-                        ? 'border-status-failed focus:ring-status-failed'
-                        : 'border-border-subtle focus:border-accent-primary focus:ring-accent-primary'
-                    "
-                  />
-                </div>
-                <Transition name="error">
-                  <p v-if="errors['output_config.webhook_url']" class="mt-2 text-sm text-status-failed">
-                    {{ errors['output_config.webhook_url'] }}
-                  </p>
-                </Transition>
-              </div>
-            </div>
-
-            <!-- Divider -->
-            <div class="border-t border-border-subtle" />
-
-            <!-- Section 6: Auto-Export -->
-            <div v-if="allDirectExportExporters && allDirectExportExporters.length > 0" class="space-y-4">
-              <div class="flex items-center gap-2">
-                <Download :size="16" class="text-text-muted" />
-                <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.autoExport }}</h3>
-              </div>
-              <p class="text-xs text-text-muted">
-                {{ strings.feeds.autoExport.description }}
-              </p>
-
-              <!-- Warning for disabled exporters that were previously configured -->
-              <div
-                v-if="disabledConfiguredExporters.length > 0"
-                class="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3"
-              >
-                <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
-                <div class="text-xs text-amber-200">
-                  <p class="font-medium mb-1">{{ strings.feeds.autoExport.disabledExportersWarning }}</p>
-                  <ul class="list-disc list-inside">
-                    <li v-for="exp in disabledConfiguredExporters" :key="exp.name">
-                      {{ exp.name.charAt(0).toUpperCase() + exp.name.slice(1) }}
-                    </li>
-                  </ul>
-                  <p class="mt-1">{{ strings.feeds.autoExport.enableInSettings }} <span class="font-medium">{{ strings.feeds.autoExport.settingsExport }}</span> {{ strings.feeds.autoExport.toUseAgain }}</p>
-                </div>
-              </div>
-
-              <!-- No enabled exporters message -->
-              <div
-                v-if="enabledExporters.length === 0"
-                class="rounded-lg border border-border-subtle bg-bg-surface p-4 text-center"
-              >
-                <p class="text-sm text-text-muted">
-                  {{ strings.feeds.autoExport.noExportersEnabled }}
-                  <span class="font-medium text-text-secondary">{{ strings.feeds.autoExport.settingsExport }}</span>
-                  {{ strings.feeds.autoExport.toConfigureAutoExport }}
-                </p>
-              </div>
-
-              <div v-else class="space-y-3">
-                <div
-                  v-for="exporter in enabledExporters"
-                  :key="exporter.name"
-                  class="rounded-lg border border-border-subtle bg-bg-surface p-4"
-                >
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <input
-                        :id="`export-${exporter.name}`"
-                        type="checkbox"
-                        v-model="autoExportConfig[exporter.name].enabled"
-                        class="h-4 w-4 rounded border-border-default bg-bg-elevated text-accent-primary focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-bg-base"
-                      />
-                      <label :for="`export-${exporter.name}`" class="text-sm font-medium text-text-primary cursor-pointer">
-                        {{ exporter.name.charAt(0).toUpperCase() + exporter.name.slice(1) }}
-                      </label>
-                    </div>
-                    <span class="text-xs text-text-muted">.{{ exporter.file_extension }}</span>
-                  </div>
-                  <p class="text-xs text-text-muted mb-3">{{ exporter.description }}</p>
-
-                  <!-- Warning when enabled but no path configured -->
-                  <Transition name="slide">
-                    <div
-                      v-if="autoExportConfig[exporter.name]?.enabled && !hasPathConfigured(exporter.name)"
-                      class="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 mb-3"
-                    >
-                      <AlertTriangle :size="16" class="text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p class="text-xs text-amber-200">
-                        {{ strings.feeds.autoExport.noPathWarning }}
-                        <span class="font-medium">{{ strings.feeds.autoExport.settingsExport }}</span>.
-                      </p>
-                    </div>
-                  </Transition>
-
-                  <!-- Path override input (shown when enabled) -->
-                  <Transition name="slide">
-                    <div v-if="autoExportConfig[exporter.name]?.enabled" class="mt-3">
-                      <label :for="`export-path-${exporter.name}`" class="mb-1 block text-xs font-medium text-text-secondary">
-                        {{ strings.feeds.fields.customPath }}
-                        <span v-if="getGlobalExportPath(exporter.name)" class="text-text-muted">
-                          ({{ strings.feeds.autoExport.leaveEmptyForGlobal }} <span class="font-mono text-text-secondary">{{ getGlobalExportPath(exporter.name) }}</span>)
-                        </span>
-                        <span v-else class="text-text-muted">({{ strings.feeds.autoExport.optionalOverride }})</span>
-                      </label>
-                      <input
-                        :id="`export-path-${exporter.name}`"
-                        v-model="autoExportConfig[exporter.name].path"
-                        type="text"
-                        :placeholder="getGlobalExportPath(exporter.name) ? strings.feeds.placeholders.overridePath : strings.feeds.placeholders.noGlobalPath"
-                        class="w-full rounded-lg border border-border-subtle bg-bg-elevated px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-accent-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
-                      />
-                    </div>
-                  </Transition>
-                </div>
-              </div>
-            </div>
+            <!-- Sections 5+6: Output Configuration + Auto-Export -->
+            <FeedFormOutput
+              :enabled-exporters="enabledExporters"
+              :all-direct-export-exporters="allDirectExportExporters || []"
+              :disabled-configured-exporters="disabledConfiguredExporters"
+              :export-settings="exportSettings"
+              v-model:output-config="output_config"
+              v-model:auto-export-config="autoExportConfig"
+              :errors="errors"
+            />
 
             <!-- Actions -->
             <div class="flex gap-3 pt-4">

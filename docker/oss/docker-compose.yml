@@ -1,6 +1,7 @@
 # Reconly OSS - Docker Compose Configuration
 #
 # Quick Start:
+#   cp .env.example .env             # Create config from template (edit as needed)
 #   docker compose up -d             # Start (empty database)
 #   docker compose up -d --build     # Start with rebuild
 #   docker compose logs -f api       # View API logs

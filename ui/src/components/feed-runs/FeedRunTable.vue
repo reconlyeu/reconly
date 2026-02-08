@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ChevronRight, Clock, AlertCircle, CheckCircle, Loader2 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
+import { formatDuration, formatTokensTotal } from '@/utils/formatters';
 import type { FeedRun, FeedRunStatus } from '@/types/entities';
 
 defineProps<{
@@ -11,21 +12,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   return date.toLocaleString();
-};
-
-const formatDuration = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined) return '-';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}m ${secs}s`;
-};
-
-const formatTokens = (tokensIn: number, tokensOut: number): string => {
-  const total = tokensIn + tokensOut;
-  if (total >= 1000000) return `${(total / 1000000).toFixed(1)}M`;
-  if (total >= 1000) return `${(total / 1000).toFixed(1)}K`;
-  return total.toString();
 };
 
 const getStatusIcon = (status: FeedRunStatus) => {
@@ -132,7 +118,7 @@ const navigateToDetail = (runId: number) => {
             {{ run.items_processed }}
           </td>
           <td class="px-4 py-3 text-sm text-text-secondary">
-            {{ formatTokens(run.total_tokens_in, run.total_tokens_out) }}
+            {{ formatTokensTotal(run.total_tokens_in, run.total_tokens_out) }}
           </td>
           <td class="px-4 py-3 text-sm text-text-secondary">
             {{ formatDuration(run.duration_seconds) }}

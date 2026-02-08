@@ -13,6 +13,7 @@ import {
 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 import { feedRunsApi } from '@/services/api';
+import { formatDuration, formatTokens } from '@/utils/formatters';
 import type { FeedRunStatus } from '@/types/entities';
 import FeedRunSourceList from './FeedRunSourceList.vue';
 import FeedRunErrorLog from './FeedRunErrorLog.vue';
@@ -59,20 +60,6 @@ const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '-';
   const date = new Date(dateStr);
   return date.toLocaleString();
-};
-
-const formatDuration = (seconds: number | null | undefined): string => {
-  if (seconds === null || seconds === undefined) return '-';
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.round(seconds % 60);
-  return `${mins}m ${secs}s`;
-};
-
-const formatTokens = (tokens: number): string => {
-  if (tokens >= 1000000) return `${(tokens / 1000000).toFixed(2)}M`;
-  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}K`;
-  return tokens.toString();
 };
 
 const getStatusIcon = (status: FeedRunStatus) => {

@@ -20,7 +20,7 @@ import { registerIcons } from './plugins/icons';
 registerIcons();
 
 // Handle ESM interop - the plugin might be at .default
-const Toast = (ToastPlugin as any).default || ToastPlugin;
+const Toast = (ToastPlugin as { default?: typeof ToastPlugin }).default || ToastPlugin;
 
 // Create a single Pinia instance for all Vue islands
 const pinia = createPinia();
