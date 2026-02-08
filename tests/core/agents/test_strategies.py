@@ -23,8 +23,12 @@ from reconly_core.agents.settings import AgentSettings
 
 @pytest.fixture
 def mock_summarizer():
-    """Create a mock LLM provider."""
-    summarizer = MagicMock()
+    """Create a mock LLM provider.
+
+    Uses spec to restrict attributes so _get_underlying_provider()
+    doesn't mistake it for a SummarizerWithFallback (which has .primary).
+    """
+    summarizer = MagicMock(spec=["get_model_info", "api_key"])
     summarizer.get_model_info.return_value = {
         "provider": "openai",
         "model": "gpt-4o",
@@ -35,8 +39,12 @@ def mock_summarizer():
 
 @pytest.fixture
 def mock_ollama_summarizer():
-    """Create a mock Ollama LLM provider."""
-    summarizer = MagicMock()
+    """Create a mock Ollama LLM provider.
+
+    Uses spec to restrict attributes so _get_underlying_provider()
+    doesn't mistake it for a SummarizerWithFallback (which has .primary).
+    """
+    summarizer = MagicMock(spec=["get_model_info", "base_url"])
     summarizer.get_model_info.return_value = {
         "provider": "ollama",
         "model": "llama3.2",
@@ -47,8 +55,12 @@ def mock_ollama_summarizer():
 
 @pytest.fixture
 def mock_anthropic_summarizer():
-    """Create a mock Anthropic LLM provider."""
-    summarizer = MagicMock()
+    """Create a mock Anthropic LLM provider.
+
+    Uses spec to restrict attributes so _get_underlying_provider()
+    doesn't mistake it for a SummarizerWithFallback (which has .primary).
+    """
+    summarizer = MagicMock(spec=["get_model_info", "api_key"])
     summarizer.get_model_info.return_value = {
         "provider": "anthropic",
         "model": "claude-3-5-sonnet-20241022",

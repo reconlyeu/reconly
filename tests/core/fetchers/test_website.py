@@ -188,14 +188,16 @@ class TestWebsiteFetcher:
     @responses.activate
     def test_fetch_with_content_div(self, website_fetcher):
         """WHEN HTML uses <div class="content"> and no main/article
-        THEN content is extracted from div."""
-        html = """
+        THEN content is extracted from div (if it meets minimum length threshold)."""
+        # Content must exceed 100 char threshold used by the best-element selection logic
+        long_paragraph = "This is the main content in a div element. " * 5
+        html = f"""
         <html>
             <head><title>Div Content</title></head>
             <body>
                 <div class="sidebar">Sidebar</div>
                 <div class="content">
-                    <p>Main content in div</p>
+                    <p>{long_paragraph}</p>
                 </div>
             </body>
         </html>
@@ -211,7 +213,7 @@ class TestWebsiteFetcher:
         result = website_fetcher.fetch('https://example.com/div')
         item = result[0]
 
-        assert 'Main content in div' in item['content']
+        assert 'main content in a div element' in item['content']
         assert 'Sidebar' not in item['content']
 
     @responses.activate
@@ -346,14 +348,16 @@ class TestWebsiteFetcher:
     @responses.activate
     def test_fetch_with_id_content(self, website_fetcher):
         """WHEN HTML uses <div id="content">
-        THEN content is extracted from that div."""
-        html = """
+        THEN content is extracted from that div (if it meets minimum length threshold)."""
+        # Content must exceed 100 char threshold used by the best-element selection logic
+        long_paragraph = "Main content with ID selector providing detailed information. " * 4
+        html = f"""
         <html>
             <head><title>ID Content</title></head>
             <body>
                 <div id="header">Header</div>
                 <div id="content">
-                    <p>Main content with ID</p>
+                    <p>{long_paragraph}</p>
                 </div>
             </body>
         </html>
@@ -369,5 +373,5 @@ class TestWebsiteFetcher:
         result = website_fetcher.fetch('https://example.com/idcontent')
         item = result[0]
 
-        assert 'Main content with ID' in item['content']
+        assert 'Main content with ID selector' in item['content']
         assert 'Header' not in item['content']

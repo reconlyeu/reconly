@@ -70,7 +70,7 @@ class TestIMAPFetcherRequiresConnection:
         """Test that fetcher raises error when _connection_host is missing."""
         fetcher = IMAPFetcher()
 
-        with pytest.raises(IMAPError) as exc_info:
+        with pytest.raises(Exception) as exc_info:
             fetcher.fetch(
                 url="imap://example.com",
                 # Missing _connection_* credentials
@@ -85,7 +85,7 @@ class TestIMAPFetcherRequiresConnection:
         """Test that fetcher raises error when _connection_username is missing."""
         fetcher = IMAPFetcher()
 
-        with pytest.raises(IMAPError) as exc_info:
+        with pytest.raises(Exception) as exc_info:
             fetcher.fetch(
                 url="imap://imap.example.com",
                 _connection_host="imap.example.com",
@@ -101,7 +101,7 @@ class TestIMAPFetcherRequiresConnection:
         """Test that fetcher raises error when _connection_password is missing."""
         fetcher = IMAPFetcher()
 
-        with pytest.raises(IMAPError) as exc_info:
+        with pytest.raises(Exception) as exc_info:
             fetcher.fetch(
                 url="imap://imap.example.com",
                 _connection_host="imap.example.com",

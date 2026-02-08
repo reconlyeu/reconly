@@ -277,7 +277,15 @@ class TestResultFormatting:
             mock_summarizer,
         )
 
-        assert '/' not in result['url'].replace('agent://', '')
+        # URL format is agent://YYYY-MM-DD/sanitized-topic
+        # The date prefix has a single / separator, but the topic portion should have
+        # slashes and spaces replaced with dashes
+        url_without_scheme = result['url'].replace('agent://', '')
+        # Split off the date prefix (YYYY-MM-DD/) and check the topic part
+        parts = url_without_scheme.split('/', 1)
+        assert len(parts) == 2, f"Expected date/topic format, got: {url_without_scheme}"
+        topic_part = parts[1]
+        assert '/' not in topic_part
         assert ' ' not in result['url']
 
     def test_format_result_truncates_long_prompts(self, agent_fetcher, mock_agent_result):
@@ -293,9 +301,13 @@ class TestResultFormatting:
             mock_summarizer,
         )
 
-        # URL should be truncated to ~50 chars of prompt
-        url_without_prefix = result['url'].replace('agent://', '')
-        assert len(url_without_prefix) <= 50
+        # URL format is agent://YYYY-MM-DD/truncated-topic
+        # The topic portion (after date prefix) should be truncated to ~50 chars
+        url_without_scheme = result['url'].replace('agent://', '')
+        parts = url_without_scheme.split('/', 1)
+        assert len(parts) == 2, f"Expected date/topic format, got: {url_without_scheme}"
+        topic_part = parts[1]
+        assert len(topic_part) <= 50
 
     def test_format_result_includes_agent_result_data(self, agent_fetcher, mock_agent_result):
         """Test that _format_result includes data from AgentResult."""
@@ -386,7 +398,9 @@ class TestAgentFetcherIntegration:
             'reconly_core.providers.factory.get_summarizer'
         ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
-        ) as mock_get_settings:
+        ) as mock_get_settings, patch.object(
+            agent_fetcher, '_get_embedding_config'
+        ) as mock_get_embedding_config:
             # Setup mocks
             mock_settings = MagicMock()
             mock_settings.default_max_iterations = 5
@@ -397,6 +411,9 @@ class TestAgentFetcherIntegration:
             mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
             mock_get_summarizer.return_value = mock_summarizer
 
+            mock_embedding_config = {'provider': 'ollama', 'model': 'bge-m3'}
+            mock_get_embedding_config.return_value = mock_embedding_config
+
             mock_strategy = MagicMock()
             mock_strategy.research = AsyncMock(return_value=mock_agent_result)
             mock_get_strategy.return_value = mock_strategy
@@ -404,8 +421,10 @@ class TestAgentFetcherIntegration:
             # Run
             await agent_fetcher._run_agent("Test topic", {})
 
-            # Verify strategy was called
-            mock_get_strategy.assert_called_once_with('simple', summarizer=mock_summarizer)
+            # Verify strategy was called with embedding_config
+            mock_get_strategy.assert_called_once_with(
+                'simple', summarizer=mock_summarizer, embedding_config=mock_embedding_config
+            )
             mock_strategy.research.assert_called_once_with("Test topic", mock_settings, 5)
 
     @pytest.mark.asyncio
@@ -417,7 +436,9 @@ class TestAgentFetcherIntegration:
             'reconly_core.providers.factory.get_summarizer'
         ) as mock_get_summarizer, patch.object(
             agent_fetcher, '_get_agent_settings'
-        ) as mock_get_settings:
+        ) as mock_get_settings, patch.object(
+            agent_fetcher, '_get_embedding_config'
+        ) as mock_get_embedding_config:
             mock_settings = MagicMock()
             mock_settings.default_max_iterations = 5
             mock_settings.validate.return_value = None
@@ -427,6 +448,9 @@ class TestAgentFetcherIntegration:
             mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
             mock_get_summarizer.return_value = mock_summarizer
 
+            mock_embedding_config = {'provider': 'ollama', 'model': 'bge-m3'}
+            mock_get_embedding_config.return_value = mock_embedding_config
+
             mock_strategy = MagicMock()
             mock_strategy.research = AsyncMock(return_value=mock_agent_result)
             mock_get_strategy.return_value = mock_strategy
@@ -434,8 +458,10 @@ class TestAgentFetcherIntegration:
             # Run with comprehensive strategy
             await agent_fetcher._run_agent("Test", {'research_strategy': 'comprehensive'})
 
-            # Verify comprehensive strategy was requested
-            mock_get_strategy.assert_called_once_with('comprehensive', summarizer=mock_summarizer)
+            # Verify comprehensive strategy was requested with embedding_config
+            mock_get_strategy.assert_called_once_with(
+                'comprehensive', summarizer=mock_summarizer, embedding_config=mock_embedding_config
+            )
 
     @pytest.mark.asyncio
     async def test_run_agent_respects_config_max_iterations(self, agent_fetcher, mock_agent_result):
@@ -553,13 +579,14 @@ class TestAgentFetcherStrategyIntegration:
     async def test_deep_strategy_uses_correct_timeout(
         self, agent_fetcher, mock_agent_result
     ):
-        """Test that deep strategy uses 10-minute timeout."""
-        from reconly_core.fetchers.agent import STRATEGY_TIMEOUTS
+        """Test that deep strategy uses the configured timeout."""
+        from reconly_core.fetchers.agent import _get_strategy_timeouts
 
         with (
             patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
             patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+            patch.object(agent_fetcher, '_get_embedding_config') as mock_get_embedding_config,
             patch('asyncio.wait_for') as mock_wait_for,
         ):
             mock_settings = MagicMock()
@@ -569,6 +596,9 @@ class TestAgentFetcherStrategyIntegration:
             mock_settings.gptr_max_subtopics = 3
             mock_settings.validate.return_value = None
             mock_get_settings.return_value = mock_settings
+
+            mock_embedding_config = {'provider': 'ollama', 'model': 'bge-m3'}
+            mock_get_embedding_config.return_value = mock_embedding_config
 
             mock_summarizer = MagicMock()
             mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
@@ -584,10 +614,10 @@ class TestAgentFetcherStrategyIntegration:
 
             await agent_fetcher._run_agent("Test topic", {'research_strategy': 'deep'})
 
-            # Verify timeout
+            # Verify timeout uses the value from _get_strategy_timeouts
             mock_wait_for.assert_called_once()
             _, kwargs = mock_wait_for.call_args
-            assert kwargs['timeout'] == STRATEGY_TIMEOUTS['deep']  # 600 seconds
+            assert kwargs['timeout'] == _get_strategy_timeouts()['deep']
 
     @pytest.mark.asyncio
     async def test_search_provider_override_from_config(
@@ -666,12 +696,13 @@ class TestAgentFetcherTimeoutHandling:
     ):
         """Test that TimeoutError includes strategy name and duration."""
         import asyncio as asyncio_module
-        from reconly_core.fetchers.agent import STRATEGY_TIMEOUTS
+        from reconly_core.fetchers.agent import _get_strategy_timeouts
 
         with (
             patch('reconly_core.agents.strategies.get_strategy') as mock_get_strategy,
             patch('reconly_core.providers.factory.get_summarizer') as mock_get_summarizer,
             patch.object(agent_fetcher, '_get_agent_settings') as mock_get_settings,
+            patch.object(agent_fetcher, '_get_embedding_config') as mock_get_embedding_config,
             patch('asyncio.wait_for') as mock_wait_for,
         ):
             mock_settings = MagicMock()
@@ -679,6 +710,9 @@ class TestAgentFetcherTimeoutHandling:
             mock_settings.default_max_iterations = 5
             mock_settings.validate.return_value = None
             mock_get_settings.return_value = mock_settings
+
+            mock_embedding_config = {'provider': 'ollama', 'model': 'bge-m3'}
+            mock_get_embedding_config.return_value = mock_embedding_config
 
             mock_summarizer = MagicMock()
             mock_summarizer.get_model_info.return_value = {'provider': 'openai', 'model': 'gpt-4'}
@@ -695,7 +729,7 @@ class TestAgentFetcherTimeoutHandling:
 
             error_msg = str(exc_info.value)
             assert 'comprehensive' in error_msg
-            assert str(STRATEGY_TIMEOUTS['comprehensive']) in error_msg
+            assert str(_get_strategy_timeouts()['comprehensive']) in error_msg
 
 
 # =============================================================================
