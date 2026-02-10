@@ -195,13 +195,13 @@ Key Points:
 
         <!-- Modal -->
         <div
-          class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface shadow-2xl shadow-black/50"
+          class="relative w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface shadow-2xl shadow-black/50"
         >
           <!-- Decorative gradient orb -->
           <div class="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-orange-500/20 blur-3xl" />
 
-          <!-- Sticky Header -->
-          <div class="sticky top-0 z-10 border-b border-border-subtle bg-bg-elevated/95 backdrop-blur-sm p-6">
+          <!-- Header -->
+          <div class="border-b border-border-subtle bg-bg-elevated/95 p-6">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
                 <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10">
@@ -222,7 +222,7 @@ Key Points:
           </div>
 
           <!-- Form -->
-          <form @submit.prevent="onSubmit" class="p-6 space-y-6">
+          <form @submit.prevent="onSubmit" class="flex-1 overflow-y-auto p-6 space-y-6">
             <!-- Name -->
             <div>
               <label for="name" class="mb-2 block text-sm font-medium text-text-primary">

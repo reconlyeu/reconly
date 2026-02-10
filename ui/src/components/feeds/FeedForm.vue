@@ -287,13 +287,13 @@ const handleClose = () => {
 
         <!-- Modal -->
         <div
-          class="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface shadow-2xl shadow-black/50"
+          class="relative w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-surface shadow-2xl shadow-black/50"
         >
           <!-- Decorative gradient orb -->
           <div class="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-accent-primary/20 blur-3xl" />
 
-          <!-- Sticky Header -->
-          <div class="sticky top-0 z-10 border-b border-border-subtle bg-bg-elevated/95 backdrop-blur-sm p-6">
+          <!-- Header -->
+          <div class="border-b border-border-subtle bg-bg-elevated/95 p-6">
             <div class="flex items-center justify-between">
               <h2 class="text-2xl font-bold text-text-primary">
                 {{ isEditMode ? strings.feeds.editFeed : strings.feeds.createNewFeed }}
@@ -309,7 +309,7 @@ const handleClose = () => {
           </div>
 
           <!-- Form -->
-          <form @submit.prevent="onSubmit" class="p-6 space-y-8">
+          <form @submit.prevent="onSubmit" class="flex-1 overflow-y-auto p-6 space-y-8">
             <!-- Section 1: Basic Info -->
             <div class="space-y-4">
               <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.basicInformation }}</h3>

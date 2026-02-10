@@ -81,7 +81,7 @@ services:
       # Scheduler
       - SCHEDULER_TIMEZONE=${SCHEDULER_TIMEZONE:-}
       # Research (SearXNG - only useful with --profile research)
-      - SEARXNG_URL=${SEARXNG_URL:-}
+      - SEARXNG_URL=${SEARXNG_URL:-http://searxng:8080}
     volumes:
       - reconly_data:/app/data
       - ./state:/app/state
@@ -90,6 +90,8 @@ services:
 
   # --- Research profile (opt-in) ---
   # Start with: docker compose --profile research up -d
+  # NOTE: Comprehensive/deep research strategies require a 32B+ model or cloud
+  # provider. Small models (7B) will hallucinate instead of synthesizing results.
 
   valkey:
     image: valkey/valkey:8-alpine

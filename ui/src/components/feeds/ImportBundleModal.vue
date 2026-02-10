@@ -158,7 +158,7 @@ const feedAlreadyExists = computed(() => {
 
         <!-- Modal -->
         <div
-          class="modal-content relative w-full max-w-xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-base shadow-2xl shadow-black/50"
+          class="relative w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-base shadow-2xl shadow-black/50"
         >
           <!-- Decorative gradient orbs -->
           <div class="pointer-events-none absolute -right-40 -top-40 h-96 w-96 rounded-full bg-accent-primary/10 blur-3xl" />
@@ -183,7 +183,7 @@ const feedAlreadyExists = computed(() => {
           </div>
 
           <!-- Content -->
-          <div class="relative p-6">
+          <div class="relative flex-1 overflow-y-auto p-6">
             <!-- Upload Step -->
             <div v-if="step === 'upload'">
               <p class="mb-4 text-sm text-text-secondary">
@@ -403,13 +403,4 @@ const feedAlreadyExists = computed(() => {
   opacity: 0;
 }
 
-/* Hide scrollbars but allow scrolling */
-.modal-content {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-.modal-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
 </style>

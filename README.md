@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml"><img src="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License"/></a>
-  <!-- <a href="#"><img src="https://img.shields.io/github/v/release/reconlyeu/reconly" alt="Release"/></a> -->
+  <a href="https://github.com/reconlyeu/reconly/releases"><img src="https://img.shields.io/github/v/release/reconlyeu/reconly" alt="Release"/></a>
   <!-- <a href="#"><img src="https://img.shields.io/docker/pulls/reconlyeu/reconly" alt="Docker Pulls"/></a> -->
 </p>
 

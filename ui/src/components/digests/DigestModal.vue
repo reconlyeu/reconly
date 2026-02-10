@@ -242,14 +242,14 @@ const toggleContent = () => {
 
         <!-- Modal -->
         <div
-          class="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-base shadow-2xl shadow-black/50"
+          class="relative w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col rounded-2xl border border-border-default bg-gradient-to-br from-bg-elevated to-bg-base shadow-2xl shadow-black/50"
         >
           <!-- Decorative gradient orbs -->
           <div class="pointer-events-none absolute -right-40 -top-40 h-96 w-96 rounded-full bg-accent-primary/10 blur-3xl" />
           <div class="pointer-events-none absolute -left-40 -bottom-40 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl" />
 
-          <!-- Sticky Header -->
-          <div class="sticky top-0 z-10 border-b border-border-subtle bg-bg-elevated/95 backdrop-blur-sm p-6">
+          <!-- Header -->
+          <div class="border-b border-border-subtle bg-bg-elevated/95 p-6">
             <div class="flex items-start justify-between gap-4">
               <!-- Source + Feed Badges -->
               <div class="flex flex-wrap items-center gap-2">
@@ -290,7 +290,7 @@ const toggleContent = () => {
           </div>
 
           <!-- Content -->
-          <article class="relative p-8 md:p-12">
+          <article class="relative flex-1 overflow-y-auto p-8 md:p-12">
             <!-- Preview image or placeholder thumbnail (absolute positioned) -->
             <div class="absolute right-8 top-8 w-[134px] aspect-video rounded-lg border border-border-subtle bg-bg-surface overflow-hidden shadow-lg md:right-12 md:top-12">
               <img
@@ -493,25 +493,6 @@ const toggleContent = () => {
 
 .content-container::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-muted);
-}
-
-/* Custom scrollbar */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 8px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: var(--color-bg-surface);
-  border-radius: 4px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: var(--color-bg-hover);
-  border-radius: 4px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-default);
 }
 
 /* Prose styling for content - use :deep() to penetrate v-html */

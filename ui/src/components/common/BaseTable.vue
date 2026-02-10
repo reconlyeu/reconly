@@ -132,7 +132,7 @@ defineExpose({
   <div>
     <!-- Loading State -->
     <div v-if="isLoading" class="overflow-hidden rounded-xl border border-border-subtle">
-      <table class="w-full">
+      <table class="w-full table-fixed">
         <thead class="bg-bg-elevated">
           <tr>
             <th v-if="selectable" class="w-12 py-3 pl-4 pr-2 text-left">
@@ -187,7 +187,7 @@ defineExpose({
 
     <!-- Table -->
     <div v-else class="overflow-hidden rounded-xl border border-border-subtle">
-      <table class="w-full">
+      <table class="w-full table-fixed">
         <thead class="bg-bg-elevated">
           <tr>
             <!-- Select All Checkbox - entire cell is clickable -->
