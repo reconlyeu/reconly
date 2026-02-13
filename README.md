@@ -37,6 +37,8 @@
 ```bash
 # Install from https://ollama.com/download, then:
 ollama pull qwen2.5:7b
+# Already have a model? Set OLLAMA_MODEL=your-model in .env instead.
+# For best results: 14B+ local model or cloud provider (see .env.example).
 ```
 
 **2. Start Reconly**

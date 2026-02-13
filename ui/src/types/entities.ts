@@ -285,7 +285,7 @@ export interface ReportTemplateUpdate {
 // FEED RUN
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type FeedRunStatus = 'pending' | 'running' | 'completed' | 'completed_with_errors' | 'failed';
+export type FeedRunStatus = 'pending' | 'running' | 'completed' | 'partial' | 'failed';
 export type TriggerType = 'schedule' | 'manual' | 'api';
 export type ErrorType = 'FetchError' | 'ParseError' | 'SummarizeError' | 'SaveError' | 'TimeoutError';
 
@@ -570,6 +570,8 @@ export interface ModelInfo {
   provider: string;
   is_default: boolean;
   deprecated: boolean;
+  /** Parameter count string from provider (e.g., "7.6B", "14B") */
+  parameter_size?: string | null;
 }
 
 /**
@@ -640,6 +642,8 @@ export interface ResolvedProvider {
   fallback_used: boolean;
   /** Providers that were checked but unavailable */
   unavailable_providers: string[];
+  /** Model capability tier: "basic" (<14B local), "recommended" (>=14B or cloud), "unknown" */
+  capability_tier?: string | null;
 }
 
 /**

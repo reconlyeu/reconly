@@ -18,7 +18,7 @@ from reconly_api.schemas.providers import (
 from reconly_api.schemas.components import ProviderMetadataResponse
 from reconly_api.routes.component_utils import convert_config_fields
 from reconly_core.services.settings_service import SettingsService
-from reconly_core.providers.capabilities import ModelInfo
+from reconly_core.providers.capabilities import ModelInfo, get_capability_tier
 from reconly_core.providers.cache import get_model_cache
 from reconly_core.providers.factory import get_api_key_for_provider
 from reconly_core.providers.registry import (
@@ -120,6 +120,7 @@ def _model_info_to_response(model: ModelInfo) -> ModelInfoResponse:
         provider=model.provider,
         is_default=model.is_default,
         deprecated=model.deprecated,
+        parameter_size=model.parameter_size,
     )
 
 
@@ -377,4 +378,32 @@ async def get_default_provider(db: Session = Depends(get_db)):
     from reconly_core.providers.factory import resolve_default_provider
 
     result = resolve_default_provider(db=db)
+
+    # Compute capability tier from the resolved model's parameter size
+    capability_tier = None
+    provider_name = result.get("provider")
+    model_name = result.get("model")
+    if result.get("available") and provider_name:
+        is_local = True
+        if is_provider_registered(provider_name):
+            entry = get_provider_entry(provider_name)
+            try:
+                metadata = entry.cls.get_metadata()
+                is_local = metadata.is_local
+            except (AttributeError, NotImplementedError):
+                pass
+
+        # Look up parameter_size from cached model list
+        parameter_size = None
+        if model_name:
+            api_key = get_api_key_for_provider(provider_name)
+            models = get_provider_models_cached(provider_name, api_key=api_key)
+            for m in models:
+                if m.id == model_name:
+                    parameter_size = m.parameter_size
+                    break
+
+        capability_tier = get_capability_tier(parameter_size, is_local)
+
+    result["capability_tier"] = capability_tier
     return ResolvedProviderResponse(**result)

@@ -231,11 +231,13 @@ class OllamaProvider(BaseProvider):
                 models = []
                 for i, m in enumerate(data.get('models', [])):
                     model_name = m['name']
+                    param_size = m.get('details', {}).get('parameter_size')
                     models.append(ModelInfo(
                         id=model_name,
                         name=model_name,
                         provider='ollama',
-                        is_default=(i == 0)  # First model is default
+                        is_default=(i == 0),  # First model is default
+                        parameter_size=param_size,
                     ))
                 return models
         except Exception:

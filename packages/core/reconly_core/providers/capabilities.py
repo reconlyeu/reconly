@@ -4,6 +4,7 @@ Edition Notes:
     - OSS edition: cost_per_1k_input and cost_per_1k_output are always 0.0
     - Enterprise edition: Providers override with actual pricing
 """
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -18,6 +19,7 @@ class ModelInfo:
         provider: Provider name (e.g., "anthropic", "openai")
         is_default: Whether this is the provider's default model
         deprecated: Whether model is deprecated
+        parameter_size: Raw parameter size string from provider (e.g., "7.6B", "14B")
     """
 
     id: str
@@ -25,6 +27,7 @@ class ModelInfo:
     provider: str
     is_default: bool = False
     deprecated: bool = False
+    parameter_size: Optional[str] = None
 
     def to_dict(self) -> dict:
         """Convert to dictionary for API response."""
@@ -34,7 +37,33 @@ class ModelInfo:
             "provider": self.provider,
             "is_default": self.is_default,
             "deprecated": self.deprecated,
+            "parameter_size": self.parameter_size,
         }
+
+
+def get_capability_tier(parameter_size: Optional[str], is_local: bool) -> str:
+    """Classify model capability based on parameter count.
+
+    Args:
+        parameter_size: Raw size string from provider (e.g., "7.6B", "14B")
+        is_local: Whether the provider runs locally
+
+    Returns:
+        "basic" for small local models (<14B),
+        "recommended" for large local or cloud models,
+        "unknown" when size can't be determined for local models
+    """
+    if parameter_size:
+        match = re.match(r"([\d.]+)", parameter_size)
+        if match:
+            billions = float(match.group(1))
+            return "basic" if billions < 14 else "recommended"
+
+    # Cloud providers are always capable enough
+    if not is_local:
+        return "recommended"
+
+    return "unknown"
 
 
 @dataclass

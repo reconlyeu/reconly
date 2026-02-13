@@ -21,6 +21,7 @@ class ModelInfoResponse(BaseModel):
     provider: str = Field(..., description="Provider name (e.g., 'anthropic', 'openai')")
     is_default: bool = Field(default=False, description="Whether this is the provider's default model")
     deprecated: bool = Field(default=False, description="Whether model is deprecated")
+    parameter_size: Optional[str] = Field(default=None, description="Parameter count (e.g., '7.6B', '14B')")
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,6 +98,10 @@ class ResolvedProviderResponse(BaseModel):
         default_factory=list,
         description="Providers that were checked but unavailable"
     )
+    capability_tier: Optional[str] = Field(
+        default=None,
+        description="Model capability tier: 'basic' (<14B local), 'recommended' (>=14B or cloud), 'unknown'"
+    )
 
     model_config = ConfigDict(json_schema_extra={
         "example": {
@@ -104,7 +109,8 @@ class ResolvedProviderResponse(BaseModel):
             "model": "llama3.2",
             "available": True,
             "fallback_used": True,
-            "unavailable_providers": ["lmstudio"]
+            "unavailable_providers": ["lmstudio"],
+            "capability_tier": "basic"
         }
     })
 

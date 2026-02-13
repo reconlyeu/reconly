@@ -48,6 +48,7 @@ class TestModelInfo:
             'provider': 'test',
             'is_default': True,
             'deprecated': True,
+            'parameter_size': None,
         }
 
 

@@ -12,9 +12,8 @@
 
 import { computed, onMounted } from 'vue';
 import { Plus, MessageSquare, Trash2, Loader2 } from 'lucide-vue-next';
-import { useQuery } from '@tanstack/vue-query';
 import { useChat } from '@/composables/useChat';
-import { providersApi } from '@/services/api';
+import { useModelCapability } from '@/composables/useModelCapability';
 import { strings } from '@/i18n/en';
 
 interface Props {
@@ -42,11 +41,7 @@ const {
 } = useChat();
 
 // Fetch resolved default provider (first available from fallback chain)
-const { data: resolvedProvider } = useQuery({
-  queryKey: ['providers', 'default'],
-  queryFn: () => providersApi.getDefault(),
-  staleTime: 5000, // Short cache - provider display should update quickly after settings change
-});
+const { resolvedProvider, isSmallModel } = useModelCapability();
 
 // Display provider and model info
 const poweredByText = computed(() => {
@@ -214,6 +209,12 @@ onMounted(() => {
     <div class="flex-shrink-0 p-4 border-t border-border-subtle">
       <p class="text-xs text-text-muted text-center">
         {{ poweredByText }}
+      </p>
+      <p v-if="isSmallModel" class="text-xs text-amber-400/80 text-center mt-1">
+        {{ strings.modelCapability.smallModelNote }}
+        <a href="/settings" class="underline hover:no-underline">
+          {{ strings.modelCapability.settingsLink }}
+        </a>
       </p>
     </div>
   </div>

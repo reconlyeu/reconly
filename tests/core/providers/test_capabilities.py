@@ -1,5 +1,9 @@
 """Tests for provider capabilities."""
-from reconly_core.providers.capabilities import ProviderCapabilities
+from reconly_core.providers.capabilities import (
+    ModelInfo,
+    ProviderCapabilities,
+    get_capability_tier,
+)
 
 
 class TestProviderCapabilities:
@@ -191,3 +195,60 @@ class TestProviderCapabilities:
         assert caps.is_free() is True
         assert caps.is_local is True
         assert caps.requires_api_key is False
+
+
+class TestModelInfo:
+    """Test cases for ModelInfo dataclass."""
+
+    def test_to_dict_includes_parameter_size(self):
+        """Test that to_dict() includes parameter_size field."""
+        model = ModelInfo(
+            id="qwen2.5:7b",
+            name="qwen2.5:7b",
+            provider="ollama",
+            parameter_size="7.6B",
+        )
+        d = model.to_dict()
+        assert d["parameter_size"] == "7.6B"
+
+    def test_to_dict_parameter_size_none(self):
+        """Test that to_dict() includes parameter_size as None when not set."""
+        model = ModelInfo(id="gpt-4o", name="GPT-4o", provider="openai")
+        d = model.to_dict()
+        assert d["parameter_size"] is None
+
+
+class TestGetCapabilityTier:
+    """Test cases for get_capability_tier() classification."""
+
+    def test_small_local_model(self):
+        """Small local model (<14B) returns 'basic'."""
+        assert get_capability_tier("7.6B", is_local=True) == "basic"
+
+    def test_very_small_local_model(self):
+        """Very small local model returns 'basic'."""
+        assert get_capability_tier("3.8B", is_local=True) == "basic"
+
+    def test_recommended_local_model(self):
+        """14B+ local model returns 'recommended'."""
+        assert get_capability_tier("14B", is_local=True) == "recommended"
+
+    def test_large_local_model(self):
+        """Large local model returns 'recommended'."""
+        assert get_capability_tier("70.6B", is_local=True) == "recommended"
+
+    def test_cloud_provider_no_size(self):
+        """Cloud provider with no size info returns 'recommended'."""
+        assert get_capability_tier(None, is_local=False) == "recommended"
+
+    def test_local_provider_no_size(self):
+        """Local provider with no size info returns 'unknown'."""
+        assert get_capability_tier(None, is_local=True) == "unknown"
+
+    def test_boundary_just_below_14(self):
+        """Model just below 14B threshold returns 'basic'."""
+        assert get_capability_tier("13.9B", is_local=True) == "basic"
+
+    def test_cloud_provider_with_size(self):
+        """Cloud provider with size info still uses the size for classification."""
+        assert get_capability_tier("7B", is_local=False) == "basic"

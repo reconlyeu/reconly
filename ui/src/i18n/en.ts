@@ -1478,6 +1478,12 @@ export const strings = {
     // Empty state
     noFields: 'No configuration fields available.',
   },
+
+  // Model capability nudges
+  modelCapability: {
+    smallModelNote: 'Small model detected \u2014 for best results with chat and agents, use a 14B+ model or cloud provider.',
+    settingsLink: 'Change in Settings',
+  },
 } as const;
 
 export type Strings = typeof strings;
