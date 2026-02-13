@@ -422,11 +422,8 @@ curl -X POST http://localhost:8000/api/v1/chat/conversations \
   }'
 ```
 
-For full chat documentation, see [Chat Tools Reference](architecture/chat-tools.md).
-
 ## See Also
 
-- [Setup Guide](setup.md) - Getting started
+- [Installation Guide](installation.md) - Getting started
 - [Deployment Guide](deployment.md) - Production deployment
-- [Adding Providers](ADDING_PROVIDERS.md) - Custom LLM providers
-- [Chat Tools Reference](architecture/chat-tools.md) - Available chat tools and model recommendations
+- [Adding Providers](../developer/adding-providers.md) - Custom LLM providers

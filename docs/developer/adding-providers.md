@@ -304,7 +304,7 @@ def __init__(self, api_key: str = None, base_url: str = None):
     self.timeout = self.metadata.get_timeout()
 ```
 
-For more details on the metadata system, see [Component Metadata Architecture](architecture/component-metadata.md).
+<!-- For more details on the metadata system, see Component Metadata Architecture. -->
 
 ### 3. Create Tests
 

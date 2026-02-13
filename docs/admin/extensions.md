@@ -294,7 +294,7 @@ Search GitHub for repositories with:
 
 ## Creating Your Own Extensions
 
-Want to create an extension? See the [Extension Development Guide](./EXTENSION_DEVELOPMENT.md).
+Want to create an extension? See the [Extension Development Guide](../developer/extension-development.md).
 
 ---
 

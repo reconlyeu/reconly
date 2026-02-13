@@ -573,6 +573,5 @@ REINDEX INDEX idx_chunks_embedding_hnsw;
 - **Monitor performance**: Track embedding costs and search latency
 
 For more details, see:
-- [ARCHITECTURE.md - RAG Knowledge System](../../ARCHITECTURE.md#rag-knowledge-system)
-- [API Documentation](api.md) - RAG endpoints
-- [Development Guide](development.md) - Contributing to RAG features
+- [API Documentation](../developer/api.md) - RAG endpoints
+- [Development Guide](../developer/development.md) - Contributing to RAG features

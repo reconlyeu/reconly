@@ -1,6 +1,6 @@
 # Feature Setup Guide
 
-After completing the [Quick Start](../README.md#quick-start), you have RSS, YouTube, and website summarization working. This guide shows how to enable additional features based on your needs and hardware capabilities.
+After completing the [Quick Start](../index.md), you have RSS, YouTube, and website summarization working. This guide shows how to enable additional features based on your needs and hardware capabilities.
 
 ## Feature Matrix
 

@@ -276,7 +276,7 @@ The Knowledge Graph requires the RAG system to be configured:
 2. Embedding provider configured (Ollama, LM Studio, OpenAI, or HuggingFace)
 3. Digests must be embedded (`embedding_status = 'completed'`)
 
-See [RAG Setup Guide](rag-setup.md) for configuration details.
+See [RAG Setup Guide](../admin/rag-setup.md) for configuration details.
 
 ## Adding New Features
 

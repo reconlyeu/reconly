@@ -258,7 +258,7 @@ curl -X PUT http://localhost:8000/api/v1/feeds/1 \
 **Notes:**
 - Webhooks are sent asynchronously after feed completion
 - Failed webhook delivery does not affect the feed run
-- See [n8n Integration Guide](integrations/n8n.md) for workflow examples
+- See [n8n Integration Guide](../admin/integrations/n8n.md) for workflow examples
 
 ### Feed Bundles
 

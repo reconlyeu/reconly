@@ -32,7 +32,7 @@ The provided `docker/oss/docker-compose.yml` pulls a pre-built image from the co
 1. **Stage 1**: Builds the Vue/Astro UI with Node.js
 2. **Stage 2**: Creates the Python API image with bundled UI
 
-See [`docker/oss/docker-compose.yml`](../docker/oss/docker-compose.yml) for the full configuration. Key settings:
+See `docker/oss/docker-compose.yml` in the repository for the full configuration. Key settings:
 
 - **`RECONLY_VERSION`** — Docker image tag (default: `latest`)
 - **`API_PORT`** — Host port (default: `8000`)

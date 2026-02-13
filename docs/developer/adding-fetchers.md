@@ -221,7 +221,7 @@ if fetcher.metadata.supports_oauth:
     handle_oauth_flow()
 ```
 
-For more details on the metadata system, see [Component Metadata Architecture](architecture/component-metadata.md).
+<!-- For more details on the metadata system, see Component Metadata Architecture. -->
 
 ### 4. Optional: Override can_handle()
 
@@ -713,7 +713,7 @@ Before submitting your fetcher:
 
 ## Packaging as an Extension
 
-Want to distribute your fetcher as an installable package? See the [Extension Development Guide](./EXTENSION_DEVELOPMENT.md) for full details. Here's a quick overview:
+Want to distribute your fetcher as an installable package? See the [Extension Development Guide](extension-development.md) for full details. Here's a quick overview:
 
 ### 1. Create Package Structure
 
@@ -772,5 +772,5 @@ pip install -e .
 
 - Check existing fetchers in `packages/core/reconly_core/fetchers/`
 - Review test examples in `tests/core/fetchers/`
-- See [Extension Development Guide](./EXTENSION_DEVELOPMENT.md) for packaging details
+- See [Extension Development Guide](extension-development.md) for packaging details
 - Open an issue on GitHub if stuck

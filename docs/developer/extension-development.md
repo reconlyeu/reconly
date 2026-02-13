@@ -1464,6 +1464,6 @@ Users can install from any source, but verified extensions get a badge in the UI
 
 ## Questions?
 
-- Check the [ADDING_EXPORTERS.md](./ADDING_EXPORTERS.md) for exporter API details
-- Check the [ADDING_FETCHERS.md](./ADDING_FETCHERS.md) for fetcher API details
+- Check the [ADDING_EXPORTERS.md](adding-exporters.md) for exporter API details
+- Check the [ADDING_FETCHERS.md](adding-fetchers.md) for fetcher API details
 - Open an issue on GitHub if stuck

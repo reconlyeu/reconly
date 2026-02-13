@@ -230,6 +230,6 @@ GPT Researcher works best with capable models. For Ollama or LM Studio:
 
 ## See Also
 
-- [Search Framework Configuration](../configuration.md#agent-settings)
-- [LLM Provider Setup](../setup.md#llm-providers)
+- [Configuration Reference](../configuration.md)
+- [LLM Provider Setup](../installation.md#configure-your-ai-provider-optional)
 - [GPT Researcher Documentation](https://docs.gptr.dev/)

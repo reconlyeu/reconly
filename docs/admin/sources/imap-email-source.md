@@ -633,9 +633,7 @@ Combine email sources with summarization:
 
 ## Related Documentation
 
-- [Adding Custom Fetchers](../ADDING_FETCHERS.md) - Extend email provider support
-- [Data Flow Architecture](../architecture/data-flow.md) - How emails flow through the system
-- [Security Documentation](../../SECURITY.md) - Comprehensive security details
+- [Adding Custom Fetchers](../../developer/adding-fetchers.md) - Extend email provider support
 
 ---
 
@@ -647,4 +645,4 @@ Combine email sources with summarization:
 
 **Contributing:**
 - Submit pull requests to add new email provider support
-- See [ADDING_FETCHERS.md](../ADDING_FETCHERS.md) for implementation guide
+- See [Adding Fetchers](../../developer/adding-fetchers.md) for implementation guide

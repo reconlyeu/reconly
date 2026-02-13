@@ -228,7 +228,7 @@ EOF
 python -m reconly_core.cli.main --import --create-feed --feed-name "Tech News"
 ```
 
-> **YouTube Sources**: Both video URLs and channel URLs are supported. Channel URLs (like `@fireship`) will automatically fetch transcripts from recent videos. See [API Documentation](api.md#youtube-sources) for supported URL formats.
+> **YouTube Sources**: Both video URLs and channel URLs are supported. Channel URLs (like `@fireship`) will automatically fetch transcripts from recent videos. See [API Documentation](../developer/api.md#youtube-sources) for supported URL formats.
 
 ## Troubleshooting
 
@@ -264,6 +264,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ## Next Steps
 
 - [CLI Reference](cli.md) - Command-line usage
-- [API Documentation](api.md) - REST API endpoints
-- [UI Development](ui.md) - Frontend architecture
+- [API Documentation](../developer/api.md) - REST API endpoints
+- [UI Development](../developer/ui.md) - Frontend architecture
 - [Deployment](deployment.md) - Docker and production setup

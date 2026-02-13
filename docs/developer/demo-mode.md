@@ -93,7 +93,7 @@ docker compose up        # Fresh start
 Demo mode is read-only with static data. To use Reconly for real:
 
 1. **Stop demo**: `docker compose down -v`
-2. **Set up production**: Follow the [Setup Guide](setup.md)
+2. **Set up production**: Follow the [Installation Guide](../admin/installation.md)
 3. **Configure LLM**: Add Ollama/LM Studio locally or cloud API keys
 4. **Add your sources**: Create feeds with your RSS/YouTube/email sources
 
@@ -142,9 +142,9 @@ docker compose up
 ## Next Steps
 
 After exploring demo mode:
-- [Setup Guide](setup.md) — Production installation
-- [Configuration Reference](configuration.md) — Environment variables
-- [RAG Setup](rag-setup.md) — Semantic search and Q&A
+- [Installation Guide](../admin/installation.md) — Production installation
+- [Configuration Reference](../admin/configuration.md) — Environment variables
+- [RAG Setup](../admin/rag-setup.md) — Semantic search and Q&A
 
 ---
 
