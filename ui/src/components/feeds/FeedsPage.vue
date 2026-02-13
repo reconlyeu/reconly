@@ -194,7 +194,7 @@ const handleSuccess = () => {
       <div>
         <h1 class="text-2xl font-bold text-text-primary">{{ strings.feeds.title }}</h1>
         <p class="mt-1 text-sm text-text-secondary">
-          Configure feeds to orchestrate sources with schedules and outputs
+          {{ strings.pageSubtitles.feeds }}
         </p>
       </div>
       <div class="flex items-center gap-3">

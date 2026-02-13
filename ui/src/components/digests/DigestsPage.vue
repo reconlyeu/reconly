@@ -236,7 +236,7 @@ const closeModal = () => {
       <div>
         <h1 class="text-2xl font-bold text-text-primary">{{ strings.digests.title }}</h1>
         <p class="mt-1 text-sm text-text-secondary">
-          Browse, search, and filter your summarized content
+          {{ strings.pageSubtitles.digests }}
         </p>
       </div>
       <ViewModeToggle v-model="viewMode" />

@@ -184,6 +184,7 @@ const handleImportSuccess = () => {
       :empty-message="strings.onboarding.emptyStates.feeds.message"
       :empty-icon="Layers"
       :empty-tip="strings.onboarding.emptyStates.feeds.tip"
+      empty-learn-more-url="https://github.com/reconlyeu/reconly/blob/main/docs/guide/managing-feeds.md"
       @retry="refetch"
     >
       <template #empty-action>

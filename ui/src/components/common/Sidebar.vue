@@ -13,6 +13,8 @@ import {
   Settings,
   LogOut,
   FlaskConical,
+  HelpCircle,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
@@ -77,6 +79,12 @@ const isActive = (href: string) => {
   }
   return props.currentPath.startsWith(href);
 };
+
+const showHelpMenu = ref(false);
+
+const toggleHelpMenu = () => {
+  showHelpMenu.value = !showHelpMenu.value;
+};
 </script>
 
 <template>
@@ -122,6 +130,35 @@ const isActive = (href: string) => {
         <span>{{ strings.nav.logout }}</span>
       </button>
     </nav>
+
+    <!-- Help Menu -->
+    <div class="px-3 pb-2 relative">
+      <button
+        @click="toggleHelpMenu"
+        class="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+        title="Help"
+      >
+        <HelpCircle class="w-[1.2rem] h-[1.2rem] flex-shrink-0" />
+        <span>{{ strings.help.title }}</span>
+      </button>
+
+      <!-- Help dropdown -->
+      <div
+        v-if="showHelpMenu"
+        class="absolute bottom-full left-3 right-3 mb-1 bg-bg-elevated border border-border-subtle rounded-lg shadow-lg py-1 z-50"
+      >
+        <a
+          href="https://github.com/reconlyeu/reconly/tree/main/docs#readme"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          @click="showHelpMenu = false"
+        >
+          <BookOpen class="w-4 h-4 flex-shrink-0" />
+          <span>{{ strings.help.documentation }}</span>
+        </a>
+      </div>
+    </div>
 
     <!-- Footer - height matches the fixed quick actions bar (h-14 = 56px) -->
     <div class="h-14 px-4 border-t border-border-subtle flex items-center justify-center gap-3">

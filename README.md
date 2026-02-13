@@ -53,7 +53,7 @@ Open **http://localhost:8000** — the getting started wizard will guide you thr
 
 > **Alternative LLM options:** [LM Studio](https://lmstudio.ai) (local), or cloud APIs (Anthropic, OpenAI) — configure in `.env`
 
-**Want more features?** See the [Feature Setup Guide](docs/feature-setup-guide.md) to enable semantic search, AI research agents, email fetching, and more.
+**Want more features?** See the [Feature Setup Guide](docs/admin/feature-setup-guide.md) to enable semantic search, AI research agents, email fetching, and more.
 
 ---
 
@@ -92,7 +92,7 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
-| Ollama / LM Studio | Free | 100% Local | [Setup guide](docs/setup.md#option-a-ollama-local-free-private) |
+| Ollama / LM Studio | Free | 100% Local | [Setup guide](docs/admin/installation.md#option-a-ollama-local-free-private) |
 | HuggingFace | Free tier | Cloud | API key |
 | OpenAI | ~$0.02/article | Cloud | API key |
 | Anthropic | ~$0.04/article | Cloud | API key |
@@ -105,13 +105,14 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 
 | | |
 |---|---|
-| [Setup Guide](docs/setup.md) | Installation, database, AI providers |
-| [Feature Setup Guide](docs/feature-setup-guide.md) | Enable RAG, agents, email, and more |
-| [AI Research Agents](docs/sources/agent-research-source.md) | Autonomous research configuration |
-| [RAG & Knowledge Graph](docs/rag-setup.md) | Semantic search, embeddings |
-| [Configuration](docs/configuration.md) | All environment variables |
-| [API Reference](docs/api.md) | REST endpoints |
-| [Deployment](docs/deployment.md) | Production setup, Docker, Nginx |
+| [Setup Guide](docs/admin/installation.md) | Installation, database, AI providers |
+| [Feature Setup Guide](docs/admin/feature-setup-guide.md) | Enable RAG, agents, email, and more |
+| [AI Research Agents](docs/admin/sources/agent-research-source.md) | Autonomous research configuration |
+| [RAG & Knowledge Graph](docs/admin/rag-setup.md) | Semantic search, embeddings |
+| [Configuration](docs/admin/configuration.md) | All environment variables |
+| [API Reference](docs/developer/api.md) | REST endpoints |
+| [Deployment](docs/admin/deployment.md) | Production setup, Docker, Nginx |
+| [All Documentation](docs/README.md) | Full documentation index |
 
 ---
 

@@ -127,6 +127,7 @@ const handleDelete = (sourceId: number) => {
     :empty-message="emptyMessage"
     :empty-icon="Rss"
     :empty-tip="emptyTip"
+    :empty-learn-more-url="hasTypeFilter ? undefined : 'https://github.com/reconlyeu/reconly/blob/main/docs/guide/managing-sources.md'"
     @retry="refetch"
   >
     <template #empty-action>

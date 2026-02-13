@@ -152,6 +152,7 @@ const prevPage = () => {
     :empty-message="emptyMessage"
     :empty-icon="FileText"
     :empty-tip="emptyTip"
+    :empty-learn-more-url="hasFilters ? undefined : 'https://github.com/reconlyeu/reconly/blob/main/docs/guide/reading-digests.md'"
     :show-pagination="totalPages > 1"
     :page="page"
     :total-pages="totalPages"

@@ -34,7 +34,7 @@ Start PostgreSQL with pgvector:
 docker-compose -f docker/docker-compose.postgres.yml up -d
 
 # Or install PostgreSQL 16+ with pgvector extension locally
-# See docs/rag-setup.md for installation instructions
+# See docs/admin/rag-setup.md for installation instructions
 ```
 
 Configure the database connection:
@@ -152,7 +152,7 @@ pytest tests/ -k "test_rss" -v
 4. Add tests in `tests/test_summarizers/`
 5. Update documentation
 
-See `docs/ADDING_PROVIDERS.md` for detailed guide.
+See `docs/developer/adding-providers.md` for detailed guide.
 
 ## Database Migrations
 

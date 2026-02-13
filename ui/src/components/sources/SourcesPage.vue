@@ -181,7 +181,7 @@ function handleSuccess(): void {
       <div>
         <h1 class="text-2xl font-bold text-text-primary">{{ strings.sources.title }}</h1>
         <p class="mt-1 text-sm text-text-secondary">
-          Manage content sources (RSS, YouTube, websites, blogs)
+          {{ strings.pageSubtitles.sources }}
         </p>
       </div>
       <div class="flex items-center gap-3">
