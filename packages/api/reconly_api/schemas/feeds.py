@@ -102,7 +102,7 @@ class FeedResponse(FeedBase):
     user_id: Optional[int] = None
     last_run_at: Optional[datetime] = None
     last_run_id: Optional[int] = None  # ID of the most recent run
-    last_run_status: Optional[str] = None  # pending, running, completed, completed_with_errors, failed
+    last_run_status: Optional[str] = None  # pending, running, completed, partial, failed
     next_run_at: Optional[datetime] = None
     created_at: datetime
     updated_at: Optional[datetime] = None

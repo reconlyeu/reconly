@@ -106,9 +106,10 @@ class GraphService:
     """
 
     # Default thresholds
-    DEFAULT_SEMANTIC_THRESHOLD = 0.75
-    DEFAULT_MIN_SIMILARITY = 0.6
+    DEFAULT_SEMANTIC_THRESHOLD = 0.55
+    DEFAULT_MIN_SIMILARITY = 0.4
     DEFAULT_MAX_EDGES_PER_DIGEST = 10
+    DEFAULT_TAG_THRESHOLD = 0.15
 
     def __init__(
         self,
@@ -118,6 +119,7 @@ class GraphService:
         min_similarity: float = DEFAULT_MIN_SIMILARITY,
         max_edges_per_digest: int = DEFAULT_MAX_EDGES_PER_DIGEST,
         default_chunk_source: ChunkSource = 'source_content',
+        tag_threshold: float = DEFAULT_TAG_THRESHOLD,
     ):
         """Initialize the graph service.
 
@@ -129,6 +131,7 @@ class GraphService:
             max_edges_per_digest: Maximum edges per digest for pruning
             default_chunk_source: Default chunk source for semantic relationships
                                   ('source_content' or 'digest')
+            tag_threshold: Minimum Jaccard similarity for tag relationships
         """
         self.db = db
         self.embedding_provider = embedding_provider
@@ -136,6 +139,7 @@ class GraphService:
         self.min_similarity = min_similarity
         self.max_edges_per_digest = max_edges_per_digest
         self.default_chunk_source: ChunkSource = default_chunk_source
+        self.tag_threshold = tag_threshold
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # RELATIONSHIP COMPUTATION
@@ -464,7 +468,7 @@ class GraphService:
             union = len(digest_tag_ids | other_tag_ids)
             jaccard = intersection / union if union > 0 else 0.0
 
-            if jaccard < self.min_similarity:
+            if jaccard < self.tag_threshold:
                 continue
 
             # Get shared tag names for extra_data
@@ -508,11 +512,11 @@ class GraphService:
         for other in other_digests:
             other_time = other.created_at or datetime.utcnow()
 
-            # Calculate temporal score (exponential decay over 30 days)
+            # Calculate temporal score (exponential decay over ~25 days)
             time_diff = abs((digest_time - other_time).total_seconds())
             days_diff = time_diff / 86400  # Convert to days
-            # Score decays from 1.0 to ~0.37 over 30 days
-            score = max(0.1, min(1.0, 1.0 * (0.9 ** days_diff)))
+            # Score decays from 1.0 to ~0.55 over 30 days
+            score = max(0.1, min(1.0, 1.0 * (0.98 ** days_diff)))
 
             if score < self.min_similarity:
                 continue

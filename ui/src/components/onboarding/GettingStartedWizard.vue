@@ -43,7 +43,7 @@ const { shouldShowWizard, skipOnboarding, finishOnboarding } = useOnboarding();
 let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 const isTerminalStatus = (status: FeedRunStatus): boolean => {
-  return status === 'completed' || status === 'completed_with_errors' || status === 'failed';
+  return status === 'completed' || status === 'partial' || status === 'failed';
 };
 
 const stopPolling = () => {
@@ -223,7 +223,7 @@ const runFeedMutation = useMutation({
         // Update with the completed run details
         feedRun.value = completedRun;
         isRunning.value = false;
-        if (completedRun.status === 'completed' || completedRun.status === 'completed_with_errors') {
+        if (completedRun.status === 'completed' || completedRun.status === 'partial') {
           runCompleted.value = true;
         } else {
           runError.value = 'Feed run failed. Check your LLM configuration.';

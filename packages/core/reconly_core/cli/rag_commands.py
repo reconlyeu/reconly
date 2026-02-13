@@ -93,6 +93,7 @@ class RAGCommandHandler:
 
             semantic_threshold = settings.get("rag.graph.semantic_threshold")
             max_edges = settings.get("rag.graph.max_edges_per_digest")
+            tag_threshold = settings.get("rag.graph.tag_threshold")
 
             # Initialize services
             provider = get_embedding_provider(db=db.session)
@@ -102,6 +103,7 @@ class RAGCommandHandler:
                 semantic_threshold=semantic_threshold,
                 max_edges_per_digest=max_edges,
                 default_chunk_source=chunk_source,
+                tag_threshold=tag_threshold,
             )
 
             # Process digests in batches

@@ -68,7 +68,7 @@ const statusBadge = computed(() => {
         icon: CheckCircle2,
         animate: false,
       };
-    case 'completed_with_errors':
+    case 'partial':
       return {
         text: strings.feeds.status.completedWithErrors || 'Partial',
         bgClass: 'bg-status-warning/10',
@@ -117,7 +117,7 @@ const lastRunConfig = computed(() => {
   const status = props.feed.last_run_status;
   if (status === 'failed') {
     return { text: timeText, icon: AlertCircle, color: 'text-status-failed' };
-  } else if (status === 'completed_with_errors') {
+  } else if (status === 'partial') {
     return { text: timeText, icon: AlertCircle, color: 'text-status-warning' };
   }
   return { text: timeText, icon: CheckCircle2, color: 'text-status-success' };

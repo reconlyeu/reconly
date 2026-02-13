@@ -334,10 +334,18 @@ SETTINGS_REGISTRY: dict[str, SettingDef] = {
     "rag.graph.semantic_threshold": SettingDef(
         category="rag",
         type=float,
-        default=0.75,
+        default=0.55,
         editable=True,
         env_var="RAG_GRAPH_SEMANTIC_THRESHOLD",
-        description="Minimum similarity score for semantic relationships (0.0-1.0)",
+        description="Minimum cosine similarity for semantic relationships (0.0-1.0). Lower values create more connections.",
+    ),
+    "rag.graph.tag_threshold": SettingDef(
+        category="rag",
+        type=float,
+        default=0.15,
+        editable=True,
+        env_var="RAG_GRAPH_TAG_THRESHOLD",
+        description="Minimum Jaccard similarity for tag relationships (0.0-1.0). Even one shared tag creates a connection at low thresholds.",
     ),
     "rag.graph.max_edges_per_digest": SettingDef(
         category="rag",

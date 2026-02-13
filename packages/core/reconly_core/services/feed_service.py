@@ -667,7 +667,7 @@ class FeedService:
         )
         if metrics.sources_failed == 0:
             feed_run.status = "completed"
-        elif has_timeout:
+        elif metrics.sources_failed == sources_total:
             feed_run.status = "failed"
         else:
             feed_run.status = "partial"
@@ -735,7 +735,7 @@ class FeedService:
                 feed_run.error_details = current_details
 
                 if feed_run.status == "completed":
-                    feed_run.status = "completed_with_warnings"
+                    feed_run.status = "partial"
 
                 session.commit()
 
@@ -2406,6 +2406,21 @@ class FeedService:
         session.add(digest)
         session.flush()  # Get ID
 
+        # Create DigestSourceItem + SourceContent for RAG source content embeddings
+        source_item = DigestSourceItem(
+            digest_id=digest.id,
+            source_id=source.id,
+            item_url=result.get("url", ""),
+            item_title=result.get("title"),
+            item_published_at=published_at,
+        )
+        session.add(source_item)
+        session.flush()
+
+        # Store source content - prefer full_content (scraped) over content (RSS summary)
+        content = result.get("full_content") or result.get("content", "")
+        self._store_source_content(source_item, content, session)
+
         return digest
 
     def _log_llm_usage(
@@ -2959,6 +2974,7 @@ class FeedService:
                     default_chunk_source = settings_service.get("rag.source_content.default_chunk_source")
                     semantic_threshold = settings_service.get("rag.graph.semantic_threshold")
                     max_edges = settings_service.get("rag.graph.max_edges_per_digest")
+                    tag_threshold = settings_service.get("rag.graph.tag_threshold")
 
                     graph_service = GraphService(
                         session,
@@ -2966,6 +2982,7 @@ class FeedService:
                         semantic_threshold=semantic_threshold,
                         max_edges_per_digest=max_edges,
                         default_chunk_source=default_chunk_source,
+                        tag_threshold=tag_threshold,
                     )
 
                     for digest in digests:

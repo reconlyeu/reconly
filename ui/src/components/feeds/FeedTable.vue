@@ -82,7 +82,7 @@ const getLastRunConfig = (feed: Feed) => {
   const status = feed.last_run_status;
   if (status === 'failed') {
     return { text, icon: AlertCircle, color: 'text-status-failed' };
-  } else if (status === 'completed_with_errors') {
+  } else if (status === 'partial') {
     return { text, icon: AlertCircle, color: 'text-status-warning' };
   }
   return { text, icon: CheckCircle2, color: 'text-status-success' };

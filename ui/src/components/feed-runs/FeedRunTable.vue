@@ -19,7 +19,7 @@ const getStatusIcon = (status: FeedRunStatus) => {
     case 'pending': return Clock;
     case 'running': return Loader2;
     case 'completed': return CheckCircle;
-    case 'completed_with_errors': return AlertCircle;
+    case 'partial': return AlertCircle;
     case 'failed': return AlertCircle;
     default: return Clock;
   }
@@ -30,7 +30,7 @@ const getStatusClass = (status: FeedRunStatus): string => {
     case 'pending': return 'text-text-secondary';
     case 'running': return 'text-accent-primary animate-spin';
     case 'completed': return 'text-status-success';
-    case 'completed_with_errors': return 'text-status-error';
+    case 'partial': return 'text-status-error';
     case 'failed': return 'text-status-error';
     default: return 'text-text-secondary';
   }
@@ -41,7 +41,7 @@ const getStatusBadgeClass = (status: FeedRunStatus): string => {
     case 'pending': return 'bg-text-secondary/10 text-text-secondary';
     case 'running': return 'bg-accent-primary/10 text-accent-primary';
     case 'completed': return 'bg-status-success/10 text-status-success';
-    case 'completed_with_errors': return 'bg-status-error/10 text-status-error';
+    case 'partial': return 'bg-status-error/10 text-status-error';
     case 'failed': return 'bg-status-error/10 text-status-error';
     default: return 'bg-text-secondary/10 text-text-secondary';
   }
@@ -49,7 +49,7 @@ const getStatusBadgeClass = (status: FeedRunStatus): string => {
 
 const getStatusLabel = (status: FeedRunStatus): string => {
   switch (status) {
-    case 'completed_with_errors': return 'Errors';
+    case 'partial': return 'Errors';
     default: return strings.status[status] || status;
   }
 };

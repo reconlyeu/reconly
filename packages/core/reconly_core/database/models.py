@@ -593,7 +593,7 @@ class FeedRun(Base):
     triggered_by_user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
 
     # Status
-    status = Column(String(20), default='pending', nullable=False, index=True)  # pending, running, completed, failed
+    status = Column(String(20), default='pending', nullable=False, index=True)  # pending, running, completed, partial, failed
 
     # Timing
     started_at = Column(DateTime, nullable=True)

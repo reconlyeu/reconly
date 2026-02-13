@@ -23,7 +23,7 @@ import { Network, Loader2 } from 'lucide-vue-next';
 // State
 const layout = ref<GraphLayoutType>('force');
 const viewMode = ref<GraphViewMode>('2d');
-const minSimilarity = ref(0.5);
+const minSimilarity = ref(0.3);
 const includeTags = ref(true);
 const depth = ref(2);
 const feedFilter = ref<number | null>(null);

@@ -28,7 +28,7 @@ async def get_graph_nodes(
         description="Number of relationship hops to traverse (1-5)"
     ),
     min_similarity: float = Query(
-        0.6,
+        0.3,
         ge=0.0,
         le=1.0,
         description="Minimum relationship score to include (0.0 to 1.0)"

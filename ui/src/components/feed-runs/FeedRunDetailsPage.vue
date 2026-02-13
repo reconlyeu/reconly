@@ -67,7 +67,7 @@ const getStatusIcon = (status: FeedRunStatus) => {
     case 'pending': return Clock;
     case 'running': return Loader2;
     case 'completed': return CheckCircle;
-    case 'completed_with_errors': return AlertCircle;
+    case 'partial': return AlertCircle;
     case 'failed': return AlertCircle;
     default: return Clock;
   }
@@ -78,7 +78,7 @@ const getStatusClass = (status: FeedRunStatus): string => {
     case 'pending': return 'text-text-secondary bg-text-secondary/10';
     case 'running': return 'text-accent-primary bg-accent-primary/10';
     case 'completed': return 'text-status-success bg-status-success/10';
-    case 'completed_with_errors': return 'text-status-error bg-status-error/10';
+    case 'partial': return 'text-status-error bg-status-error/10';
     case 'failed': return 'text-status-error bg-status-error/10';
     default: return 'text-text-secondary bg-text-secondary/10';
   }
@@ -86,7 +86,7 @@ const getStatusClass = (status: FeedRunStatus): string => {
 
 const getStatusLabel = (status: FeedRunStatus): string => {
   switch (status) {
-    case 'completed_with_errors': return 'Errors';
+    case 'partial': return 'Partial';
     default: return strings.status[status] || status;
   }
 };
