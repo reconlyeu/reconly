@@ -36,6 +36,9 @@ theme:
 plugins:
   - search
 
+exclude_docs: |
+  README.md
+
 markdown_extensions:
   - admonition
   - pymdownx.details
