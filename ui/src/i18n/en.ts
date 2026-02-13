@@ -1484,6 +1484,62 @@ export const strings = {
     smallModelNote: 'Small model detected \u2014 for best results with chat and agents, use a 14B+ model or cloud provider.',
     settingsLink: 'Change in Settings',
   },
+
+  // Help menu & in-app help
+  help: {
+    title: 'Help',
+    documentation: 'Documentation',
+    keyboardShortcuts: 'Keyboard Shortcuts',
+  },
+
+  // Documentation site URLs
+  docs: {
+    baseUrl: 'https://reconlyeu.github.io/reconly',
+    guide: {
+      managingSources: 'https://reconlyeu.github.io/reconly/guide/managing-sources/',
+      managingFeeds: 'https://reconlyeu.github.io/reconly/guide/managing-feeds/',
+      readingDigests: 'https://reconlyeu.github.io/reconly/guide/reading-digests/',
+    },
+  },
+
+  // Page subtitles
+  pageSubtitles: {
+    sources: 'Content endpoints that feeds pull from',
+    feeds: 'Automated pipelines that fetch, summarize, and deliver content',
+    digests: 'AI-generated summaries of your collected content',
+    templates: 'Control how content is summarized and formatted',
+    analytics: 'Token usage and provider statistics',
+  },
+
+  // Keyboard shortcuts modal
+  shortcuts: {
+    title: 'Keyboard Shortcuts',
+    global: 'Global',
+    navigation: 'Navigation',
+    lists: 'Lists',
+    actions: 'Actions',
+    openShortcuts: 'Open shortcuts',
+    openChat: 'Open quick chat',
+    closeModal: 'Close modal / panel',
+    goToDashboard: 'Go to Dashboard',
+    goToDigests: 'Go to Digests',
+    goToFeeds: 'Go to Feeds',
+    goToSources: 'Go to Sources',
+    goToTemplates: 'Go to Templates',
+    goToChat: 'Go to Chat',
+    goToAnalytics: 'Go to Analytics',
+    goToKnowledgeGraph: 'Go to Knowledge Graph',
+    goToFeedRuns: 'Go to Feed Runs',
+    goToSettings: 'Go to Settings',
+    nextItem: 'Next item',
+    previousItem: 'Previous item',
+    openSelected: 'Open selected',
+    toggleSelection: 'Toggle selection',
+    create: 'New / Create',
+    edit: 'Edit selected',
+    deleteItem: 'Delete selected',
+    focusSearch: 'Focus search',
+  },
 } as const;
 
 export type Strings = typeof strings;

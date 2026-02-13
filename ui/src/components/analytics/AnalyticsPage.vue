@@ -31,7 +31,7 @@ const periods = [
       <div>
         <h1 class="text-2xl font-bold text-text-primary">{{ strings.analytics.title }}</h1>
         <p class="mt-1 text-sm text-text-secondary">
-          Monitor LLM token usage and success metrics
+          {{ strings.pageSubtitles.analytics }}
         </p>
       </div>
 

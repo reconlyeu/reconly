@@ -3,7 +3,7 @@
  * Reusable empty state component.
  * Displays when a list or collection has no items.
  */
-import { Inbox, Lightbulb, type LucideIcon } from 'lucide-vue-next';
+import { Inbox, Lightbulb, ExternalLink, type LucideIcon } from 'lucide-vue-next';
 import { type Component } from 'vue';
 import { strings } from '@/i18n/en';
 
@@ -16,6 +16,10 @@ interface Props {
   icon?: LucideIcon | Component;
   /** Optional tip text shown with lightbulb icon */
   tip?: string;
+  /** Optional URL for a "Learn more" link */
+  learnMoreUrl?: string;
+  /** Label for the learn more link */
+  learnMoreLabel?: string;
 }
 
 withDefaults(defineProps<Props>(), {
@@ -23,6 +27,8 @@ withDefaults(defineProps<Props>(), {
   message: strings.common.empty.message,
   icon: () => Inbox,
   tip: undefined,
+  learnMoreUrl: undefined,
+  learnMoreLabel: 'Learn more',
 });
 </script>
 
@@ -42,6 +48,18 @@ withDefaults(defineProps<Props>(), {
     <!-- Slot for action button -->
     <div v-if="$slots.action" class="mt-6">
       <slot name="action" />
+    </div>
+    <!-- Optional learn more link -->
+    <div v-if="learnMoreUrl" class="mt-4">
+      <a
+        :href="learnMoreUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-1.5 text-sm text-accent-primary hover:text-accent-primary/80 transition-colors"
+      >
+        {{ learnMoreLabel }}
+        <ExternalLink :size="14" :stroke-width="2" />
+      </a>
     </div>
     <!-- Optional tip with lightbulb icon -->
     <div v-if="tip" class="mt-6 flex items-center justify-center gap-2 text-xs text-text-muted">

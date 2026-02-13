@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml"><img src="https://github.com/reconlyeu/reconly/actions/workflows/ci.yml/badge.svg" alt="CI"/></a>
+  <a href="https://reconlyeu.github.io/reconly/"><img src="https://img.shields.io/badge/docs-reconlyeu.github.io-blue" alt="Documentation"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License"/></a>
   <a href="https://github.com/reconlyeu/reconly/releases"><img src="https://img.shields.io/github/v/release/reconlyeu/reconly" alt="Release"/></a>
   <!-- <a href="#"><img src="https://img.shields.io/docker/pulls/reconlyeu/reconly" alt="Docker Pulls"/></a> -->
@@ -53,7 +54,7 @@ Open **http://localhost:8000** — the getting started wizard will guide you thr
 
 > **Alternative LLM options:** [LM Studio](https://lmstudio.ai) (local), or cloud APIs (Anthropic, OpenAI) — configure in `.env`
 
-**Want more features?** See the [Feature Setup Guide](docs/feature-setup-guide.md) to enable semantic search, AI research agents, email fetching, and more.
+**Want more features?** See the [Feature Setup Guide](docs/admin/feature-setup-guide.md) to enable semantic search, AI research agents, email fetching, and more.
 
 ---
 
@@ -92,7 +93,7 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 
 | Provider | Cost | Privacy | Setup |
 |----------|------|---------|-------|
-| Ollama / LM Studio | Free | 100% Local | [Setup guide](docs/setup.md#option-a-ollama-local-free-private) |
+| Ollama / LM Studio | Free | 100% Local | [Setup guide](docs/admin/installation.md#option-a-ollama-local-free-private) |
 | HuggingFace | Free tier | Cloud | API key |
 | OpenAI | ~$0.02/article | Cloud | API key |
 | Anthropic | ~$0.04/article | Cloud | API key |
@@ -105,13 +106,14 @@ Reconly combines traditional feed aggregation with autonomous AI research. Fetch
 
 | | |
 |---|---|
-| [Setup Guide](docs/setup.md) | Installation, database, AI providers |
-| [Feature Setup Guide](docs/feature-setup-guide.md) | Enable RAG, agents, email, and more |
-| [AI Research Agents](docs/sources/agent-research-source.md) | Autonomous research configuration |
-| [RAG & Knowledge Graph](docs/rag-setup.md) | Semantic search, embeddings |
-| [Configuration](docs/configuration.md) | All environment variables |
-| [API Reference](docs/api.md) | REST endpoints |
-| [Deployment](docs/deployment.md) | Production setup, Docker, Nginx |
+| [Setup Guide](https://reconlyeu.github.io/reconly/admin/installation/) | Installation, database, AI providers |
+| [Feature Setup Guide](https://reconlyeu.github.io/reconly/admin/feature-setup-guide/) | Enable RAG, agents, email, and more |
+| [AI Research Agents](https://reconlyeu.github.io/reconly/admin/sources/agent-research-source/) | Autonomous research configuration |
+| [RAG & Knowledge Graph](https://reconlyeu.github.io/reconly/admin/rag-setup/) | Semantic search, embeddings |
+| [Configuration](https://reconlyeu.github.io/reconly/admin/configuration/) | All environment variables |
+| [API Reference](https://reconlyeu.github.io/reconly/developer/api/) | REST endpoints |
+| [Deployment](https://reconlyeu.github.io/reconly/admin/deployment/) | Production setup, Docker, Nginx |
+| [All Documentation](https://reconlyeu.github.io/reconly/) | Full documentation site |
 
 ---
 

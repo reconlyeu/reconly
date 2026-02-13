@@ -6,7 +6,7 @@ import * as z from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query';
 import { feedsApi, sourcesApi, promptTemplatesApi, reportTemplatesApi, settingsApi } from '@/services/api';
 import type { Feed, FeedCreate, FeedUpdate } from '@/types/entities';
-import { X, Loader2, Calendar, FileStack, HelpCircle } from 'lucide-vue-next';
+import { X, Loader2, Calendar, FileStack, HelpCircle, ExternalLink } from 'lucide-vue-next';
 import { useDirectExportCapableExporters, useEnabledDirectExportExporters } from '@/composables/useExporters';
 import cronstrue from 'cronstrue';
 import { strings } from '@/i18n/en';
@@ -367,6 +367,15 @@ const handleClose = () => {
                   <label class="text-sm font-medium text-text-primary">
                     {{ strings.feeds.digestMode.title }}
                   </label>
+                  <a
+                    :href="`${strings.docs.guide.managingFeeds}#digest-mode`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"
+                  >
+                    Learn more
+                    <ExternalLink :size="11" />
+                  </a>
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                   <label
@@ -488,6 +497,15 @@ const handleClose = () => {
               <div class="flex items-center gap-2">
                 <Calendar :size="16" class="text-text-muted" />
                 <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.schedule }}</h3>
+                <a
+                  :href="`${strings.docs.guide.managingFeeds}#schedule`"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"
+                >
+                  Learn more
+                  <ExternalLink :size="11" />
+                </a>
               </div>
 
               <div>

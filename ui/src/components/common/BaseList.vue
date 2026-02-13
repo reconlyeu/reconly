@@ -34,6 +34,8 @@ interface Props {
   emptyIcon?: Component;
   /** Empty state tip */
   emptyTip?: string;
+  /** Empty state learn more URL */
+  emptyLearnMoreUrl?: string;
   /** Show pagination */
   showPagination?: boolean;
   /** Current page */
@@ -113,6 +115,7 @@ const gridColsClass = {
       :message="emptyMessage || `${entityName.charAt(0).toUpperCase() + entityName.slice(1)}s will appear here once they are created.`"
       :icon="emptyIcon"
       :tip="emptyTip"
+      :learn-more-url="emptyLearnMoreUrl"
     >
       <template #action>
         <slot name="empty-action" />

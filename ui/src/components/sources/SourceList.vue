@@ -127,6 +127,7 @@ const handleDelete = (sourceId: number) => {
     :empty-message="emptyMessage"
     :empty-icon="Rss"
     :empty-tip="emptyTip"
+    :empty-learn-more-url="hasTypeFilter ? undefined : strings.docs.guide.managingSources"
     @retry="refetch"
   >
     <template #empty-action>

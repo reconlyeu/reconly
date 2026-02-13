@@ -184,6 +184,7 @@ const handleImportSuccess = () => {
       :empty-message="strings.onboarding.emptyStates.feeds.message"
       :empty-icon="Layers"
       :empty-tip="strings.onboarding.emptyStates.feeds.tip"
+      :empty-learn-more-url="strings.docs.guide.managingFeeds"
       @retry="refetch"
     >
       <template #empty-action>

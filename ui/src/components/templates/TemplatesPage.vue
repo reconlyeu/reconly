@@ -223,7 +223,7 @@ const handleSuccess = () => {
       <div>
         <h1 class="text-2xl font-bold text-text-primary">{{ strings.templates.title }}</h1>
         <p class="mt-1 text-sm text-text-secondary">
-          Manage prompt and report templates for content summarization
+          {{ strings.pageSubtitles.templates }}
         </p>
       </div>
       <ViewModeToggle v-model="viewMode" />

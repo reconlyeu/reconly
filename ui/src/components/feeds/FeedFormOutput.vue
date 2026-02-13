@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Exporter } from '@/types/entities';
-import { Mail, Webhook, Download, AlertTriangle } from 'lucide-vue-next';
+import { Mail, Webhook, Download, AlertTriangle, ExternalLink } from 'lucide-vue-next';
 import { strings } from '@/i18n/en';
 
 interface Props {
@@ -95,6 +95,15 @@ const hasPathConfigured = (exporterName: string): boolean => {
       <div class="flex items-center gap-2">
         <Download :size="16" class="text-text-muted" />
         <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.autoExport }}</h3>
+        <a
+          :href="`${strings.docs.guide.managingFeeds}#output-configuration`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"
+        >
+          Learn more
+          <ExternalLink :size="11" />
+        </a>
       </div>
       <p class="text-xs text-text-muted">
         {{ strings.feeds.autoExport.description }}
