@@ -368,7 +368,7 @@ const handleClose = () => {
                     {{ strings.feeds.digestMode.title }}
                   </label>
                   <a
-                    href="https://github.com/reconlyeu/reconly/blob/main/docs/guide/managing-feeds.md#digest-mode"
+                    :href="`${strings.docs.guide.managingFeeds}#digest-mode`"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"
@@ -498,7 +498,7 @@ const handleClose = () => {
                 <Calendar :size="16" class="text-text-muted" />
                 <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.schedule }}</h3>
                 <a
-                  href="https://github.com/reconlyeu/reconly/blob/main/docs/guide/managing-feeds.md#schedule"
+                  :href="`${strings.docs.guide.managingFeeds}#schedule`"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"

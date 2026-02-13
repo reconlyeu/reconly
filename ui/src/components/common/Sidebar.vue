@@ -138,7 +138,7 @@ const toggleHelpMenu = () => {
         class="absolute bottom-full left-3 right-3 mb-1 bg-bg-elevated border border-border-subtle rounded-lg shadow-lg py-1 z-50"
       >
         <a
-          href="https://github.com/reconlyeu/reconly/tree/main/docs#readme"
+          :href="strings.docs.baseUrl"
           target="_blank"
           rel="noopener noreferrer"
           class="flex items-center gap-3 px-3 py-2 text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"

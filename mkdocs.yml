@@ -1,0 +1,88 @@
+site_name: Reconly Documentation
+site_url: https://reconlyeu.github.io/reconly/
+site_description: Privacy-first news & research intelligence platform
+repo_url: https://github.com/reconlyeu/reconly
+repo_name: reconlyeu/reconly
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Concepts: guide/concepts.md
+      - Getting Started: guide/getting-started.md
+      - Managing Sources: guide/managing-sources.md
+      - Managing Feeds: guide/managing-feeds.md
+      - Reading Digests: guide/reading-digests.md
+      - Using Chat: guide/using-chat.md
+      - Templates: guide/templates.md
+      - Knowledge Graph: guide/knowledge-graph.md
+      - Keyboard Shortcuts: guide/keyboard-shortcuts.md
+      - Troubleshooting: guide/troubleshooting.md
+  - Admin Guide:
+      - Installation: admin/installation.md
+      - Configuration: admin/configuration.md
+      - Feature Setup: admin/feature-setup-guide.md
+      - RAG & Embeddings: admin/rag-setup.md
+      - Deployment: admin/deployment.md
+      - Extensions: admin/extensions.md
+      - CLI Reference: admin/cli.md
+      - Sources:
+          - AI Research Agents: admin/sources/agent-research-source.md
+          - IMAP Email Source: admin/sources/imap-email-source.md
+      - Integrations:
+          - n8n: admin/integrations/n8n.md
+  - Developer Guide:
+      - Development Setup: developer/development.md
+      - API Reference: developer/api.md
+      - UI Development: developer/ui.md
+      - Demo Mode: developer/demo-mode.md
+      - Adding Fetchers: developer/adding-fetchers.md
+      - Adding Providers: developer/adding-providers.md
+      - Adding Exporters: developer/adding-exporters.md
+      - Extension Development: developer/extension-development.md
+      - Feed Bundles: developer/bundles/BUNDLE_SPEC.md
+      - Migrations: developer/migrations/README.md

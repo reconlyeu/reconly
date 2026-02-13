@@ -96,7 +96,7 @@ const hasPathConfigured = (exporterName: string): boolean => {
         <Download :size="16" class="text-text-muted" />
         <h3 class="text-sm font-semibold uppercase tracking-wider text-text-muted">{{ strings.feeds.sections.autoExport }}</h3>
         <a
-          href="https://github.com/reconlyeu/reconly/blob/main/docs/guide/managing-feeds.md#output-configuration"
+          :href="`${strings.docs.guide.managingFeeds}#output-configuration`"
           target="_blank"
           rel="noopener noreferrer"
           class="ml-auto text-xs text-text-muted hover:text-accent-primary transition-colors inline-flex items-center gap-1"

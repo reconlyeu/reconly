@@ -1492,6 +1492,16 @@ export const strings = {
     keyboardShortcuts: 'Keyboard Shortcuts',
   },
 
+  // Documentation site URLs
+  docs: {
+    baseUrl: 'https://reconlyeu.github.io/reconly',
+    guide: {
+      managingSources: 'https://reconlyeu.github.io/reconly/guide/managing-sources/',
+      managingFeeds: 'https://reconlyeu.github.io/reconly/guide/managing-feeds/',
+      readingDigests: 'https://reconlyeu.github.io/reconly/guide/reading-digests/',
+    },
+  },
+
   // Page subtitles
   pageSubtitles: {
     sources: 'Content endpoints that feeds pull from',
