@@ -661,10 +661,6 @@ class FeedService:
     ) -> FeedRunResult:
         """Update FeedRun record with results, send notifications, process RAG."""
         # Determine status
-        has_timeout = any(
-            err.get("error_type") == ERROR_TYPE_TIMEOUT
-            for err in metrics.structured_errors
-        )
         if metrics.sources_failed == 0:
             feed_run.status = "completed"
         elif metrics.sources_failed == sources_total:
